@@ -298,33 +298,80 @@ export class DungeonGameScene extends Phaser.Scene {
       enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
       enemy.setData('type', enemyType);
       
-      // Create walking animation for enemies using original specifications
-      const walkAnimKey = `walk-${enemyType}`;
-      if (!this.anims.exists(walkAnimKey)) {
-        if (enemyType === 'skeleton') {
+      // Create directional walking animations for enemies using original specifications
+      if (enemyType === 'skeleton') {
+        if (!this.anims.exists('walkUpSkeleton')) {
           this.anims.create({
-            key: walkAnimKey,
+            key: 'walkUpSkeleton',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 104, end: 112 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'walkDownSkeleton',
             frames: this.anims.generateFrameNumbers('skeleton', { start: 130, end: 137 }),
             frameRate: 8,
             repeat: -1
           });
-        } else if (enemyType === 'zombie') {
           this.anims.create({
-            key: walkAnimKey,
-            frames: this.anims.generateFrameNumbers('zombie', { start: 6, end: 8 }),
+            key: 'walkLeftSkeleton',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 117, end: 125 }),
             frameRate: 8,
             repeat: -1
           });
-        } else if (enemyType === 'chiroptera') {
           this.anims.create({
-            key: walkAnimKey,
-            frames: this.anims.generateFrameNumbers('bat', { start: 0, end: 4 }),
+            key: 'walkRightSkeleton',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 143, end: 151 }),
             frameRate: 8,
             repeat: -1
           });
         }
+        enemy.anims.play('walkDownSkeleton'); // Default
+      } else if (enemyType === 'zombie') {
+        if (!this.anims.exists('walkUpZombie')) {
+          this.anims.create({
+            key: 'walkUpZombie',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 42, end: 44 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'walkDownZombie',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 6, end: 8 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'walkLeftZombie',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 18, end: 20 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'walkRightZombie',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 30, end: 32 }),
+            frameRate: 8,
+            repeat: -1
+          });
+        }
+        enemy.anims.play('walkDownZombie'); // Default
+      } else if (enemyType === 'chiroptera') {
+        if (!this.anims.exists('flyLeft')) {
+          this.anims.create({
+            key: 'flyLeft',
+            frames: this.anims.generateFrameNumbers('bat', { start: 0, end: 4 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'flyRight',
+            frames: this.anims.generateFrameNumbers('bat', { start: 6, end: 8 }),
+            frameRate: 8,
+            repeat: -1
+          });
+        }
+        enemy.anims.play('flyLeft'); // Default
       }
-      enemy.anims.play(walkAnimKey);
       
       this.enemies.add(enemy);
     }
@@ -626,6 +673,52 @@ export class DungeonGameScene extends Phaser.Scene {
       if (distance < 200 && distance > 32) { // Don't move if too close
         const speed = 25 + this.currentDungeon * 5; // Much slower
         this.physics.moveToObject(enemy, this.player, speed);
+        
+        // Update animation based on movement direction
+        const enemyType = enemy.getData('type');
+        const deltaX = this.player.x - enemy.x;
+        const deltaY = this.player.y - enemy.y;
+        
+        if (enemyType === 'skeleton') {
+          if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Moving horizontally
+            if (deltaX > 0) {
+              enemy.anims.play('walkRightSkeleton', true);
+            } else {
+              enemy.anims.play('walkLeftSkeleton', true);
+            }
+          } else {
+            // Moving vertically
+            if (deltaY > 0) {
+              enemy.anims.play('walkDownSkeleton', true);
+            } else {
+              enemy.anims.play('walkUpSkeleton', true);
+            }
+          }
+        } else if (enemyType === 'zombie') {
+          if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Moving horizontally
+            if (deltaX > 0) {
+              enemy.anims.play('walkRightZombie', true);
+            } else {
+              enemy.anims.play('walkLeftZombie', true);
+            }
+          } else {
+            // Moving vertically
+            if (deltaY > 0) {
+              enemy.anims.play('walkDownZombie', true);
+            } else {
+              enemy.anims.play('walkUpZombie', true);
+            }
+          }
+        } else if (enemyType === 'chiroptera') {
+          // Bat flies left or right based on horizontal movement
+          if (deltaX > 0) {
+            enemy.anims.play('flyRight', true);
+          } else {
+            enemy.anims.play('flyLeft', true);
+          }
+        }
       } else {
         // Stop moving if too close
         enemy.setVelocity(0, 0);
@@ -637,21 +730,59 @@ export class DungeonGameScene extends Phaser.Scene {
     if (!this.boss) return;
     
     // Boss behavior based on vulnerability (slower overall)
+    const distance = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
+    const deltaX = this.player.x - this.boss.x;
+    const deltaY = this.player.y - this.boss.y;
+    
     if (this.bossVulnerability < 100) {
       // Invulnerable: very slow movement
-      const distance = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
       if (distance > 100) {
         this.physics.moveToObject(this.boss, this.player, 15); // Much slower
+        
+        // Update boss animation based on movement direction
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          // Moving horizontally
+          if (deltaX > 0) {
+            this.boss.anims.play('walkRightOrc', true);
+          } else {
+            this.boss.anims.play('walkLeftOrc', true);
+          }
+        } else {
+          // Moving vertically
+          if (deltaY > 0) {
+            this.boss.anims.play('walkDownOrc', true);
+          } else {
+            this.boss.anims.play('walkUpOrc', true);
+          }
+        }
       } else {
         this.boss.setVelocity(0, 0); // Stop if close
+        this.boss.anims.play('attackDownOrc', true); // Attack animation when close
       }
     } else {
       // Vulnerable: moderate movement
-      const distance = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
       if (distance > 50) {
         this.physics.moveToObject(this.boss, this.player, 40); // Reduced from 80
+        
+        // Update boss animation based on movement direction
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          // Moving horizontally
+          if (deltaX > 0) {
+            this.boss.anims.play('walkRightOrc', true);
+          } else {
+            this.boss.anims.play('walkLeftOrc', true);
+          }
+        } else {
+          // Moving vertically
+          if (deltaY > 0) {
+            this.boss.anims.play('walkDownOrc', true);
+          } else {
+            this.boss.anims.play('walkUpOrc', true);
+          }
+        }
       } else {
         this.boss.setVelocity(0, 0);
+        this.boss.anims.play('attackDownOrc', true); // Attack animation when close
       }
     }
   }
