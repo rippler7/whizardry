@@ -298,27 +298,33 @@ export class DungeonGameScene extends Phaser.Scene {
       enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
       enemy.setData('type', enemyType);
       
-      // Create walking animation for enemies
-      const animKey = `${enemyType}-walk`;
-      if (!this.anims.exists(animKey)) {
-        let frameRange = { start: 0, end: 3 }; // Default
-        
+      // Create walking animation for enemies using original specifications
+      const walkAnimKey = `walk-${enemyType}`;
+      if (!this.anims.exists(walkAnimKey)) {
         if (enemyType === 'skeleton') {
-          frameRange = { start: 0, end: 8 }; // Skeleton walking frames
+          this.anims.create({
+            key: walkAnimKey,
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 130, end: 137 }),
+            frameRate: 8,
+            repeat: -1
+          });
         } else if (enemyType === 'zombie') {
-          frameRange = { start: 0, end: 7 }; // Zombie walking frames
+          this.anims.create({
+            key: walkAnimKey,
+            frames: this.anims.generateFrameNumbers('zombie', { start: 6, end: 8 }),
+            frameRate: 8,
+            repeat: -1
+          });
         } else if (enemyType === 'chiroptera') {
-          frameRange = { start: 0, end: 5 }; // Bat flying frames
+          this.anims.create({
+            key: walkAnimKey,
+            frames: this.anims.generateFrameNumbers('bat', { start: 0, end: 4 }),
+            frameRate: 8,
+            repeat: -1
+          });
         }
-        
-        this.anims.create({
-          key: animKey,
-          frames: this.anims.generateFrameNumbers(spriteKey, frameRange),
-          frameRate: 6,
-          repeat: -1
-        });
       }
-      enemy.anims.play(animKey);
+      enemy.anims.play(walkAnimKey);
       
       this.enemies.add(enemy);
     }
@@ -340,17 +346,27 @@ export class DungeonGameScene extends Phaser.Scene {
       chest.setData('opened', false);
       chest.setInteractive();
       
-      // Create chest idle animation
-      const animKey = `${chestTypes[index]}-idle`;
-      if (!this.anims.exists(animKey)) {
-        this.anims.create({
-          key: animKey,
-          frames: this.anims.generateFrameNumbers(chestTypes[index], { start: 0, end: 3 }),
-          frameRate: 3,
-          repeat: -1
-        });
+      // Create chest opening animation using original specifications
+      const openAnimKey = `open-${chestTypes[index]}`;
+      if (!this.anims.exists(openAnimKey)) {
+        if (chestTypes[index] === 'chestRed' || chestTypes[index] === 'chestBlue') {
+          this.anims.create({
+            key: openAnimKey,
+            frames: this.anims.generateFrameNumbers(chestTypes[index], { start: 0, end: 3 }),
+            frameRate: 8,
+            repeat: 0
+          });
+        } else { // Green and Yellow chests
+          this.anims.create({
+            key: openAnimKey,
+            frames: this.anims.generateFrameNumbers(chestTypes[index], { start: 4, end: 7 }),
+            frameRate: 8,
+            repeat: 0
+          });
+        }
       }
-      chest.anims.play(animKey);
+      // Start with first frame (closed chest)
+      chest.setFrame(chestTypes[index] === 'chestGreen' || chestTypes[index] === 'chestYellow' ? 4 : 0);
       
       chest.on('pointerdown', () => this.openChest(chest));
       
@@ -372,16 +388,46 @@ export class DungeonGameScene extends Phaser.Scene {
       this.boss.setData('maxHealth', 400);
       this.boss.setTint(0x8888ff); // Blue tint when invulnerable
       
-      // Create boss animation
-      if (!this.anims.exists('boss-idle')) {
+      // Create boss animations using original specifications
+      if (!this.anims.exists('walkDownOrc')) {
         this.anims.create({
-          key: 'boss-idle',
-          frames: this.anims.generateFrameNumbers('Boss', { start: 0, end: 7 }),
-          frameRate: 4,
+          key: 'walkDownOrc',
+          frames: this.anims.generateFrameNumbers('Boss', { start: 130, end: 137 }),
+          frameRate: 8,
           repeat: -1
         });
+        this.anims.create({
+          key: 'walkUpOrc',
+          frames: this.anims.generateFrameNumbers('Boss', { start: 104, end: 112 }),
+          frameRate: 8,
+          repeat: -1
+        });
+        this.anims.create({
+          key: 'walkLeftOrc',
+          frames: this.anims.generateFrameNumbers('Boss', { start: 117, end: 125 }),
+          frameRate: 8,
+          repeat: -1
+        });
+        this.anims.create({
+          key: 'walkRightOrc',
+          frames: this.anims.generateFrameNumbers('Boss', { start: 143, end: 151 }),
+          frameRate: 8,
+          repeat: -1
+        });
+        this.anims.create({
+          key: 'attackDownOrc',
+          frames: this.anims.generateFrameNumbers('Boss', { start: 78, end: 84 }),
+          frameRate: 8,
+          repeat: -1
+        });
+        this.anims.create({
+          key: 'OrcDie',
+          frames: this.anims.generateFrameNumbers('Boss', { start: 260, end: 265 }),
+          frameRate: 8,
+          repeat: 0
+        });
       }
-      this.boss.anims.play('boss-idle');
+      this.boss.anims.play('walkDownOrc');
     }
   }
 
@@ -630,6 +676,10 @@ export class DungeonGameScene extends Phaser.Scene {
         if (this.correctAnswers >= 4) {
           this.unlockDoor();
         }
+        
+        // Play chest opening animation
+        const openAnimKey = `open-${chest.texture.key}`;
+        chest.anims.play(openAnimKey);
       } else {
         chest.setTint(0xff0000); // Red tint for wrong answer
         this.time.delayedCall(1000, () => {

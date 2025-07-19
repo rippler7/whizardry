@@ -1,0 +1,216 @@
+var animCastDownSkeleton = {
+			key:'animCastDownSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:26,end:32}),
+			frameRate:maxFrameRate,
+			repeat:1
+		};
+		var walkUpSkeleton = {
+			key:'walkUpSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:104,end:112}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkDownSkeleton = {
+			key:'walkDownSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:130,end:137}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkLeftSkeleton = {
+			key:'walkLeftSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:117,end:125}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkRightSkeleton = {
+			key:'walkRightSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:143,end:151}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var shootUSkeletonp = {
+			key:'shootUpSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:208,end:220}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		var shootLeftSkeleton = {
+			key:'shootLeftSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:221,end:233}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		var playerDieSkeleton = {
+			key:'playerDieSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:260,end:265}),
+			frameRate:maxFrameRate,
+			repeat:false
+		}	
+
+		var walkUpOrc = {
+			key:'walkUpOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:104,end:112}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkDownOrc = {
+			key:'walkDownOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:130,end:137}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkLeftOrc = {
+			key:'walkLeftOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:117,end:125}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkRightOrc = {
+			key:'walkRightOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:143,end:151}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var attackLeftOrc = {
+			key:'attackLeftOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:65,end:72}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var attackRightOrc = {
+			key:'attackRightOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:91,end:97}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var attackUpOrc = {
+			key:'attackUpOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:52,end:58}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var attackDownOrc = {
+			key:'attackDownOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:78,end:84}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var OrcDie = {
+			key:"OrcDie",
+			frames: this.anims.generateFrameNumbers('Boss',{start:260,end:265}),
+			repeat:0
+		}
+
+		var flyLeft = {
+			key:'flyLeft',
+			frames: this.anims.generateFrameNumbers('bat',{start:0,end:4}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var flyRight = {
+			key:'flyRight',
+			frames: this.anims.generateFrameNumbers('bat',{start:6,end:8}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var batDie = {
+			key:'batDie',
+			frames: this.anims.generateFrameNumbers('bat',{start:46,end:54}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+
+		var walkUpZombie = {
+			key:'walkUpZombie',
+			frames: this.anims.generateFrameNumbers('zombie',{start:42,end:44}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkDownZombie = {
+			key:'walkDownZombie',
+			frames: this.anims.generateFrameNumbers('zombie',{start:6,end:8}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkLeftZombie = {
+			key:'walkLeftZombie',
+			frames: this.anims.generateFrameNumbers('zombie',{start:18,end:20}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkRightZombie = {
+			key:'walkRightZombie',
+			frames: this.anims.generateFrameNumbers('zombie',{start:30,end:32}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var dieZombie = {
+			key:'dieZombie',
+			frames: this.anims.generateFrameNumbers('zombie',{start:48,end:53}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+
+		var openGate = {
+			key:'openGate',
+			frames: this.anims.generateFrameNumbers('gate',{start:0,end:3}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+
+		var closeGate = {
+			key:'closeGate',
+			frames: this.anims.generateFrameNumbers('gate',{start:4,end:7}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+                
+                var cystalRotateRed = {
+			key:'redcrystal',
+			frames: this.anims.generateFrameNumbers('redcrystal',{start:0,end:7}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+                var cystalRotateBlue = {
+			key:'bluecrystal',
+			frames: this.anims.generateFrameNumbers('bluecrystal',{start:0,end:7}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+        var cystalRotateGreen = {
+			key:'greencrystal',
+			frames: this.anims.generateFrameNumbers('greencrystal',{start:0,end:7}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+        var cystalRotateYellow = {
+			key:'yellowcrystal',
+			frames: this.anims.generateFrameNumbers('yellowcrystal',{start:0,end:7}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+
+		var chestOpenRed = {
+			key:'chestOpenRed',
+			frames: this.anims.generateFrameNumbers('chestRed',{start:0,end:3}),
+			frameRate:maxFrameRate,
+			repeat:0
+		};
+		var chestOpenBlue = {
+			key:'chestOpenBlue',
+			frames: this.anims.generateFrameNumbers('chestBlue',{start:0,end:3}),
+			frameRate:maxFrameRate,
+			repeat:0
+		};
+		var chestOpenGreen = {
+			key:'chestOpenGreen',
+			frames: this.anims.generateFrameNumbers('chestGreen',{start:4,end:7}),
+			frameRate:maxFrameRate,
+			repeat:0
+		};
+		var chestOpenYellow = {
+			key:'chestOpenYellow',
+			frames: this.anims.generateFrameNumbers('chestYellow',{start:4,end:7}),
+			frameRate:maxFrameRate,
+			repeat:0
+		};
