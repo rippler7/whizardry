@@ -613,9 +613,9 @@ export class DungeonGameScene extends Phaser.Scene {
       const speedX = bullet.getData('speedX');
       const speedY = bullet.getData('speedY');
       
-      // Apply velocity using delta time (like original: delta * speed * -50)
-      bullet.body.setVelocityX(delta * speedX * -50);
-      bullet.body.setVelocityY(delta * speedY * -50);
+      // Apply velocity using delta time (corrected direction)
+      bullet.body.setVelocityX(delta * speedX * 50);
+      bullet.body.setVelocityY(delta * speedY * 50);
       
       // Remove bullet after lifetime expires (original used 1750ms)
       if (born > 1750) {
