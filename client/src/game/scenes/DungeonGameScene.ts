@@ -659,22 +659,31 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private fireBullet() {
     const bullet = this.physics.add.sprite(this.player.x, this.player.y, 'bullet');
-    bullet.setScale(0.8); // Slightly larger and easier to see
+    bullet.setScale(1.2); // Make it more visible as a magic orb
+    bullet.setTint(0x88ccff); // Blue tint for magic effect
     
-    // Aim towards mouse pointer
+    // Get mouse/pointer position in world coordinates
     const pointer = this.input.activePointer;
-    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY);
+    const worldX = pointer.worldX;
+    const worldY = pointer.worldY;
     
+    // Calculate angle from player to mouse cursor
+    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, worldX, worldY);
+    
+    // Set bullet rotation to face the direction it's traveling
     bullet.setRotation(angle);
-    this.physics.velocityFromRotation(angle, 250, bullet.body!.velocity); // Reduced from 400
+    
+    // Apply velocity in the direction of the mouse cursor
+    const speed = 300; // Faster magic projectile
+    this.physics.velocityFromRotation(angle, speed, bullet.body!.velocity);
     
     this.bullets.add(bullet);
     
-    // Play sound
+    // Play shooting sound
     this.sound.play('spit', { volume: 0.3 });
     
-    // Remove bullet after 3 seconds (longer lifetime)
-    this.time.delayedCall(3000, () => {
+    // Remove bullet after 4 seconds or when it goes off screen
+    this.time.delayedCall(4000, () => {
       if (bullet.active) {
         bullet.destroy();
       }
