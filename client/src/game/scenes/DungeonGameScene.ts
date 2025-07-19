@@ -122,13 +122,14 @@ export class DungeonGameScene extends Phaser.Scene {
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, 0x2d4a22);
 
-    // Create colored rectangles as fallback sprites
+    // Create colored rectangles as fallback sprites first
     this.createFallbackSprites();
 
-    // Create player
+    // Create player with proper sprite
     this.player = this.physics.add.sprite(100, height / 2, 'mageHero');
     this.player.setCollideWorldBounds(true);
     this.player.setScale(1.5);
+    this.player.setTint(0x4a90e2); // Blue tint to make it visible
 
     // Create physics groups
     this.enemies = this.physics.add.group();
@@ -167,23 +168,39 @@ export class DungeonGameScene extends Phaser.Scene {
   private createDungeonLayout() {
     const { width, height } = this.scale;
 
-    // Create walls around the dungeon
+    // Create walls around the dungeon with physics bodies
     const wallThickness = 32;
     const wallColor = 0x8b4513;
 
+    // Create walls group for collision
+    const walls = this.physics.add.staticGroup();
+
     // Top wall
-    this.add.rectangle(width / 2, wallThickness / 2, width, wallThickness, wallColor);
+    const topWall = this.add.rectangle(width / 2, wallThickness / 2, width, wallThickness, wallColor);
+    walls.add(topWall);
+
     // Bottom wall
-    this.add.rectangle(width / 2, height - wallThickness / 2, width, wallThickness, wallColor);
+    const bottomWall = this.add.rectangle(width / 2, height - wallThickness / 2, width, wallThickness, wallColor);
+    walls.add(bottomWall);
+
     // Left wall
-    this.add.rectangle(wallThickness / 2, height / 2, wallThickness, height, wallColor);
+    const leftWall = this.add.rectangle(wallThickness / 2, height / 2, wallThickness, height, wallColor);
+    walls.add(leftWall);
+
     // Right wall (with gap for door)
-    this.add.rectangle(width - wallThickness / 2, height / 4, wallThickness, height / 2, wallColor);
-    this.add.rectangle(width - wallThickness / 2, height * 3/4, wallThickness, height / 2, wallColor);
+    const rightWallTop = this.add.rectangle(width - wallThickness / 2, height / 4, wallThickness, height / 2, wallColor);
+    const rightWallBottom = this.add.rectangle(width - wallThickness / 2, height * 3/4, wallThickness, height / 2, wallColor);
+    walls.add(rightWallTop);
+    walls.add(rightWallBottom);
 
     // Add some obstacles in the middle
-    this.add.rectangle(width / 3, height / 3, 64, 64, wallColor);
-    this.add.rectangle(width * 2/3, height * 2/3, 64, 64, wallColor);
+    const obstacle1 = this.add.rectangle(width / 3, height / 3, 64, 64, wallColor);
+    const obstacle2 = this.add.rectangle(width * 2/3, height * 2/3, 64, 64, wallColor);
+    walls.add(obstacle1);
+    walls.add(obstacle2);
+
+    // Store walls for collision detection
+    this.registry.set('walls', walls);
   }
 
   private createEnemies() {
@@ -200,6 +217,15 @@ export class DungeonGameScene extends Phaser.Scene {
       enemy.setData('health', 50 + this.currentDungeon * 10);
       enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
       enemy.setData('type', enemyType);
+      
+      // Set enemy color based on type
+      if (enemyType === 'skeleton') {
+        enemy.setTint(0xcccccc); // Light gray
+      } else if (enemyType === 'zombie') {
+        enemy.setTint(0x228b22); // Forest green
+      } else if (enemyType === 'chiroptera') {
+        enemy.setTint(0x8b008b); // Dark magenta
+      }
       
       this.enemies.add(enemy);
     }
@@ -250,6 +276,18 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private setupCollisions() {
+    // Get walls from registry
+    const walls = this.registry.get('walls');
+    
+    // Player vs walls
+    if (walls) {
+      this.physics.add.collider(this.player, walls);
+      this.physics.add.collider(this.enemies, walls);
+      this.physics.add.collider(this.bullets, walls, (bullet: any) => {
+        bullet.destroy(); // Bullets destroyed when hitting walls
+      });
+    }
+    
     // Player vs enemies
     this.physics.add.overlap(this.player, this.enemies, this.hitPlayer, undefined, this);
     
@@ -263,6 +301,9 @@ export class DungeonGameScene extends Phaser.Scene {
     if (this.boss) {
       this.physics.add.overlap(this.player, this.boss, this.hitPlayer, undefined, this);
       this.physics.add.overlap(this.bullets, this.boss, this.hitBoss, undefined, this);
+      if (walls) {
+        this.physics.add.collider(this.boss, walls);
+      }
     }
   }
 
@@ -294,8 +335,14 @@ export class DungeonGameScene extends Phaser.Scene {
       fontFamily: 'Arial'
     }).setOrigin(0.5);
 
+    this.add.text(this.scale.width / 2, 40, 'WASD to move • SPACE to shoot • Click chests for questions', {
+      fontSize: '14px',
+      fill: '#ffff88',
+      fontFamily: 'Arial'
+    }).setOrigin(0.5);
+
     if (this.currentDungeon === this.maxDungeons) {
-      this.add.text(this.scale.width / 2, 40, 'Boss is invulnerable until all questions answered!', {
+      this.add.text(this.scale.width / 2, 60, 'Boss is invulnerable until all questions answered!', {
         fontSize: '14px',
         fill: '#ff4444',
         fontFamily: 'Arial'
@@ -607,58 +654,79 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create colored rectangle textures as fallbacks
     const graphics = this.add.graphics();
     
-    // Player (blue)
+    // Player (blue rectangle)
     graphics.fillStyle(0x4a90e2);
     graphics.fillRect(0, 0, 32, 32);
-    graphics.generateTexture('mageHero', 32, 32);
+    graphics.generateTexture('mageHero_fallback', 32, 32);
     
-    // Enemies (red)
+    // Enemies (different colored rectangles)
     graphics.clear();
     graphics.fillStyle(0xe74c3c);
     graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('skeleton', 24, 24);
-    graphics.generateTexture('zombie', 24, 24);
-    graphics.generateTexture('chiroptera', 24, 24);
-    
-    // Boss (dark red)
-    graphics.clear();
-    graphics.fillStyle(0x8b0000);
-    graphics.fillRect(0, 0, 48, 48);
-    graphics.generateTexture('threeheadedsnake', 48, 48);
-    
-    // Bullet (yellow)
-    graphics.clear();
-    graphics.fillStyle(0xffff00);
-    graphics.fillCircle(8, 8, 4);
-    graphics.generateTexture('bullet', 16, 16);
-    
-    // Chests (different colors)
-    graphics.clear();
-    graphics.fillStyle(0x3498db);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestBlue', 24, 24);
+    graphics.generateTexture('skeleton_fallback', 24, 24);
     
     graphics.clear();
     graphics.fillStyle(0x2ecc71);
     graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestGreen', 24, 24);
+    graphics.generateTexture('zombie_fallback', 24, 24);
+    
+    graphics.clear();
+    graphics.fillStyle(0x9b59b6);
+    graphics.fillRect(0, 0, 24, 24);
+    graphics.generateTexture('chiroptera_fallback', 24, 24);
+    
+    // Boss (large dark red rectangle)
+    graphics.clear();
+    graphics.fillStyle(0x8b0000);
+    graphics.fillRect(0, 0, 48, 48);
+    graphics.generateTexture('threeheadedsnake_fallback', 48, 48);
+    
+    // Bullet (yellow circle)
+    graphics.clear();
+    graphics.fillStyle(0xffff00);
+    graphics.fillCircle(8, 8, 4);
+    graphics.generateTexture('bullet_fallback', 16, 16);
+    
+    // Chests (different colored squares)
+    graphics.clear();
+    graphics.fillStyle(0x3498db);
+    graphics.fillRect(0, 0, 24, 24);
+    graphics.generateTexture('chestBlue_fallback', 24, 24);
+    
+    graphics.clear();
+    graphics.fillStyle(0x2ecc71);
+    graphics.fillRect(0, 0, 24, 24);
+    graphics.generateTexture('chestGreen_fallback', 24, 24);
     
     graphics.clear();
     graphics.fillStyle(0xe74c3c);
     graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestRed', 24, 24);
+    graphics.generateTexture('chestRed_fallback', 24, 24);
     
     graphics.clear();
     graphics.fillStyle(0xf1c40f);
     graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestYellow', 24, 24);
+    graphics.generateTexture('chestYellow_fallback', 24, 24);
     
-    // Door (brown)
+    // Door (brown rectangle)
     graphics.clear();
     graphics.fillStyle(0x8b4513);
     graphics.fillRect(0, 0, 32, 48);
-    graphics.generateTexture('door', 32, 48);
+    graphics.generateTexture('door_fallback', 32, 48);
     
     graphics.destroy();
+    
+    // Override the original texture keys with fallback versions
+    this.textures.addBase64('mageHero', this.textures.get('mageHero_fallback').getSourceImage().src);
+    this.textures.addBase64('skeleton', this.textures.get('skeleton_fallback').getSourceImage().src);
+    this.textures.addBase64('zombie', this.textures.get('zombie_fallback').getSourceImage().src);
+    this.textures.addBase64('chiroptera', this.textures.get('chiroptera_fallback').getSourceImage().src);
+    this.textures.addBase64('threeheadedsnake', this.textures.get('threeheadedsnake_fallback').getSourceImage().src);
+    this.textures.addBase64('bullet', this.textures.get('bullet_fallback').getSourceImage().src);
+    this.textures.addBase64('chestBlue', this.textures.get('chestBlue_fallback').getSourceImage().src);
+    this.textures.addBase64('chestGreen', this.textures.get('chestGreen_fallback').getSourceImage().src);
+    this.textures.addBase64('chestRed', this.textures.get('chestRed_fallback').getSourceImage().src);
+    this.textures.addBase64('chestYellow', this.textures.get('chestYellow_fallback').getSourceImage().src);
+    this.textures.addBase64('door', this.textures.get('door_fallback').getSourceImage().src);
   }
 }
