@@ -593,14 +593,37 @@ export class DungeonGameScene extends Phaser.Scene {
     this.healthBar.strokeRect(20, 95, 200, 20);
   }
 
-  update() {
+  update(time: number, delta: number) {
     this.handlePlayerMovement();
     this.handleShooting();
+    this.updateBullets(delta);
     this.updateEnemies();
     
     if (this.boss) {
       this.updateBoss();
     }
+  }
+
+  private updateBullets(delta: number) {
+    this.bullets.children.entries.forEach((bullet: any) => {
+      // Update bullet position using delta time like original code
+      const born = bullet.getData('born') + delta;
+      bullet.setData('born', born);
+      
+      const speedX = bullet.getData('speedX');
+      const speedY = bullet.getData('speedY');
+      
+      // Apply velocity using delta time (like original: delta * speed * -50)
+      bullet.body.setVelocityX(delta * speedX * -50);
+      bullet.body.setVelocityY(delta * speedY * -50);
+      
+      // Remove bullet after lifetime expires (original used 1750ms)
+      if (born > 1750) {
+        bullet.setActive(false);
+        bullet.setVisible(false);
+        bullet.destroy();
+      }
+    });
   }
 
   private handlePlayerMovement() {
@@ -662,47 +685,36 @@ export class DungeonGameScene extends Phaser.Scene {
     bullet.setScale(1.2); // Make it more visible as a magic orb
     bullet.setTint(0x88ccff); // Blue tint for magic effect
     
-    // Get mouse/pointer position in world coordinates
+    // Get mouse click position (using downX/downY like original)
     const pointer = this.input.activePointer;
-    const worldX = pointer.worldX;
-    const worldY = pointer.worldY;
+    const mouseX = pointer.worldX;
+    const mouseY = pointer.worldY;
     
-    // Calculate direction vector from player to mouse cursor
-    const deltaX = worldX - this.player.x;
-    const deltaY = worldY - this.player.y;
+    // Calculate direction from player to mouse click (like original code)
+    const deltaX = mouseX - this.player.x;
+    const deltaY = mouseY - this.player.y;
     
-    // Normalize the direction vector
+    // Normalize direction and set speed properties like original
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const baseSpeed = 0.3; // Same as original
+    
     if (distance > 0) {
-      const normalizedX = deltaX / distance;
-      const normalizedY = deltaY / distance;
-      
-      // Apply velocity directly using setVelocity
-      const speed = 300;
-      bullet.setVelocity(normalizedX * speed, normalizedY * speed);
-      
-      // Set bullet rotation to face the direction it's traveling
-      const angle = Math.atan2(deltaY, deltaX);
-      bullet.setRotation(angle);
+      bullet.setData('speedX', (deltaX / distance) * baseSpeed);
+      bullet.setData('speedY', (deltaY / distance) * baseSpeed);
     } else {
-      // If mouse is exactly on player, shoot right
-      bullet.setVelocity(300, 0);
-      bullet.setRotation(0);
+      // Default direction if mouse is on player
+      bullet.setData('speedX', baseSpeed);
+      bullet.setData('speedY', 0);
     }
+    
+    bullet.setData('born', 0); // Track lifetime like original
     
     this.bullets.add(bullet);
     
     // Play shooting sound
     this.sound.play('spit', { volume: 0.3 });
     
-    // Remove bullet after 4 seconds
-    this.time.delayedCall(4000, () => {
-      if (bullet.active) {
-        bullet.destroy();
-      }
-    });
-    
-    console.log('Bullet fired:', bullet.x, bullet.y, 'toward:', worldX, worldY);
+    console.log('Bullet fired toward:', mouseX, mouseY, 'with speed:', bullet.getData('speedX'), bullet.getData('speedY'));
   }
 
   private updateEnemies() {
