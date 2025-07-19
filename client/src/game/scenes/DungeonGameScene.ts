@@ -87,33 +87,24 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   preload() {
-    // Load character spritesheet for animated player
-    this.load.spritesheet('player', '/assets/sprites/char.png', {
-      frameWidth: 32,
-      frameHeight: 32
-    });
+    // Load sprites using your original specifications
+    this.load.spritesheet('player', '/assets/sprites/mageHero.png', { frameWidth: 32, frameHeight: 48, endFrame: 15 });
+    this.load.spritesheet('skeleton', '/assets/sprites/skeleton.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
+    this.load.spritesheet('zombie', '/assets/sprites/zombies.png', { frameWidth: 32, frameHeight: 32, endFrame: 95 });
+    this.load.spritesheet('bat', '/assets/sprites/chiroptera.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
+    this.load.spritesheet('Boss', '/assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
+    this.load.spritesheet('gate', '/assets/sprites/rpg_gate1.png', { frameWidth: 32, frameHeight: 32, endFrame: 15 });
+    this.load.spritesheet('redcrystal', '/assets/sprites/crystal-qubodup-ccby3-32-red.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
+    this.load.spritesheet('bluecrystal', '/assets/sprites/crystal-qubodup-ccby3-32-blue.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
+    this.load.spritesheet('greencrystal', '/assets/sprites/crystal-qubodup-ccby3-32-green.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
+    this.load.spritesheet('yellowcrystal', '/assets/sprites/crystal-qubodup-ccby3-32-yellow.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
+    this.load.spritesheet('chestRed', '/assets/sprites/chestRed_faceRight.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
+    this.load.spritesheet('chestBlue', '/assets/sprites/chestBlue_faceRight.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
+    this.load.spritesheet('chestGreen', '/assets/sprites/chestGreen_faceLeft.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
+    this.load.spritesheet('chestYellow', '/assets/sprites/chestYellow_faceLeft.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
     
-    // Load atlas spritesheet for enemies and other sprites
-    this.load.spritesheet('atlas', '/assets/sprites/atlas1.png', {
-      frameWidth: 32,
-      frameHeight: 32
-    });
-    
-    // Load individual sprites as backup
-    this.load.image('mageHero', '/assets/sprites/mageHero.png');
-    this.load.image('skeleton', '/assets/sprites/skeleton.png');
-    this.load.image('zombie', '/assets/sprites/zombie.png');
-    this.load.image('chiroptera', '/assets/sprites/chiroptera.png');
-    this.load.image('threeheadedsnake', '/assets/sprites/threeheadedsnake.png');
+    // Load other sprites
     this.load.image('bullet', '/assets/sprites/bullet.png');
-    
-    // Load chest sprites
-    this.load.image('chestBlue', '/assets/sprites/chestBlue_faceRight.png');
-    this.load.image('chestGreen', '/assets/sprites/chestGreen_faceLeft.png');
-    this.load.image('chestRed', '/assets/sprites/chestRed_faceRight.png');
-    this.load.image('chestYellow', '/assets/sprites/chestYellow_faceLeft.png');
-    
-    // Load door sprite
     this.load.image('door', '/assets/sprites/gameDoor1.png');
     
     // Load audio files
@@ -184,63 +175,66 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createPlayerAnimations() {
-    // Create walking animations for all directions
-    // Down (facing camera) - frames 0-2
-    this.anims.create({
-      key: 'walk-down',
-      frames: this.anims.generateFrameNumbers('player', { start: 0, end: 2 }),
-      frameRate: 8,
-      repeat: -1
-    });
-    
-    // Left - frames 9-11
-    this.anims.create({
-      key: 'walk-left',
-      frames: this.anims.generateFrameNumbers('player', { start: 9, end: 11 }),
-      frameRate: 8,
-      repeat: -1
-    });
-    
-    // Right - frames 18-20
-    this.anims.create({
-      key: 'walk-right',
-      frames: this.anims.generateFrameNumbers('player', { start: 18, end: 20 }),
-      frameRate: 8,
-      repeat: -1
-    });
-    
-    // Up (facing away) - frames 27-29
-    this.anims.create({
-      key: 'walk-up',
-      frames: this.anims.generateFrameNumbers('player', { start: 27, end: 29 }),
-      frameRate: 8,
-      repeat: -1
-    });
-    
-    // Idle animations
-    this.anims.create({
-      key: 'idle-down',
-      frames: [{ key: 'player', frame: 1 }],
-      frameRate: 1
-    });
-    
-    this.anims.create({
-      key: 'idle-left',
-      frames: [{ key: 'player', frame: 10 }],
-      frameRate: 1
-    });
-    
-    this.anims.create({
-      key: 'idle-right',
-      frames: [{ key: 'player', frame: 19 }],
-      frameRate: 1
-    });
-    
-    this.anims.create({
-      key: 'idle-up',
-      frames: [{ key: 'player', frame: 28 }],
-      frameRate: 1
-    });
+    // Create walking animations for mage hero (16 frames total, 4 directions x 4 frames each)
+    // Check if animations already exist to avoid duplicates
+    if (!this.anims.exists('walk-down')) {
+      // Down (facing camera) - frames 0-3
+      this.anims.create({
+        key: 'walk-down',
+        frames: this.anims.generateFrameNumbers('player', { start: 0, end: 3 }),
+        frameRate: 8,
+        repeat: -1
+      });
+      
+      // Left - frames 4-7
+      this.anims.create({
+        key: 'walk-left',
+        frames: this.anims.generateFrameNumbers('player', { start: 4, end: 7 }),
+        frameRate: 8,
+        repeat: -1
+      });
+      
+      // Right - frames 8-11
+      this.anims.create({
+        key: 'walk-right',
+        frames: this.anims.generateFrameNumbers('player', { start: 8, end: 11 }),
+        frameRate: 8,
+        repeat: -1
+      });
+      
+      // Up (facing away) - frames 12-15
+      this.anims.create({
+        key: 'walk-up',
+        frames: this.anims.generateFrameNumbers('player', { start: 12, end: 15 }),
+        frameRate: 8,
+        repeat: -1
+      });
+      
+      // Idle animations
+      this.anims.create({
+        key: 'idle-down',
+        frames: [{ key: 'player', frame: 0 }],
+        frameRate: 1
+      });
+      
+      this.anims.create({
+        key: 'idle-left',
+        frames: [{ key: 'player', frame: 4 }],
+        frameRate: 1
+      });
+      
+      this.anims.create({
+        key: 'idle-right',
+        frames: [{ key: 'player', frame: 8 }],
+        frameRate: 1
+      });
+      
+      this.anims.create({
+        key: 'idle-up',
+        frames: [{ key: 'player', frame: 12 }],
+        frameRate: 1
+      });
+    }
   }
 
   private createDungeonLayout() {
@@ -290,27 +284,37 @@ export class DungeonGameScene extends Phaser.Scene {
       const y = Phaser.Math.Between(100, this.scale.height - 100);
       const enemyType = enemyTypes[i % enemyTypes.length];
       
-      // Use atlas sprites for enemies with animation
-      const atlasFrameMap: { [key: string]: number } = {
-        'skeleton': 12, // First frame for skeleton in atlas
-        'zombie': 24,   // First frame for zombie in atlas  
-        'chiroptera': 36 // First frame for bat in atlas
+      // Use proper enemy sprites with correct mapping
+      const spriteMap: { [key: string]: string } = {
+        'skeleton': 'skeleton',
+        'zombie': 'zombie',
+        'chiroptera': 'bat'
       };
       
-      const enemy = this.physics.add.sprite(x, y, 'atlas', atlasFrameMap[enemyType] || 0);
-      enemy.setScale(1.2); // Scale to make visible
+      const spriteKey = spriteMap[enemyType] || 'skeleton';
+      const enemy = this.physics.add.sprite(x, y, spriteKey, 0);
+      enemy.setScale(1.0); // Normal scale since sprites are properly sized
       enemy.setData('health', 50 + this.currentDungeon * 10);
       enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
       enemy.setData('type', enemyType);
       
-      // Create simple animation for enemies
-      const animKey = `${enemyType}-move`;
+      // Create walking animation for enemies
+      const animKey = `${enemyType}-walk`;
       if (!this.anims.exists(animKey)) {
-        const startFrame = atlasFrameMap[enemyType] || 0;
+        let frameRange = { start: 0, end: 3 }; // Default
+        
+        if (enemyType === 'skeleton') {
+          frameRange = { start: 0, end: 8 }; // Skeleton walking frames
+        } else if (enemyType === 'zombie') {
+          frameRange = { start: 0, end: 7 }; // Zombie walking frames
+        } else if (enemyType === 'chiroptera') {
+          frameRange = { start: 0, end: 5 }; // Bat flying frames
+        }
+        
         this.anims.create({
           key: animKey,
-          frames: this.anims.generateFrameNumbers('atlas', { start: startFrame, end: startFrame + 2 }),
-          frameRate: 4,
+          frames: this.anims.generateFrameNumbers(spriteKey, frameRange),
+          frameRate: 6,
           repeat: -1
         });
       }
@@ -330,11 +334,23 @@ export class DungeonGameScene extends Phaser.Scene {
     ];
 
     positions.forEach((pos, index) => {
-      const chest = this.physics.add.sprite(pos.x, pos.y, chestTypes[index]);
-      chest.setScale(1.5); // Scale to make visible
+      const chest = this.physics.add.sprite(pos.x, pos.y, chestTypes[index], 0);
+      chest.setScale(1.0); // Normal scale since chests are properly sized now
       chest.setData('questionIndex', index);
       chest.setData('opened', false);
       chest.setInteractive();
+      
+      // Create chest idle animation
+      const animKey = `${chestTypes[index]}-idle`;
+      if (!this.anims.exists(animKey)) {
+        this.anims.create({
+          key: animKey,
+          frames: this.anims.generateFrameNumbers(chestTypes[index], { start: 0, end: 3 }),
+          frameRate: 3,
+          repeat: -1
+        });
+      }
+      chest.anims.play(animKey);
       
       chest.on('pointerdown', () => this.openChest(chest));
       
@@ -350,11 +366,22 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createBoss() {
     if (this.currentDungeon === this.maxDungeons) {
-      this.boss = this.physics.add.sprite(this.scale.width / 2, this.scale.height / 2, 'threeheadedsnake');
-      this.boss.setScale(2.0); // Proper scale for boss
+      this.boss = this.physics.add.sprite(this.scale.width / 2, this.scale.height / 2, 'Boss', 0);
+      this.boss.setScale(1.5); // Proper scale for boss
       this.boss.setData('health', 400);
       this.boss.setData('maxHealth', 400);
       this.boss.setTint(0x8888ff); // Blue tint when invulnerable
+      
+      // Create boss animation
+      if (!this.anims.exists('boss-idle')) {
+        this.anims.create({
+          key: 'boss-idle',
+          frames: this.anims.generateFrameNumbers('Boss', { start: 0, end: 7 }),
+          frameRate: 4,
+          repeat: -1
+        });
+      }
+      this.boss.anims.play('boss-idle');
     }
   }
 
