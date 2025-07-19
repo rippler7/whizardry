@@ -87,24 +87,43 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   preload() {
-    // Create simple colored rectangles for sprites that may be missing
-    this.load.image('mageHero', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('skeleton', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('zombie', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('chiroptera', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('threeheadedsnake', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('bullet', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
+    // Load character spritesheet for animated player
+    this.load.spritesheet('player', '/assets/sprites/char.png', {
+      frameWidth: 32,
+      frameHeight: 32
+    });
     
-    // Chests
-    this.load.image('chestBlue', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('chestGreen', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('chestRed', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
-    this.load.image('chestYellow', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
+    // Load atlas spritesheet for enemies and other sprites
+    this.load.spritesheet('atlas', '/assets/sprites/atlas1.png', {
+      frameWidth: 32,
+      frameHeight: 32
+    });
     
-    // Door
-    this.load.image('door', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==');
+    // Load individual sprites as backup
+    this.load.image('mageHero', '/assets/sprites/mageHero.png');
+    this.load.image('skeleton', '/assets/sprites/skeleton.png');
+    this.load.image('zombie', '/assets/sprites/zombie.png');
+    this.load.image('chiroptera', '/assets/sprites/chiroptera.png');
+    this.load.image('threeheadedsnake', '/assets/sprites/threeheadedsnake.png');
+    this.load.image('bullet', '/assets/sprites/bullet.png');
     
-    // Try to load actual assets if they exist, fallback to colored rectangles
+    // Load chest sprites
+    this.load.image('chestBlue', '/assets/sprites/chestBlue_faceRight.png');
+    this.load.image('chestGreen', '/assets/sprites/chestGreen_faceLeft.png');
+    this.load.image('chestRed', '/assets/sprites/chestRed_faceRight.png');
+    this.load.image('chestYellow', '/assets/sprites/chestYellow_faceLeft.png');
+    
+    // Load door sprite
+    this.load.image('door', '/assets/sprites/gameDoor1.png');
+    
+    // Load audio files
+    this.load.audio('enchanted_forest', ['/assets/audio/enchanted_forest.mp3', '/assets/audio/enchanted_forest_loop.ogg']);
+    this.load.audio('boss_battle', ['/assets/audio/BoxCat_Games_-_05_-_Battle_Boss.mp3', '/assets/audio/BoxCat_Games_-_05_-_Battle_Boss.ogg']);
+    this.load.audio('spit', ['/assets/audio/spit.mp3', '/assets/audio/spit.ogg']);
+    this.load.audio('star', ['/assets/audio/star.mp3', '/assets/audio/star.ogg']);
+    this.load.audio('hurt', ['/assets/audio/hurt.mp3', '/assets/audio/hurt.ogg']);
+    this.load.audio('enemy-death', ['/assets/audio/enemy-death.mp3', '/assets/audio/enemy-death.ogg']);
+    
     this.load.on('filecomplete', (key: string) => {
       console.log('Asset loaded:', key);
     });
@@ -122,14 +141,13 @@ export class DungeonGameScene extends Phaser.Scene {
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, 0x2d4a22);
 
-    // Create colored rectangles as fallback sprites first
-    this.createFallbackSprites();
-
-    // Create player with proper sprite
-    this.player = this.physics.add.sprite(100, height / 2, 'mageHero');
+    // Create player with animated spritesheet
+    this.player = this.physics.add.sprite(100, height / 2, 'player', 0);
     this.player.setCollideWorldBounds(true);
-    this.player.setScale(1.0); // Don't scale since sprites are already bigger
-    this.player.setTint(0x4a90e2); // Blue tint to make it visible
+    this.player.setScale(1.5); // Scale to make visible
+    
+    // Create player animations
+    this.createPlayerAnimations();
 
     // Create physics groups
     this.enemies = this.physics.add.group();
@@ -157,12 +175,72 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create UI
     this.createUI();
 
-    // Background music disabled for now to prevent crashes
-    // if (this.currentDungeon === this.maxDungeons) {
-    //   this.sound.play('boss_battle', { volume: 0.3, loop: true });
-    // } else {
-    //   this.sound.play('enchanted_forest', { volume: 0.2, loop: true });
-    // }
+    // Start background music
+    if (this.currentDungeon === this.maxDungeons) {
+      this.sound.play('boss_battle', { volume: 0.3, loop: true });
+    } else {
+      this.sound.play('enchanted_forest', { volume: 0.2, loop: true });
+    }
+  }
+
+  private createPlayerAnimations() {
+    // Create walking animations for all directions
+    // Down (facing camera) - frames 0-2
+    this.anims.create({
+      key: 'walk-down',
+      frames: this.anims.generateFrameNumbers('player', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: -1
+    });
+    
+    // Left - frames 9-11
+    this.anims.create({
+      key: 'walk-left',
+      frames: this.anims.generateFrameNumbers('player', { start: 9, end: 11 }),
+      frameRate: 8,
+      repeat: -1
+    });
+    
+    // Right - frames 18-20
+    this.anims.create({
+      key: 'walk-right',
+      frames: this.anims.generateFrameNumbers('player', { start: 18, end: 20 }),
+      frameRate: 8,
+      repeat: -1
+    });
+    
+    // Up (facing away) - frames 27-29
+    this.anims.create({
+      key: 'walk-up',
+      frames: this.anims.generateFrameNumbers('player', { start: 27, end: 29 }),
+      frameRate: 8,
+      repeat: -1
+    });
+    
+    // Idle animations
+    this.anims.create({
+      key: 'idle-down',
+      frames: [{ key: 'player', frame: 1 }],
+      frameRate: 1
+    });
+    
+    this.anims.create({
+      key: 'idle-left',
+      frames: [{ key: 'player', frame: 10 }],
+      frameRate: 1
+    });
+    
+    this.anims.create({
+      key: 'idle-right',
+      frames: [{ key: 'player', frame: 19 }],
+      frameRate: 1
+    });
+    
+    this.anims.create({
+      key: 'idle-up',
+      frames: [{ key: 'player', frame: 28 }],
+      frameRate: 1
+    });
   }
 
   private createDungeonLayout() {
@@ -212,20 +290,31 @@ export class DungeonGameScene extends Phaser.Scene {
       const y = Phaser.Math.Between(100, this.scale.height - 100);
       const enemyType = enemyTypes[i % enemyTypes.length];
       
-      const enemy = this.physics.add.sprite(x, y, enemyType);
-      enemy.setScale(1.0); // Don't scale since sprites are already bigger
+      // Use atlas sprites for enemies with animation
+      const atlasFrameMap: { [key: string]: number } = {
+        'skeleton': 12, // First frame for skeleton in atlas
+        'zombie': 24,   // First frame for zombie in atlas  
+        'chiroptera': 36 // First frame for bat in atlas
+      };
+      
+      const enemy = this.physics.add.sprite(x, y, 'atlas', atlasFrameMap[enemyType] || 0);
+      enemy.setScale(1.2); // Scale to make visible
       enemy.setData('health', 50 + this.currentDungeon * 10);
       enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
       enemy.setData('type', enemyType);
       
-      // Set enemy color based on type
-      if (enemyType === 'skeleton') {
-        enemy.setTint(0xcccccc); // Light gray
-      } else if (enemyType === 'zombie') {
-        enemy.setTint(0x228b22); // Forest green
-      } else if (enemyType === 'chiroptera') {
-        enemy.setTint(0x8b008b); // Dark magenta
+      // Create simple animation for enemies
+      const animKey = `${enemyType}-move`;
+      if (!this.anims.exists(animKey)) {
+        const startFrame = atlasFrameMap[enemyType] || 0;
+        this.anims.create({
+          key: animKey,
+          frames: this.anims.generateFrameNumbers('atlas', { start: startFrame, end: startFrame + 2 }),
+          frameRate: 4,
+          repeat: -1
+        });
       }
+      enemy.anims.play(animKey);
       
       this.enemies.add(enemy);
     }
@@ -242,7 +331,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
     positions.forEach((pos, index) => {
       const chest = this.physics.add.sprite(pos.x, pos.y, chestTypes[index]);
-      chest.setScale(1.0); // Don't scale since sprites are already bigger
+      chest.setScale(1.5); // Scale to make visible
       chest.setData('questionIndex', index);
       chest.setData('opened', false);
       chest.setInteractive();
@@ -255,14 +344,14 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createExitDoor() {
     this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'door');
-    this.door.setScale(1.0); // Don't scale since sprites are already bigger
+    this.door.setScale(1.5); // Scale to make visible
     this.door.setTint(0x888888); // Initially locked (gray)
   }
 
   private createBoss() {
     if (this.currentDungeon === this.maxDungeons) {
       this.boss = this.physics.add.sprite(this.scale.width / 2, this.scale.height / 2, 'threeheadedsnake');
-      this.boss.setScale(2.5);
+      this.boss.setScale(2.0); // Proper scale for boss
       this.boss.setData('health', 400);
       this.boss.setData('maxHealth', 400);
       this.boss.setTint(0x8888ff); // Blue tint when invulnerable
@@ -380,21 +469,49 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private handlePlayerMovement() {
     const speed = 120; // Reduced from 160
+    let isMoving = false;
     
     if (this.cursors.left.isDown || this.wasd.A.isDown) {
       this.player.setVelocityX(-speed);
+      this.player.anims.play('walk-left', true);
+      isMoving = true;
     } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
       this.player.setVelocityX(speed);
+      this.player.anims.play('walk-right', true);
+      isMoving = true;
     } else {
       this.player.setVelocityX(0);
     }
     
     if (this.cursors.up.isDown || this.wasd.W.isDown) {
       this.player.setVelocityY(-speed);
+      if (!isMoving) this.player.anims.play('walk-up', true);
+      isMoving = true;
     } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
       this.player.setVelocityY(speed);
+      if (!isMoving) this.player.anims.play('walk-down', true);
+      isMoving = true;
     } else {
       this.player.setVelocityY(0);
+    }
+    
+    // Play idle animation when not moving
+    if (!isMoving) {
+      // Get current animation to determine which idle to play
+      const currentAnim = this.player.anims.currentAnim;
+      if (currentAnim) {
+        if (currentAnim.key.includes('left')) {
+          this.player.anims.play('idle-left');
+        } else if (currentAnim.key.includes('right')) {
+          this.player.anims.play('idle-right');
+        } else if (currentAnim.key.includes('up')) {
+          this.player.anims.play('idle-up');
+        } else {
+          this.player.anims.play('idle-down');
+        }
+      } else {
+        this.player.anims.play('idle-down');
+      }
     }
   }
 
@@ -417,8 +534,8 @@ export class DungeonGameScene extends Phaser.Scene {
     
     this.bullets.add(bullet);
     
-    // Play sound (commented out to avoid missing audio files causing crashes)
-    // this.sound.play('spit', { volume: 0.3 });
+    // Play sound
+    this.sound.play('spit', { volume: 0.3 });
     
     // Remove bullet after 3 seconds (longer lifetime)
     this.time.delayedCall(3000, () => {
@@ -480,7 +597,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.playerScore += 100;
         this.bossVulnerability += 25; // 25% vulnerability per correct answer
         
-        // this.sound.play('star', { volume: 0.5 }); // Disabled to prevent crashes
+        this.sound.play('star', { volume: 0.5 });
         
         // Check if door should unlock
         if (this.correctAnswers >= 4) {
@@ -557,7 +674,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private hitPlayer(player: any, enemy: any) {
     this.playerHealth -= 20;
-    // this.sound.play('hurt', { volume: 0.4 }); // Disabled to prevent crashes
+    this.sound.play('hurt', { volume: 0.4 });
     
     // Push player back (less force)
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
@@ -577,7 +694,7 @@ export class DungeonGameScene extends Phaser.Scene {
     enemy.setData('health', health);
     
     if (health <= 0) {
-      // this.sound.play('enemy-death', { volume: 0.3 }); // Disabled to prevent crashes
+      this.sound.play('enemy-death', { volume: 0.3 });
       enemy.destroy();
       this.playerScore += 50;
       this.updateUI();
@@ -650,96 +767,5 @@ export class DungeonGameScene extends Phaser.Scene {
     this.questionsText.setText(`Questions: ${this.correctAnswers}/4`);
   }
 
-  private createFallbackSprites() {
-    // Create colored rectangle textures as fallbacks - make them MUCH bigger
-    const graphics = this.add.graphics();
-    
-    // Player (large blue rectangle)
-    graphics.fillStyle(0x4a90e2);
-    graphics.fillRect(0, 0, 64, 64); // Much bigger
-    graphics.generateTexture('mageHero_fallback', 64, 64);
-    
-    // Enemies (different colored rectangles - bigger)
-    graphics.clear();
-    graphics.fillStyle(0xe74c3c);
-    graphics.fillRect(0, 0, 48, 48); // Bigger enemies
-    graphics.generateTexture('skeleton_fallback', 48, 48);
-    
-    graphics.clear();
-    graphics.fillStyle(0x2ecc71);
-    graphics.fillRect(0, 0, 48, 48);
-    graphics.generateTexture('zombie_fallback', 48, 48);
-    
-    graphics.clear();
-    graphics.fillStyle(0x9b59b6);
-    graphics.fillRect(0, 0, 48, 48);
-    graphics.generateTexture('chiroptera_fallback', 48, 48);
-    
-    // Boss (very large dark red rectangle)
-    graphics.clear();
-    graphics.fillStyle(0x8b0000);
-    graphics.fillRect(0, 0, 96, 96); // Even bigger boss
-    graphics.generateTexture('threeheadedsnake_fallback', 96, 96);
-    
-    // Bullet (larger yellow circle)
-    graphics.clear();
-    graphics.fillStyle(0xffff00);
-    graphics.fillCircle(16, 16, 12); // Bigger bullet
-    graphics.generateTexture('bullet_fallback', 32, 32);
-    
-    // Chests (bigger colored squares)
-    graphics.clear();
-    graphics.fillStyle(0x3498db);
-    graphics.fillRect(0, 0, 48, 48); // Bigger chests
-    graphics.generateTexture('chestBlue_fallback', 48, 48);
-    
-    graphics.clear();
-    graphics.fillStyle(0x2ecc71);
-    graphics.fillRect(0, 0, 48, 48);
-    graphics.generateTexture('chestGreen_fallback', 48, 48);
-    
-    graphics.clear();
-    graphics.fillStyle(0xe74c3c);
-    graphics.fillRect(0, 0, 48, 48);
-    graphics.generateTexture('chestRed_fallback', 48, 48);
-    
-    graphics.clear();
-    graphics.fillStyle(0xf1c40f);
-    graphics.fillRect(0, 0, 48, 48);
-    graphics.generateTexture('chestYellow_fallback', 48, 48);
-    
-    // Door (larger brown rectangle)
-    graphics.clear();
-    graphics.fillStyle(0x8b4513);
-    graphics.fillRect(0, 0, 64, 96); // Bigger door
-    graphics.generateTexture('door_fallback', 64, 96);
-    
-    graphics.destroy();
-    
-    // Remove existing textures and add new ones
-    if (this.textures.exists('mageHero')) this.textures.remove('mageHero');
-    if (this.textures.exists('skeleton')) this.textures.remove('skeleton');
-    if (this.textures.exists('zombie')) this.textures.remove('zombie');
-    if (this.textures.exists('chiroptera')) this.textures.remove('chiroptera');
-    if (this.textures.exists('threeheadedsnake')) this.textures.remove('threeheadedsnake');
-    if (this.textures.exists('bullet')) this.textures.remove('bullet');
-    if (this.textures.exists('chestBlue')) this.textures.remove('chestBlue');
-    if (this.textures.exists('chestGreen')) this.textures.remove('chestGreen');
-    if (this.textures.exists('chestRed')) this.textures.remove('chestRed');
-    if (this.textures.exists('chestYellow')) this.textures.remove('chestYellow');
-    if (this.textures.exists('door')) this.textures.remove('door');
-    
-    // Copy fallback textures to main keys
-    this.textures.addCanvas('mageHero', this.textures.get('mageHero_fallback').getSourceImage());
-    this.textures.addCanvas('skeleton', this.textures.get('skeleton_fallback').getSourceImage());
-    this.textures.addCanvas('zombie', this.textures.get('zombie_fallback').getSourceImage());
-    this.textures.addCanvas('chiroptera', this.textures.get('chiroptera_fallback').getSourceImage());
-    this.textures.addCanvas('threeheadedsnake', this.textures.get('threeheadedsnake_fallback').getSourceImage());
-    this.textures.addCanvas('bullet', this.textures.get('bullet_fallback').getSourceImage());
-    this.textures.addCanvas('chestBlue', this.textures.get('chestBlue_fallback').getSourceImage());
-    this.textures.addCanvas('chestGreen', this.textures.get('chestGreen_fallback').getSourceImage());
-    this.textures.addCanvas('chestRed', this.textures.get('chestRed_fallback').getSourceImage());
-    this.textures.addCanvas('chestYellow', this.textures.get('chestYellow_fallback').getSourceImage());
-    this.textures.addCanvas('door', this.textures.get('door_fallback').getSourceImage());
-  }
+
 }
