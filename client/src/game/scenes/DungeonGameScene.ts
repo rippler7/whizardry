@@ -128,7 +128,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create player with proper sprite
     this.player = this.physics.add.sprite(100, height / 2, 'mageHero');
     this.player.setCollideWorldBounds(true);
-    this.player.setScale(1.5);
+    this.player.setScale(1.0); // Don't scale since sprites are already bigger
     this.player.setTint(0x4a90e2); // Blue tint to make it visible
 
     // Create physics groups
@@ -213,7 +213,7 @@ export class DungeonGameScene extends Phaser.Scene {
       const enemyType = enemyTypes[i % enemyTypes.length];
       
       const enemy = this.physics.add.sprite(x, y, enemyType);
-      enemy.setScale(1.2);
+      enemy.setScale(1.0); // Don't scale since sprites are already bigger
       enemy.setData('health', 50 + this.currentDungeon * 10);
       enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
       enemy.setData('type', enemyType);
@@ -242,7 +242,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
     positions.forEach((pos, index) => {
       const chest = this.physics.add.sprite(pos.x, pos.y, chestTypes[index]);
-      chest.setScale(1.5);
+      chest.setScale(1.0); // Don't scale since sprites are already bigger
       chest.setData('questionIndex', index);
       chest.setData('opened', false);
       chest.setInteractive();
@@ -255,7 +255,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createExitDoor() {
     this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'door');
-    this.door.setScale(2);
+    this.door.setScale(1.0); // Don't scale since sprites are already bigger
     this.door.setTint(0x888888); // Initially locked (gray)
   }
 
@@ -651,82 +651,95 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createFallbackSprites() {
-    // Create colored rectangle textures as fallbacks
+    // Create colored rectangle textures as fallbacks - make them MUCH bigger
     const graphics = this.add.graphics();
     
-    // Player (blue rectangle)
+    // Player (large blue rectangle)
     graphics.fillStyle(0x4a90e2);
-    graphics.fillRect(0, 0, 32, 32);
-    graphics.generateTexture('mageHero_fallback', 32, 32);
+    graphics.fillRect(0, 0, 64, 64); // Much bigger
+    graphics.generateTexture('mageHero_fallback', 64, 64);
     
-    // Enemies (different colored rectangles)
+    // Enemies (different colored rectangles - bigger)
     graphics.clear();
     graphics.fillStyle(0xe74c3c);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('skeleton_fallback', 24, 24);
+    graphics.fillRect(0, 0, 48, 48); // Bigger enemies
+    graphics.generateTexture('skeleton_fallback', 48, 48);
     
     graphics.clear();
     graphics.fillStyle(0x2ecc71);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('zombie_fallback', 24, 24);
+    graphics.fillRect(0, 0, 48, 48);
+    graphics.generateTexture('zombie_fallback', 48, 48);
     
     graphics.clear();
     graphics.fillStyle(0x9b59b6);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chiroptera_fallback', 24, 24);
+    graphics.fillRect(0, 0, 48, 48);
+    graphics.generateTexture('chiroptera_fallback', 48, 48);
     
-    // Boss (large dark red rectangle)
+    // Boss (very large dark red rectangle)
     graphics.clear();
     graphics.fillStyle(0x8b0000);
-    graphics.fillRect(0, 0, 48, 48);
-    graphics.generateTexture('threeheadedsnake_fallback', 48, 48);
+    graphics.fillRect(0, 0, 96, 96); // Even bigger boss
+    graphics.generateTexture('threeheadedsnake_fallback', 96, 96);
     
-    // Bullet (yellow circle)
+    // Bullet (larger yellow circle)
     graphics.clear();
     graphics.fillStyle(0xffff00);
-    graphics.fillCircle(8, 8, 4);
-    graphics.generateTexture('bullet_fallback', 16, 16);
+    graphics.fillCircle(16, 16, 12); // Bigger bullet
+    graphics.generateTexture('bullet_fallback', 32, 32);
     
-    // Chests (different colored squares)
+    // Chests (bigger colored squares)
     graphics.clear();
     graphics.fillStyle(0x3498db);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestBlue_fallback', 24, 24);
+    graphics.fillRect(0, 0, 48, 48); // Bigger chests
+    graphics.generateTexture('chestBlue_fallback', 48, 48);
     
     graphics.clear();
     graphics.fillStyle(0x2ecc71);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestGreen_fallback', 24, 24);
+    graphics.fillRect(0, 0, 48, 48);
+    graphics.generateTexture('chestGreen_fallback', 48, 48);
     
     graphics.clear();
     graphics.fillStyle(0xe74c3c);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestRed_fallback', 24, 24);
+    graphics.fillRect(0, 0, 48, 48);
+    graphics.generateTexture('chestRed_fallback', 48, 48);
     
     graphics.clear();
     graphics.fillStyle(0xf1c40f);
-    graphics.fillRect(0, 0, 24, 24);
-    graphics.generateTexture('chestYellow_fallback', 24, 24);
+    graphics.fillRect(0, 0, 48, 48);
+    graphics.generateTexture('chestYellow_fallback', 48, 48);
     
-    // Door (brown rectangle)
+    // Door (larger brown rectangle)
     graphics.clear();
     graphics.fillStyle(0x8b4513);
-    graphics.fillRect(0, 0, 32, 48);
-    graphics.generateTexture('door_fallback', 32, 48);
+    graphics.fillRect(0, 0, 64, 96); // Bigger door
+    graphics.generateTexture('door_fallback', 64, 96);
     
     graphics.destroy();
     
-    // Override the original texture keys with fallback versions
-    this.textures.addBase64('mageHero', this.textures.get('mageHero_fallback').getSourceImage().src);
-    this.textures.addBase64('skeleton', this.textures.get('skeleton_fallback').getSourceImage().src);
-    this.textures.addBase64('zombie', this.textures.get('zombie_fallback').getSourceImage().src);
-    this.textures.addBase64('chiroptera', this.textures.get('chiroptera_fallback').getSourceImage().src);
-    this.textures.addBase64('threeheadedsnake', this.textures.get('threeheadedsnake_fallback').getSourceImage().src);
-    this.textures.addBase64('bullet', this.textures.get('bullet_fallback').getSourceImage().src);
-    this.textures.addBase64('chestBlue', this.textures.get('chestBlue_fallback').getSourceImage().src);
-    this.textures.addBase64('chestGreen', this.textures.get('chestGreen_fallback').getSourceImage().src);
-    this.textures.addBase64('chestRed', this.textures.get('chestRed_fallback').getSourceImage().src);
-    this.textures.addBase64('chestYellow', this.textures.get('chestYellow_fallback').getSourceImage().src);
-    this.textures.addBase64('door', this.textures.get('door_fallback').getSourceImage().src);
+    // Remove existing textures and add new ones
+    if (this.textures.exists('mageHero')) this.textures.remove('mageHero');
+    if (this.textures.exists('skeleton')) this.textures.remove('skeleton');
+    if (this.textures.exists('zombie')) this.textures.remove('zombie');
+    if (this.textures.exists('chiroptera')) this.textures.remove('chiroptera');
+    if (this.textures.exists('threeheadedsnake')) this.textures.remove('threeheadedsnake');
+    if (this.textures.exists('bullet')) this.textures.remove('bullet');
+    if (this.textures.exists('chestBlue')) this.textures.remove('chestBlue');
+    if (this.textures.exists('chestGreen')) this.textures.remove('chestGreen');
+    if (this.textures.exists('chestRed')) this.textures.remove('chestRed');
+    if (this.textures.exists('chestYellow')) this.textures.remove('chestYellow');
+    if (this.textures.exists('door')) this.textures.remove('door');
+    
+    // Copy fallback textures to main keys
+    this.textures.addCanvas('mageHero', this.textures.get('mageHero_fallback').getSourceImage());
+    this.textures.addCanvas('skeleton', this.textures.get('skeleton_fallback').getSourceImage());
+    this.textures.addCanvas('zombie', this.textures.get('zombie_fallback').getSourceImage());
+    this.textures.addCanvas('chiroptera', this.textures.get('chiroptera_fallback').getSourceImage());
+    this.textures.addCanvas('threeheadedsnake', this.textures.get('threeheadedsnake_fallback').getSourceImage());
+    this.textures.addCanvas('bullet', this.textures.get('bullet_fallback').getSourceImage());
+    this.textures.addCanvas('chestBlue', this.textures.get('chestBlue_fallback').getSourceImage());
+    this.textures.addCanvas('chestGreen', this.textures.get('chestGreen_fallback').getSourceImage());
+    this.textures.addCanvas('chestRed', this.textures.get('chestRed_fallback').getSourceImage());
+    this.textures.addCanvas('chestYellow', this.textures.get('chestYellow_fallback').getSourceImage());
+    this.textures.addCanvas('door', this.textures.get('door_fallback').getSourceImage());
   }
 }
