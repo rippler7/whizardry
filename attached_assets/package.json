@@ -1,0 +1,28 @@
+{
+  "name": "learnyourwayout",
+  "version": "1.0.0",
+  "description": "shooter game rpg with questionnaire",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rippler7/shootergame00.git"
+  },
+  "keywords": [
+    "shooter",
+    "game",
+    "rpg",
+    "questionnaire"
+  ],
+  "author": "jeremy ancog",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rippler7/shootergame00/issues"
+  },
+  "homepage": "https://github.com/rippler7/shootergame00#readme",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  }
+}

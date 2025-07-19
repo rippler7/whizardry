@@ -1,0 +1,137 @@
+class Skeleton extends Phaser.GameObjects.Sprite{
+	constructor(scene){
+		super(scene,Phaser.Math.Between(100,1000),Phaser.Math.Between(100,650),'skeleton');
+		this.collideWorldBounds = true;
+		console.log(this);
+		this.born = 0;
+		this.player =  game.scene.scenes[0].player;
+		this.speed = Phaser.Math.Between(-100,100);
+		this.randNumX = Phaser.Math.Between(-1,1);
+		this.randNumY = Phaser.Math.Between(-1,1);
+	}
+	create(){
+		this.setActive(true);
+		this.setVisible(true);
+		this.setVelocity(Phaser.Math.Between(-100,100),Phaser.Math.Between(-100,100));
+		if(this.x <= this.player.x+100 && this.x >= this.player.x-100){
+			this.y = Phaser.Math.Between(100,1000);
+		}
+		if(this.y <= this.player.y+100 && this.y >= this.player.y-100){
+			this.y = Phaser.Math.Between(100,650);
+		}		
+		this.walkUpSkeleton = {
+			key:'walkUpSkeleton',
+			frames: game.anims.generateFrameNumbers('skeleton',{start:104,end:112}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		this.walkDownSkeleton = {
+			key:'walkDownSkeleton',
+			frames: game.anims.generateFrameNumbers('skeleton',{start:130,end:137}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		this.walkLeftSkeleton = {
+			key:'walkLeftSkeleton',
+			frames: game.anims.generateFrameNumbers('skeleton',{start:117,end:125}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		this.walkRightSkeleton = {
+			key:'walkRightSkeleton',
+			frames: game.anims.generateFrameNumbers('skeleton',{start:143,end:151}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		this.shootUSkeletonp = {
+			key:'shootUpSkeleton',
+			frames: game.anims.generateFrameNumbers('skeleton',{start:208,end:220}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		this.shootLeftSkeleton = {
+			key:'shootLeftSkeleton',
+			frames: game.anims.generateFrameNumbers('skeleton',{start:221,end:233}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		this.playerDieSkeleton = {
+			key:'playerDieSkeleton',
+			frames: game.anims.generateFrameNumbers('skeleton',{start:260,end:265}),
+			repeat:false
+		}
+		
+		game.anims.create(this.walkUpSkeleton);
+		game.anims.create(this.walkDownSkeleton);
+		game.anims.create(this.walkLeftSkeleton);
+		game.anims.create(this.walkRightSkeleton);
+		game.anims.create(this.playerDieSkeleton);
+		game.anims.create(this.shootLeftSkeleton);
+
+		var animsSkel = ['walkUpSkeleton','walkDownSkeleton','walkLeftSkeleton','walkRightSkeleton','playerDieSkeleton'];
+	}
+	update(time,delta){
+		if(Math.abs(this.x - this.player.x)< 130 && Math.abs(this.y - this.player.y)< 130){
+			this.x -= (this.x-this.player.x)*(0.01);
+			this.y -= (this.y-this.player.y)*(0.01);
+			this.body.setVelocityX(0);
+			this.body.setVelocityY(0);
+		} else {
+			var res = Math.round(Phaser.Math.Between(0,1));
+			if(res > 0){
+				var randRes = Phaser.Math.Between(-20,20)*delta;
+				this.body.setVelocityX(randRes);
+				this.body.setVelocityY(0);
+				if(randRes < 0){
+					game.anims.play('walkLeftSkeleton', true);
+				} else {
+					game.anims.play('walkRightSkeleton', true);
+				}
+			} else {
+				var randRes = Phaser.Math.Between(-20,20)*delta;
+				this.body.setVelocityX(0);
+				this.body.setVelocityY(randRes);
+				if(randRes < 0){
+					game.anims.play('walkUpSkeleton', true);
+				} else {
+					game.anims.play('walkDownSkeleton', true);
+				}
+			}
+		}
+
+	}
+}
+
+
+	    var badguys = this.physics.add.group({
+	    	key:'skeleton',
+	    	classType:Skeleton,
+	    	setXY:{
+	    		x:initPosX,
+	    		y:initPosY
+	    	},
+	    	bounceX: 1,
+        	bounceY: 1,
+	    	collideWorldBounds: true,
+	    	runChildUpdate:true
+	    })
+
+	    for(var s=0;s<2;s++){
+			badguys.create(Phaser.Math.Between(100,1000),100,'skeleton',26);
+			badguys.create(Phaser.Math.Between(100,1000),600,'skeleton',26);
+			badguys.create(100,Phaser.Math.Between(100,650),'skeleton',26);
+			badguys.create(1000,Phaser.Math.Between(100,650),'skeleton',26);
+		}
+==============================================================================================
+		for(var s=0;s<10;s++){
+			var res = Math.round(Phaser.Math.Between(0,2));
+			if(res <=1){
+				this.skeleton[s].children.entries[0].body.velocity = {x:0,y:Phaser.Math.Between(-30,30)};
+			} else{
+				this.skeleton[s].children.entries[0].body.velocity = {x:Phaser.Math.Between(-30,30),y:0};
+			}
+			if(Math.abs(this.player.x-this.skeleton[s].children.entries[0].body.x < 10) && Math.abs(this.player.y-this.skeleton[s].children.entries[0].body.y < 10)){
+				this.skeleton[s].children.entries[0].body.x -= (this.skeleton[s].children.entries[0].body.x -this.player.x)*(0.01);
+				this.skeleton[s].children.entries[0].body.y -= (this.skeleton[s].children.entries[0].body.y -this.player.y)*(0.01);
+			}
+		}

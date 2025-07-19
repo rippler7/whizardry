@@ -1,0 +1,3 @@
+global currentLevel = 1;
+
+//set player updated location to meet parameters and change currentLevel accordingly; include in enemy attack condition to enable attack only on current region. //also helps in setting up questions and answers (also include level update for all enemies)

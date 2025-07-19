@@ -1,0 +1,144 @@
+CREATE TABLE achievements(
+    aid INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    aname VARCHAR(255) NOT NULL,
+    astart INT NOT NULL
+);
+
+CREATE TABLE users (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    totalplayed VARCHAR(255) NOT NULL,
+    levelid INT NOT NULL,
+    FOREIGN KEY (levelid) REFERENCES achievements(aid),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE scores (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    elapsedTime VARCHAR(200) NOT NULL,
+    scoredate VARCHAR(255) NOT NULL,
+    score INT NOT NULL DEFAULT 0,
+    uid INT NOT NULL,
+    FOREIGN KEY (uid) REFERENCES users(id)
+);
+
+CREATE TABLE questions_answers(
+    qid INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    question VARCHAR(255) NOT NULL,
+    answer VARCHAR(255) NOT NULL
+);
+
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('admin','1000000');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('freshmeat','0');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('practitioner','100');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('noob','200');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('commoner','300');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('novice','500');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('amateur','700');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('expert','1000');
+INSERT INTO `achievements` (`aname`,`astart`) VALUES ('prodigy','1500');
+
+ALTER TABLE `users` CHANGE `levelid` `levelid` INT(11) NOT NULL DEFAULT '2';
+ALTER TABLE `users` ADD `first` VARCHAR(255) NULL DEFAULT NULL AFTER `username`, ADD `last` VARCHAR(255) NULL DEFAULT NULL AFTER `first`;
+UPDATE `users` SET `first` = 'admin' WHERE `users`.`id` = 1;
+UPDATE `users` SET `last` = 'admin' WHERE `users`.`id` = 1;
+
+
+
+SELECT u.id, u.username, s.score, s.elapsedTime, s.scoredate FROM users AS u INNER JOIN scores AS s ON u.id = s.uid WHERE u.username = 'admin';
+
+//Display all-time top scores per user
+SELECT u.username,MAX(t.score) FROM users AS u INNER JOIN (SELECT s.score,s.elapsedTime,s.scoredate,s.uid FROM scores AS s) AS t ON u.id = t.uid GROUP BY u.username ORDER BY t.score DESC;
+
+//Display all time top scores per player with details:
+SELECT a.username,a.tscore,s.elapsedTime,s.scoredate FROM (SELECT u.username,MAX(t.score) AS tscore FROM users AS u INNER JOIN (SELECT s.score,s.elapsedTime,s.scoredate,s.uid FROM scores AS s) AS t ON u.id = t.uid GROUP BY u.username ORDER BY t.score DESC) AS a INNER JOIN scores AS s ON s.score = a.tscore ORDER BY a.tscore DESC LIMIT 10; 
+
+SELECT DISTINCT u.username, MAX(s.score), s.elapsedTime, s.scoredate FROM users AS u INNER JOIN scores AS s ON u.id = s.uid GROUP BY u.username;
+
+//check for the latest high scores
+SELECT DISTINCT u.username, s.score, s.elapsedTime, s.scoredate FROM users AS u INNER JOIN scores AS s ON u.id = s.uid WHERE s.score > 0 ORDER BY s.score DESC
+
+//get player current level name
+SELECT a.aname FROM achievements AS a WHERE a.astart = 
+(SELECT MAX(a.astart) FROM achievements AS a WHERE (SELECT MAX(s.score) FROM scores AS s INNER JOIN users AS u ON s.uid = u.id WHERE u.username = 'admin') >= a.astart);
+
+//get player current level id
+SELECT a.aid FROM achievements AS a WHERE a.astart = (SELECT MAX(a.astart) FROM achievements AS a WHERE (SELECT MAX(s.score) FROM scores AS s INNER JOIN users AS u ON s.uid = u.id WHERE u.username = 'admin') >= a.astart);
+
+//get player max score
+SELECT MAX(s.score) FROM scores AS s INNER JOIN users AS u ON s.uid = u.id WHERE u.username = 'admin';
+
+//GET ALL players with RANK NAME
+SELECT u.username, s.score, t.aname  FROM  users AS u INNER JOIN scores AS s ON u.id = s.uid INNER JOIN (SELECT u.username, u.id, a.aname FROM users AS u INNER JOIN achievements AS a ON u.levelid = a.aid WHERE a.aname = 'amateur') AS t ON u.id = t.id GROUP BY u.username ORDER BY s.score DESC;
+
+
+
+$.ajax({
+			url:'includes/process.php',
+			method:"POST",
+			data:data,
+			crossDomain:true,
+			success:function(d){
+				console.log("d: ");
+				console.log(d);
+				console.log("data has been sent");
+			},
+			complete:function(f){
+				console.log(f);
+			}
+		});
+
+
+if(isset($_POST['data'])){
+
+		$myfile= fopen("testfile.txt","w");
+		$txt = $_POST['data'];
+		fwrite($myfile,$txt);
+		fclose($myfile);
+	}
+
+
+
+$time = $_POST['elapsedTime'];
+		$test = "SELECT * FROM users WHERE username = '".$_SESSION['currUser']."'";
+		$res = @mysqli_query($conn,$test);
+		$count = @mysqli_num_rows($res);
+		if($count < 1){
+			echo ('an error has occurred.');
+		} else {
+			$sql = "UPDATE `users` SET `totalplayed` = 'admin' WHERE `users`.`id` = 1;"
+		}
+
+this.req = new XMLHttpRequest();
+		this.req.onload = function(){
+			console.log(this.responseText);
+		}
+		this.req.open("post","includes/process.php?",true);
+		this.req.send(data);
+
+
+
+
+
+if(isset($_POST)){
+		$time = explode(" ",$_POST['elapsedTime']);
+		$time = $time[count($time)-1];
+		$score = $_POST['pScore'];
+		$sqlGetId = "SELECT * FROM users WHERE username = '".$_SESSION['currUser']."'";
+		$res = mysqli_query($conn,$sqlGetId);
+		if(mysqli_num_rows($res)> 0){
+			$row = mysqli_fetch_assoc($res);
+			$scoreUser = "SELECT * FROM scores WHERE uid =".$row['id'].";";
+			$res2 = mysqli_query($conn,$scoreUser);
+			if(mysqli_num_rows($res2) > 0){
+				$sqlUpdate = "UPDATE `scores` SET `elapsedTime` = '".$time."',`score` = '".$score."' WHERE `scores`.`uid` = '".$_SESSION['currUser']."',;"
+				mysqli_query($conn,$sqlUpdate);
+			} else {
+				$sqlAddScore = "INSERT INTO scores (elapsedTime,scores,uid) VALUES ('".$time."','".$_POST['score']."',".$row['id'].");";
+				mysqli_query($conn,$sqlAddScore);
+			}
+
+		}
+	}

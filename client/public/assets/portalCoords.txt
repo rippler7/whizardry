@@ -1,0 +1,49 @@
+portals
+
+
+381,341  flat
+319,1831 flat
+608,1833 flat
+942,921  upright
+1390,155 upright
+1361,1338 upright
+1118,1833 flat
+1710,2328 upright
+1810,1880 upright
+2574,2330 upright
+3134,2279 flat
+2625,1702 flat
+2942,901 flat
+2352,56 upright
+1534,806 flat
+
+child.x = keyLocations[l][0];
+child.y = keyLocations[l][1];
+
+
+class Door extends Phaser.GameObjects.Sprite{
+	constructor(scene){
+		super(scene,'gate');
+		this.born = 0;
+		this.outOfBoundsKill = true;
+		this.setActive(true);
+		this.setVisible(true);
+		this.depth = this.y;
+		this.currLevel = '';
+		this.ansKey;
+	}
+	open(){
+
+	}
+	close(){
+
+	}
+	update(time,delta){
+		this.depth = this.y;
+		this.born += delta;		
+	}
+}
+
+
+Level 1: (32,32),(737,32) - (32,550),(737,550)    =>  if(this.x <= 737 && this.y <= 550)
+Level 2: 

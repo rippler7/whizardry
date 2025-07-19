@@ -1,0 +1,118 @@
+If player x distance to enemy is greater than player y distance to enemy
+(walk left/right)
+
+
+this.x -= (this.x-this.player.x)*(0.01);
+			this.y -= (this.y-this.player.y)*(0.01);
+
+
+
+
+site name: LearnYourWayOut
+password: OcTU88UhL3bi(55lpjcv
+
+site name: LearnYourWayOut2
+password: HrYJWU%YT8*(M3op(YTz
+
+
+if(choiceIndex == gate.Selection.indexOf(gate.ans) || (player.currLevel > gate.currLevel+1)){
+						
+					} else {
+						if(!gate.unLocking){
+							gate.unLocking = true;
+							game.scene.scenes[1].time.addEvent({delay:500,callback:function(){
+									doorLock.play({
+										loop:false
+									});
+									gate.unLocking = false;
+							},callbackScope:this,repeat:0});
+						}
+					}
+
+function checkGate(player,gate){
+	if(!gate.unLocking){
+	//console.log('checkGate')
+		console.log(gate.question);
+		console.log(gate.ans);
+		console.log(gate.currLevel+": "+gate.ansKey,player.ansKey);
+		var pAns;
+		if(gate.isClosed){
+			if(gate.ansKey == 'x'){		
+				pAns = 'x'; //This is for gates that don't have beacons in the area
+			} else {
+				pAns = player.ansKey;
+			}
+			if(gate.ansKey == pAns || player.currLevel > gate.currLevel && gate.repeat == 'n'){
+					openGate(player,gate);
+			} else if(gate.repeat == 'y'){
+				if(gate.ansKey == pAns || (player.currLevel > gate.currLevel+1)){
+					openGate(player,gate);
+				} else {
+					if(!gate.unLocking){
+						gate.unLocking = true;
+						game.scene.scenes[1].time.addEvent({delay:500,callback:function(){
+								doorLock.play({
+									loop:false
+								});
+								gate.unLocking = false;
+						},callbackScope:this,repeat:0});
+					}
+				}
+			}else{
+				if(!gate.unLocking){
+					gate.unLocking = true;
+					game.scene.scenes[1].time.addEvent({delay:500,callback:function(){
+							doorLock.play({
+								loop:false
+							});
+							player.ansKey = 'x';
+							gate.unLocking = false;
+					},callbackScope:this,repeat:0});
+				}
+			}
+		} 
+	}
+}
+
+
+
+pAns = player.ansKey;
+				if(choiceIndex == gate.Selection.indexOf(gate.ans) || player.currLevel > gate.currLevel && gate.repeat == 'n'){
+						gate.solved = true;
+						player.currLevel = gate.currLevel+1;
+						openGate(player,gate);
+				} else if(gate.gid == 10){
+					if(choiceIndex ==  gate.Selection.indexOf(gate.ans)){
+						player.currLevel = gate.currLevel+1;
+					}
+				} else {
+						if(!gate.unLocking){
+							gate.unLocking = true;
+							if(!gate.solved){
+								SelectionLevel = gate.gid;
+							}
+							game.scene.scenes[1].time.addEvent({delay:500,callback:function(){
+									doorLock.play({
+										loop:false
+									});
+									gate.unLocking = false;
+							},callbackScope:this,repeat:0});
+						}
+					}
+				}else{
+					if(!gate.unLocking){
+						gate.unLocking = true;
+						if(!gate.solved){
+							SelectionLevel = gate.gid;
+						}
+						game.scene.scenes[1].time.addEvent({delay:500,callback:function(){
+								doorLock.play({
+									loop:false
+								});
+								player.ansKey = 'x';
+								gate.unLocking = false;
+						},callbackScope:this,repeat:0});
+					}
+				}
+			}
+		} 

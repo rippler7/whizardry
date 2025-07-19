@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Phaser Test Harness</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+  <script src="js/random.js"></script>
+	<script src="js/dt.js"></script>
+	<script src="js/chestClass.js"></script>
+	<script src="js/doorClass.js"></script>
+	<script src="js/bulletClass.js"></script>
+	<script src="js/skeletonClass.js"></script>
+	<script src="js/zombieClass.js"></script>
+	<script src="js/batClass.js"></script>
+	<script src="js/bossClass.js"></script>
+  <style> body { margin: 0; background: #111; } </style>
+</head>
+<body>
+
+<script type="module">
+  import MainMenuScene from './js/MainMenuScene.js';
+  import SceneA from './js/SceneA.js';
+  import PauseScene from './js/PauseScene.js';
+
+  const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    backgroundColor: '#000',
+    physics: {
+      default: 'arcade',
+      arcade: { debug: true }
+    },
+    scene: [MainMenuScene, SceneA, PauseScene],
+    pixelArt: true
+  };
+
+  new Phaser.Game(config);
+</script>
+
+</body>
+</html>

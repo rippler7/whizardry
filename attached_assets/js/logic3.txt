@@ -1,0 +1,700 @@
+var game;
+var maxFrameRate = 12;
+var walkSpeed = (maxFrameRate/12)*80;
+var speed;
+var bullets;
+var lastFired = 0;
+var playerLife = 100;
+var fire;
+var ang;
+var angle;
+var cursors;
+var spacebar;
+var angle2;
+var randX = [];
+var randY = [];
+var gun;
+var fire;
+var flipX = false;
+var flipY = true;
+var activeDir = "Y";
+var badguys = [];
+var runOnce = 0;
+var Enemies = 20;
+var enemyCount = Enemies;
+var enemyHit;
+var enemyCounter = 0;
+var jungle;
+class Bullet extends Phaser.GameObjects.Sprite{
+	constructor(scene){
+		super(scene, game.scene.scenes[0].player.x, game.scene.scenes[0].player.y,'bullet');
+		this.born = 0;
+		this.outOfBoundsKill = true;
+		this.setScale(0.5,0.5);
+		this.player =  game.scene.scenes[0].player;
+		this.setActive(true);
+		this.setVisible(true);
+}	fire(){	
+		var mouseX = game.input.activePointer.downX;
+		var mouseY = game.input.activePointer.downY;
+		this.setPosition(this.player.x,this.player.y);
+		this.setActive(true);
+		this.setVisible(true);
+		this.born = 0;
+		this.speed = 0.3;
+		this.speedX = this.speed;
+		this.speedY = this.speed;
+		this.outOfBoundsKill = true;
+		this.depth = this.y;
+        fire.play();
+        if(flipX == true){
+        	this.speedX = 0-this.speedX;
+        }
+        if(flipY == true){
+        	this.speedY = 0-this.speedY;
+        }
+        if(activeDir == "X"){
+        	this.speedY = 0;
+        } else {
+        	this.speedX = 0;
+        }
+	}
+	update(time,delta){
+		this.depth = this.y;
+		this.born += delta;		
+		this.x -= (delta * this.speedX);		
+		this.y -= (delta * this.speedY);	
+		
+	    if(this.born > 1750){
+	    	this.setActive(false);
+	      	this.setVisible(false);
+	      	this.destroy();
+	    }
+	}
+}
+
+class Skeleton extends Phaser.GameObjects.Sprite{
+	constructor(scene){
+		super(scene,Phaser.Math.Between(100,1000),Phaser.Math.Between(100,650),'Skeleton');
+		this.collideWorldBounds = true;
+		this.born = 0;
+		this.speed = 0.01;
+		this.setActive(true);
+	    this.setVisible(true);
+		this.player =  game.scene.scenes[0].player;
+		this.speed = Phaser.Math.Between(-100,100);
+		this.randNumX = Phaser.Math.Between(-1,1);
+		this.randNumY = Phaser.Math.Between(-1,1);
+		this.res = Phaser.Math.Between(0,1000);
+		this.depth = this.y;
+		this.rX = Phaser.Math.Between(100,1000);
+		this.rY = Phaser.Math.Between(100,650);
+		this.x = this.rX;
+		this.y = this.rY;
+		this.walkRandomly;
+		if(this.x <= this.player.x+100 && this.x >= this.player.x-100){
+			this.x = this.player.x+100;
+		}
+		if(this.y <= this.player.y+100 && this.y >= this.player.y-100){
+			this.y = this.player.y+100;
+		}	
+		this.timedEvent = this.scene.time.addEvent({ delay: Phaser.Math.Between(1500,2000), callback: this.walkRandomly, callbackScope: this, repeat:-1 });
+		this.anims.play('walkDownSkeleton', true);
+		this.lifePoints = 3;
+	}
+	update(time,delta){
+		this.counter--;
+		this.depth = this.y;
+		this.res = Phaser.Math.Between(0,1000);
+		if(this.body && this.lifePoints > 0){
+			if(Math.abs(this.x - this.player.x)< 130 && Math.abs(this.y - this.player.y)< 130){
+				this.walkToPlayer(this.x,this.y,this.player.x,this.player.y);
+				this.body.setVelocityX(0);
+				this.body.setVelocityY(0);
+			} else {
+				if(this.x <= 100){
+					this.body.setVelocityX(Phaser.Math.Between(1,5)*delta);
+					this.body.setVelocityY(0);
+					this.anims.play('walkRightSkeleton', true);
+				}
+				else if(this.x >= 900){
+					this.body.setVelocityX(Phaser.Math.Between(-5,-1)*delta);
+					this.body.setVelocityY(0);
+					this.anims.play('walkLeftSkeleton', true);
+				}  
+				else if(this.y <= 100){
+					this.body.setVelocityX(0);
+					this.body.setVelocityY(Phaser.Math.Between(1,5)*delta);
+					this.anims.play('walkDownSkeleton', true);
+				}
+				else if(this.y >= 600){
+					this.body.setVelocityX(0);
+					this.body.setVelocityY(Phaser.Math.Between(-5,-1)*delta);
+					this.anims.play('walkUpSkeleton', true);
+				} 
+			}
+		} else {
+			if(this.lifePoints <= 0){
+				this.skeletonDie();
+			}
+		}
+		
+	}
+	walkRandomly()
+	{
+		if(this.body){
+			var dirX = Phaser.Math.Between(-150,150);
+			var dirY = Phaser.Math.Between(-150,150);
+			if(Math.abs(this.x - this.player.x)> 130 && Math.abs(this.y - this.player.y)> 130){
+					if(Math.abs(dirX) > Math.abs(dirY)){
+						if(dirX > 0){
+							this.anims.play('walkRightSkeleton', true);
+							this.body.setVelocityX(Phaser.Math.Between(5,10)*5);
+							this.body.setVelocityY(0);
+						}else{
+							this.body.setVelocityX(Phaser.Math.Between(-10,-5)*5);
+							this.body.setVelocityY(0);
+							this.anims.play('walkLeftSkeleton', true);
+						}
+					} else {
+						if(dirY > 0){
+							this.anims.play('walkUpSkeleton', true);
+							this.body.setVelocityY(Phaser.Math.Between(-10,-5)*5);
+							this.body.setVelocityX(0);
+						} else {
+							this.anims.play('walkDownSkeleton', true);
+							this.body.setVelocityY(Phaser.Math.Between(5,10)*5);
+							this.body.setVelocityX(0);
+						}
+					}
+			}
+		}
+		//this.walkToPlayer(this.x,this.y,dirX,dirY);
+	}
+
+	walkToPlayer(tx,ty,px,py){
+		if(Math.abs(tx-px) >= Math.abs(ty - py)){
+			this.x -= (tx-px)*0.01;
+			this.y -= 0;
+			if(tx>=px){
+				this.anims.play('walkLeftSkeleton', true);
+			} else {
+				this.anims.play('walkRightSkeleton', true);
+			}
+			
+		} else {
+			this.y -= (ty-py)*0.01;
+			this.x -= 0;
+			if(ty>=py){
+				this.anims.play('walkUpSkeleton', true);
+			} else {
+				this.anims.play('walkDownSkeleton', true);
+			}
+			
+		}
+	}
+
+	skeletonDie(){
+		this.anims.play('playerDieSkeleton',true);
+			this.body.setVelocityX(0);
+			this.body.setVelocityY(0);
+			this.timedEvent = this.scene.time.addEvent({ delay: Phaser.Math.Between(500,700), callback: function(){
+				this.setActive(false);
+				this.setVisible(false);
+				this.x = -100;
+				this.y = -100;
+				this.destroy();
+		}, callbackScope: this, repeat:false });
+	}
+}
+
+class Boss extends Phaser.GameObjects.Sprite{
+	constructor(scene){
+		super(scene,Phaser.Math.Between(100,1000),Phaser.Math.Between(100,650),'Boss');
+		console.log("Boss!")
+	}
+	update(time,delta){
+		this.depth = this.y;
+		if(this.body && this.lifePoints > 0){
+			this.walkToPlayerOrc();
+		} else {
+			if(this.lifePoints <= 0){
+				this.orcDie();
+			}
+		}
+		
+	}
+
+	walkToPlayerOrc(tx,ty,px,py){
+		if(Math.abs(tx-px) >= Math.abs(ty - py)){
+			tx -= (tx-px)*0.01;
+			ty -= 0;
+			if(tx>=px){
+				this.anims.play('walkLeftOrc', true);
+			} else {
+				this.anims.play('walkRightOrc', true);
+			}
+			
+		} else {
+			this.y -= (ty-py)*0.01;
+			this.x -= 0;
+			if(ty>=py){
+				this.anims.play('walkUpOrc', true);
+			} else {
+				this.anims.play('walkDownOrc', true);
+			}
+			
+		}
+	}
+
+	orcDie(){
+		this.anims.play('OrcDie',true);
+			this.body.setVelocityX(0);
+			this.body.setVelocityY(0);
+			this.timedEvent = this.scene.time.addEvent({ delay: Phaser.Math.Between(500,700), callback: function(){
+				this.setActive(false);
+				this.setVisible(false);
+				this.x = -100;
+				this.y = -100;
+				this.destroy();
+		}, callbackScope: this, repeat:false });
+	}
+}
+
+
+function randomizer(){
+	return result = [Phaser.Math.Between(-100,1000),Phaser.Math.Between(-100,650)];
+}
+
+class SceneA extends Phaser.Scene {
+	constructor(){
+		super('SceneA');
+		this.active;
+		this.currentScene;
+	}
+	preload(){
+		this.load.image('bullet', 'assets/sprites/bullet.png');
+		this.load.image('base','./assets/maps/inner_test.jpg');
+		this.load.spritesheet('player','./assets/sprites/char.png',{ frameWidth: 64, frameHeight: 64, endFrame: 272 },maxFrameRate);
+		this.load.spritesheet('skeleton','./assets/sprites/skeleton.png',{ frameWidth: 64, frameHeight: 64, endFrame: 272 },maxFrameRate);
+		this.load.spritesheet('Boss','./assets/sprites/orc.png',{ frameWidth: 64, frameHeight: 64, endFrame: 272 },maxFrameRate);
+		this.load.image('ground','./assets/maps/sea1.jpg');
+		this.load.audio('jungle', [
+	        './assets/audio/enchanted_forest.mp3',
+	        './assets/audio/enchanted_forest_loop.ogg'
+	     ]);
+		this.load.audio('fire', [
+	        './assets/audio/carrot.mp3',
+	        './assets/audio/carrot.ogg'
+	     ]);
+		this.load.audio('enemyHurt', [
+	        './assets/audio/enemy-death.mp3',
+	        './assets/audio/enemy-death.ogg'
+	     ]);
+	}
+	create(){
+		document.getElementById("scoreBoard").innerHTML = "Player Life: "+playerLife;
+		document.getElementById("enemyCounter").innerHTML = "Enemies Left: "+enemyCount;
+		this.add.image(500,375,'ground').setScrollFactor(0.25).setScale(2,2);
+		this.add.image(500,390,'base').setScrollFactor(1);
+		jungle = this.sound.add('jungle');
+		fire = this.sound.add('fire');
+		enemyHit = this.sound.add('enemyHurt');
+	    jungle.play({
+	        loop: true
+	    });
+		cursors = this.input.keyboard.createCursorKeys();
+		spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+		this.player = this.physics.add.sprite(500, 650, 'player',26);	
+		this.player.anims.animationManager.frameRate = maxFrameRate;
+		this.player.depth = this.player.y;
+		var animCastDown = {
+			key:'animCastDown',
+			frames: this.anims.generateFrameNumbers('player',{start:26,end:32}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkUp = {
+			key:'walkUp',
+			frames: this.anims.generateFrameNumbers('player',{start:104,end:112}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkDown = {
+			key:'walkDown',
+			frames: this.anims.generateFrameNumbers('player',{start:130,end:137}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkLeft = {
+			key:'walkLeft',
+			frames: this.anims.generateFrameNumbers('player',{start:117,end:125}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkRight = {
+			key:'walkRight',
+			frames: this.anims.generateFrameNumbers('player',{start:143,end:151}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var shootUp = {
+			key:'shootUp',
+			frames: this.anims.generateFrameNumbers('player',{start:208,end:220}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		var shootLeft = {
+			key:'shootLeft',
+			frames: this.anims.generateFrameNumbers('player',{start:221,end:233}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		var playerDie = {
+			key:"playerDie",
+			frames: this.anims.generateFrameNumbers('player',{start:260,end:265}),
+			repeat:false
+		}
+
+		var animCastDownSkeleton = {
+			key:'animCastDownSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:26,end:32}),
+			frameRate:maxFrameRate,
+			repeat:1
+		};
+		var walkUpSkeleton = {
+			key:'walkUpSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:104,end:112}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkDownSkeleton = {
+			key:'walkDownSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:130,end:137}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkLeftSkeleton = {
+			key:'walkLeftSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:117,end:125}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkRightSkeleton = {
+			key:'walkRightSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:143,end:151}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var shootUSkeletonp = {
+			key:'shootUpSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:208,end:220}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		var shootLeftSkeleton = {
+			key:'shootLeftSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:221,end:233}),
+			frameRate:maxFrameRate,
+			repeat:false
+		};
+		var playerDieSkeleton = {
+			key:'playerDieSkeleton',
+			frames: this.anims.generateFrameNumbers('skeleton',{start:260,end:265}),
+			frameRate:maxFrameRate,
+			repeat:false
+		}	
+
+		var walkUpOrc = {
+			key:'walkUpOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:104,end:112}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkDownOrc = {
+			key:'walkDownOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:130,end:137}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkLeftOrc = {
+			key:'walkLeftOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:117,end:125}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var walkRightOrc = {
+			key:'walkRightOrc',
+			frames: this.anims.generateFrameNumbers('Boss',{start:143,end:151}),
+			frameRate:maxFrameRate,
+			repeat:-1
+		};
+		var OrcDie = {
+			key:"OrcDie",
+			frames: this.anims.generateFrameNumbers('Boss',{start:260,end:265}),
+			repeat:false
+		}
+
+		this.anims.create(animCastDown);
+		this.anims.create(walkUp);
+		this.anims.create(walkDown);
+		this.anims.create(walkLeft);
+		this.anims.create(walkRight);
+		this.anims.create(playerDie);
+		this.anims.create(shootUp);
+		this.anims.create(shootLeft);
+		this.anims.create(animCastDownSkeleton);
+		this.anims.create(walkUpSkeleton);
+		this.anims.create(walkDownSkeleton);
+		this.anims.create(walkLeftSkeleton);
+		this.anims.create(walkRightSkeleton);
+		this.anims.create(playerDieSkeleton);
+		this.anims.create(shootLeftSkeleton);
+		this.anims.create(walkUpOrc);
+		this.anims.create(walkDownOrc);
+		this.anims.create(walkLeftOrc);
+		this.anims.create(walkRightOrc);
+		this.anims.create(OrcDie);
+		this.boss = this.physics.add.group({
+		   	key:'Boss',
+		   	classType:Boss,
+		   	bounceX: 1,
+		   	bounceY: 1,
+		   	setXY:{
+		   		x:500+Phaser.Math.Between(-200,200),
+		   		y:375+Phaser.Math.Between(-200,200)
+		   	},
+		   	setScale:{
+		   		x:1.5,
+		   		y:1.5
+		   	},
+		   	collideWorldBounds: true,
+		   	runChildUpdate:true,
+		   	enableBody:true,
+		   	endFrame:272
+	    });
+		this.baddies = spawnBadGuys();
+		this.bullets = this.physics.add.group({
+	        classType: Bullet,
+	        maxSize:3,
+	        setSize:{
+	        	x:32,
+	        	y:32
+	        },
+	        outOfBoundsKill:true,
+	        runChildUpdate: true
+	    });
+		
+	    var controlConfig = {
+	        camera: this.cameras.main,
+	        maxSpeed: 0.15
+	    };
+	    this.physics.add.colliders = [this.player,this.bullets,this.baddies,this.boss];
+	    this.physics.add.overlap(this.baddies, this.bullets, shootSkeleton);
+	    this.physics.add.overlap(this.player, this.baddies,hitSkeleton, null, this);
+	    this.physics.add.colliders = [this.player,this.boss];
+	    this.physics.add.overlap(this.player, this.boss,bossAttack, null, this);
+
+	    this.controls = new Phaser.Cameras.Controls.Smoothed(controlConfig);
+
+	    this.cameras.main.setBounds(-300,-265,1600,1280);
+	    //console.log(this.cameras.main);
+	    this.cameras.main.startFollow(this.player);
+	    this.cameras.main.zoom = 1.05;
+	    //this.cameras.main.setViewport(200,100,600,400);
+		this.player.body.collideWorldBounds = true; 
+		this.player.body.allowGravity = false;
+		this.player.body.rotation = 0;
+		this.cameras.main.fadeIn(500);
+		/*
+		this.input.on('pointerdown',function(){
+			let bullet = this.bullets.get();
+	        if(bullet) {
+	        let offset = new Phaser.Geom.Point(0, player.height / 2);
+	          
+	          bullet.fire();
+	        }
+	        if(activeDir == 'X' && flipX == false){
+		        	player.anims.play('shootLeft', true);
+		    }
+		},this);
+		*/
+		/*
+		this.input.keyboard.on('keydown_LEFT',function(event){
+			flipX = false;
+		    activeDir = "X";
+		},this);
+		this.input.keyboard.on('keydown_RIGHT',function(event){
+			activeDir = "X";
+		    flipX = true;
+		},this);
+		this.input.keyboard.on('keydown_UP',function(event){
+			activeDir = "Y";
+		    flipY = false;
+		},this);
+		this.input.keyboard.on('keydown_DOWN',function(event){
+			activeDir = "Y";
+		    flipY = true;
+		},this);
+		*/
+		this.input.keyboard.on('keydown_SPACE',function(event){
+			let bullet = this.bullets.get();
+			if(bullet) {
+				bullet.fire();	
+			}
+		},this);
+		/*
+		this.lockText = this.add.text(32, 32, '', {
+	        fontSize: '20px',
+	        fill: '#ffffff'
+	    });
+	    this.lockText.setScrollFactor(0);
+	    */
+	    
+	}
+	update(time,delta){
+		this.player.depth = this.player.y;
+		this.controls.update(delta);
+		if (cursors.left.isDown)
+		{
+			flipX = false;
+		    activeDir = "X";
+		    this.player.setVelocityX(-walkSpeed);
+		    this.player.setVelocityY(0);		
+			this.player.anims.play('walkLeft', true);
+			
+		}
+		else if (cursors.right.isDown)
+		{
+			activeDir = "X";
+		    flipX = true;
+		    this.player.setVelocityX(walkSpeed);
+		    this.player.setVelocityY(0);
+		    this.player.anims.play('walkRight', true);
+		}
+		else if (cursors.up.isDown)
+		{
+			activeDir = "Y";
+		    flipY = false;
+		    this.player.setVelocityY(-walkSpeed);
+		    this.player.setVelocityX(0);
+		    this.player.anims.play('walkUp', true);
+		}
+		else if (cursors.down.isDown)
+		{
+			activeDir = "Y";
+		    flipY = true;
+		    this.player.setVelocityY(walkSpeed);
+		    this.player.setVelocityX(0);
+		    this.player.anims.play('walkDown', true);
+		}
+		else {		
+				if(!Phaser.Input.Keyboard.JustDown(spacebar)){
+				this.player.anims.stop();
+			    this.player.setVelocityX(0);
+			    this.player.setVelocityY(0);
+			}
+		}
+		if(playerLife <= 0){
+			this.player.anims.play('playerDie', true);
+			if(runOnce == 0){
+				runOnce++;
+				jungle.stop();
+				this.scene.pause();
+			}
+		}
+		document.getElementById("enemyCounter").innerHTML = "Enemies Left: "+this.baddies.children.entries.length;
+	}
+	cleanScene(){
+		//this.physics.destroy();
+	}
+	restartGame(){
+		runOnce = 0;
+		//this.scene.start();
+	}
+}
+
+function updateLockText(){
+	document.getElementById("scoreBoard").innerHTML = "Player Life: "+playerLife;
+}
+
+function hitSkeleton(player,skeleton){
+	//skeleton.setTint(0xff0000);
+	if(playerLife > 0 && skeleton.lifePoints > 0){
+		playerLife--;
+	}
+	player.setTint(0xff0000);
+	var timedTint = this.time.addEvent({ delay: Phaser.Math.Between(500,1000), callback:function(){
+		player.clearTint();
+	}, callbackScope: this, repeat:-1 });
+	updateLockText(true);
+}
+
+function shootSkeleton(skeleton,bullet){
+	console.log("hit!");
+	enemyHit.play();
+	bullet.setActive(false);
+	bullet.setVisible(false);
+	skeleton.lifePoints--;
+	bullet.destroy();
+	if(skeleton.lifePoints == 2){
+		skeleton.setTint(0xffff00);
+	} else {
+		skeleton.setTint(0xff0000);
+	}
+	console.log(skeleton.lifePoints);
+}
+
+function bossAttack(){
+	console.log("boss is attacking!");
+}
+function spawnBadGuys(){
+	var baddie = this.game.scene.scenes[0].physics.add.group({
+	   	key:'skeleton',
+	   	classType:Skeleton,
+	   	repeat:Enemies-1,
+	   	bounceX: 1,
+	   	bounceY: 1,
+	   	collideWorldBounds: true,
+	   	runChildUpdate:true,
+	   	enableBody:true,
+	   	endFrame:272
+    });
+	baddie.children.iterate(function (child) {
+		var initPosX = Phaser.Math.Between(100,1000);
+		var initPosY = Phaser.Math.Between(100,650);
+		if(initPosX > (this.game.scene.scenes[0].player.x-100) || initPosX > (this.game.scene.scenes[0].player.x-100)){
+		  	initPosX = 500+Phaser.Math.Between(-200,200);
+		}
+		if(initPosY > (this.game.scene.scenes[0].player.y-100) || initPosY > (this.game.scene.scenes[0].player.y-100)){
+			initPosY = 375+Phaser.Math.Between(-200,200);
+		}
+       	child.x = initPosX;
+       	child.y = initPosY;
+       	child.body.setSize(8,8,true);
+   	});
+   	return baddie;
+}
+var config = {
+	type:Phaser.AUTO,
+	width:1000,
+	height:750,
+	scene:[SceneA],
+	physics:{
+		default:'arcade',
+		arcade:{
+			setBounds:true
+		}
+	},
+	parent:"container",
+	title:"Monster ShootUp"
+};
+
+document.addEventListener('DOMContentLoaded',function(){
+	runGame();
+});
+
+
+function runGame(){
+	game = new Phaser.Game(config);
+}

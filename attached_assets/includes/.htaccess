@@ -1,0 +1,9 @@
+Deny from all
+<Files process.php>
+  order allow,deny
+  allow from all
+</Files>
+<Files modal.php>
+  order allow,deny
+  allow from all
+</Files>

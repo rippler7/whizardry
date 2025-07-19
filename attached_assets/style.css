@@ -1,0 +1,133 @@
+@font-face {
+    font-family: 'arcadeclassicregular';
+    src: url('fonts/arcadeclassic-webfont.woff2') format('woff2'),
+         url('fonts/arcadeclassic-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+
+}
+body,html{
+	height: 100%;
+}
+
+body{
+	width:100%;
+	height:100%;
+	font-family:'arcadeclassicregular' !important;
+	background: #FFF url('assets/maps/indexBG.png') center no-repeat !important;
+	background-size: cover;
+	background-attachment: fixed !important;
+}
+
+a{
+	color:#79077f !important;
+}
+
+a.btn{
+	color:#FFF !important;
+}
+
+.jumbotron{
+	background-color:rgb(255,255,255,0.3) !important;
+}
+
+#overContainer{
+	font-family:'arcadeclassicregular';
+	display:block;
+	position:absolute;
+	left:50%;
+	top:50%;
+	transform:translate(-50%,-50%);
+}
+
+#mainContainer{
+	font-family:'arcadeclassicregular';
+	width: 100vw; 
+    height: 75vw; /* height:width ratio = 9/16 = .5625  */
+    background: pink;
+    max-height: 100vh;
+    max-width: 133.33vh; /* 16/9 = 1.778 */
+    margin: auto;
+    position: absolute;
+    top:0;bottom:0; /* vertical center */
+    left:0;right:0; /* horizontal center */
+	text-align:center;
+	z-index:1;
+}
+
+#mcontainer,#login,#signup,#achievementBox{
+	display:block;
+	position:absolute;
+	left:50%;
+	top:50%;
+	transform: translate(-50%,-50%);
+}
+
+#screen{
+	width:100%;
+	height:100%;
+	display:block;
+	position:absolute;
+}
+
+#upper{
+	font-family:'arcadeclassicregular';
+	display:block;
+	position:absolute;
+	z-index:2;
+	width:100%;
+	color:#FFF;
+	font-size:1.5vw;
+	font-weight:500;
+	text-align:left;
+	padding-left:20px;
+}
+
+#gameState{
+	font-family:'arcadeclassicregular';
+	display:block;
+	position:absolute;
+	top:10px;
+	width:auto;
+	height:20px;
+	z-index:3;
+	width:100%;
+	color:#FFF;
+	font-size:1.5vw;
+	color:#ff0000;
+}
+
+.centerBoard{
+	display:block;
+	position:relative;
+	left:50%;
+	transform: translateX(-50%);
+	text-align:center;
+}
+
+#signupBtn{
+	display:block;
+	position:relative;
+	left:50%;
+	transform: translateX(-50%);
+}
+
+.greyed{
+	color:#7D7D7D;
+}
+
+.paddedCenter{
+	padding:2%;
+	background-color:rgb(255,255,255,0.3); 
+	display:block;
+	margin:0px auto;
+}
+
+canvas{
+	position:absolute;
+	left:50%;
+	top:50%;
+	transform: translate(-50%,-50%);
+	width:100%;
+	height:100%;
+}
