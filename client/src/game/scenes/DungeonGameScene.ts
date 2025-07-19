@@ -422,9 +422,25 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createExitDoor() {
-    this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'door');
+    this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 0);
     this.door.setScale(1.5); // Scale to make visible
     this.door.setTint(0x888888); // Initially locked (gray)
+    
+    // Create gate animations using original specifications
+    if (!this.anims.exists('openGate')) {
+      this.anims.create({
+        key: 'openGate',
+        frames: this.anims.generateFrameNumbers('gate', { start: 0, end: 3 }),
+        frameRate: 8,
+        repeat: false
+      });
+      this.anims.create({
+        key: 'closeGate',
+        frames: this.anims.generateFrameNumbers('gate', { start: 4, end: 7 }),
+        frameRate: 8,
+        repeat: false
+      });
+    }
   }
 
   private createBoss() {
@@ -841,6 +857,9 @@ export class DungeonGameScene extends Phaser.Scene {
     this.doorUnlocked = true;
     this.door.clearTint(); // Remove gray tint
     this.door.setTint(0x00ff00); // Green tint when unlocked
+    
+    // Play gate opening animation
+    this.door.anims.play('openGate');
     
     // Create boss if final dungeon
     if (this.currentDungeon === this.maxDungeons && !this.boss) {
