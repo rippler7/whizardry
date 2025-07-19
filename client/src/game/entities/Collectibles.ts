@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { Player } from './Player';
-import { Question, getRandomQuestion } from '../data/Questions';
+// import { Question, getRandomQuestion } from '../data/Questions';
 
 export abstract class Collectible extends Phaser.Physics.Arcade.Sprite {
   protected collected: boolean = false;

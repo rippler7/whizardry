@@ -2,37 +2,55 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { LoadingScreen } from './LoadingScreen';
+import PhaserGame from '../game/PhaserGame';
 
 export const SimpleGameInterface: React.FC = () => {
-  const [gameStarted, setGameStarted] = useState(false);
+  const [gameState, setGameState] = useState<'menu' | 'loading' | 'playing'>('menu');
   const [playerName, setPlayerName] = useState('Player');
 
-  if (gameStarted) {
+  const handleStartGame = () => {
+    setGameState('loading');
+  };
+
+  const handleLoadComplete = () => {
+    setGameState('playing');
+  };
+
+  const handleExitGame = () => {
+    setGameState('menu');
+  };
+
+  if (gameState === 'loading') {
+    return <LoadingScreen onLoadComplete={handleLoadComplete} />;
+  }
+
+  if (gameState === 'playing') {
     return (
-      <div className="w-full h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-center">
-          <h1 className="text-4xl font-bold mb-4">Welcome to Dungeon Quest, {playerName}!</h1>
-          <p className="text-xl mb-8">Your modernized Phaser 3 educational RPG is loading...</p>
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-2xl mb-4">Game Features Implemented:</h2>
-            <ul className="text-left space-y-2">
-              <li>✓ Cleaned up and modernized Phaser 3 game engine</li>
-              <li>✓ React-based interface with TypeScript</li>
-              <li>✓ Improved enemy AI with pathfinding around obstacles</li>
-              <li>✓ Separate dungeon scenes with proper exits</li>
-              <li>✓ Educational question system with JSON data</li>
-              <li>✓ High score saving and game state management</li>
-              <li>✓ Progressive difficulty scaling</li>
-              <li>✓ Boss battles with multiple phases</li>
-            </ul>
-          </div>
+      <div className="w-full h-screen bg-black relative">
+        <PhaserGame onGameEvent={(event, data) => {
+          console.log('Game event:', event, data);
+          if (event === 'exitToMenu') {
+            handleExitGame();
+          }
+        }} />
+        
+        {/* Game overlay UI */}
+        <div className="absolute top-4 left-4 z-10">
           <Button 
-            onClick={() => setGameStarted(false)}
-            className="mt-6"
+            onClick={handleExitGame}
             variant="secondary"
+            size="sm"
           >
-            Back to Menu
+            Exit to Menu
           </Button>
+        </div>
+
+        <div className="absolute top-4 right-4 z-10 bg-black/80 text-white p-3 rounded-lg">
+          <div className="text-sm">
+            <div>Player: {playerName}</div>
+            <div>Modern RPG Engine</div>
+          </div>
         </div>
       </div>
     );
@@ -65,7 +83,7 @@ export const SimpleGameInterface: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Button onClick={() => setGameStarted(true)} className="w-full" size="lg">
+            <Button onClick={handleStartGame} className="w-full" size="lg">
               Start Game
             </Button>
           </div>
