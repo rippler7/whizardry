@@ -1,11 +1,84 @@
 import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
+import { DungeonGameScene } from './scenes/DungeonGameScene';
+import { GameOverScene } from './scenes/GameOverScene';
 
 interface PhaserGameProps {
   onGameEvent: (event: string, data: any) => void;
 }
 
-// Simple demo scene to show the game is working
+// Main Menu Scene
+class MainMenuScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'MainMenuScene' });
+  }
+
+  create() {
+    const { width, height } = this.scale;
+    
+    // Background
+    this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
+    
+    // Title
+    this.add.text(width / 2, height / 3, 'DUNGEON QUEST', {
+      fontSize: '48px',
+      fill: '#ffffff',
+      fontFamily: 'Arial Black'
+    }).setOrigin(0.5);
+    
+    this.add.text(width / 2, height / 3 + 60, 'Educational RPG Adventure', {
+      fontSize: '20px',
+      fill: '#ffaa00',
+      fontFamily: 'Arial'
+    }).setOrigin(0.5);
+    
+    // Start button
+    const startButton = this.add.text(width / 2, height / 2, 'START GAME', {
+      fontSize: '28px',
+      fill: '#00ff00',
+      fontFamily: 'Arial',
+      backgroundColor: '#003300',
+      padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setInteractive();
+    
+    startButton.on('pointerdown', () => {
+      this.scene.start('DungeonGameScene', { dungeon: 1, health: 100, score: 0 });
+    });
+    
+    startButton.on('pointerover', () => {
+      startButton.setScale(1.1);
+    });
+    
+    startButton.on('pointerout', () => {
+      startButton.setScale(1.0);
+    });
+    
+    // Instructions
+    this.add.text(width / 2, height * 0.75, 'Instructions:', {
+      fontSize: '18px',
+      fill: '#ffffff',
+      fontFamily: 'Arial'
+    }).setOrigin(0.5);
+    
+    const instructions = [
+      'Use WASD or Arrow Keys to move',
+      'SPACE to shoot (aim with mouse)',
+      'Click chests to answer questions',
+      'Answer all 4 questions to unlock the door',
+      'Reach dungeon 5 and defeat the boss!'
+    ];
+    
+    instructions.forEach((instruction, index) => {
+      this.add.text(width / 2, height * 0.75 + 30 + (index * 20), instruction, {
+        fontSize: '14px',
+        fill: '#cccccc',
+        fontFamily: 'Arial'
+      }).setOrigin(0.5);
+    });
+  }
+}
+
+// Legacy demo scene (keeping for reference)
 class DemoScene extends Phaser.Scene {
   private player?: Phaser.GameObjects.Rectangle;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -239,8 +312,8 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
       width: 800,
       height: 600,
       parent: containerRef.current,
-      backgroundColor: '#2d4a22',
-      scene: [DemoScene],
+      backgroundColor: '#1a1a2e',
+      scene: [MainMenuScene, DungeonGameScene, GameOverScene],
       physics: {
         default: 'arcade',
         arcade: {
