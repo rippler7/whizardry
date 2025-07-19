@@ -73,6 +73,8 @@ export const ANIMATIONS = {
         CAST_DOWN: 'animCastDownSkeleton',
         SHOOT_UP: 'shootUpSkeleton',
         SHOOT_LEFT: 'shootLeftSkeleton',
+        SHOOT_RIGHT: 'shootRightSkeleton',
+        SHOOT_DOWN: 'shootDownSkeleton',
         DIE: 'playerDieSkeleton'
     },
     ZOMBIE: {

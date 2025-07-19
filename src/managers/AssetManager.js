@@ -71,7 +71,7 @@ export class AssetManager {
         this.scene.load.image(ASSET_KEYS.SPRITES.TILES, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZSURBVFhH7cEBDQAAAMKg909tDjegAADANwL8AAHMoQFgAAAAAElFTkSuQmCC');
         this.scene.load.image(ASSET_KEYS.SPRITES.TILES2, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZSURBVFhH7cEBDQAAAMKg909tDjegAADANwL8AAHMoQFgAAAAAElFTkSuQmCC');
         
-        // Generate spritesheets as base64 data URLs
+        // Generate player spritesheet
         this.generateSpritesheet(ASSET_KEYS.SPRITES.PLAYER, 32, 48, 16, '#4A90E2');
         this.generateSpritesheet(ASSET_KEYS.SPRITES.SKELETON, 64, 64, 273, '#E8E8E8');
         this.generateSpritesheet(ASSET_KEYS.SPRITES.ZOMBIE, 32, 32, 96, '#8B4513');
