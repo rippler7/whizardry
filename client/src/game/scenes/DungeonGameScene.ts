@@ -667,27 +667,42 @@ export class DungeonGameScene extends Phaser.Scene {
     const worldX = pointer.worldX;
     const worldY = pointer.worldY;
     
-    // Calculate angle from player to mouse cursor
-    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, worldX, worldY);
+    // Calculate direction vector from player to mouse cursor
+    const deltaX = worldX - this.player.x;
+    const deltaY = worldY - this.player.y;
     
-    // Set bullet rotation to face the direction it's traveling
-    bullet.setRotation(angle);
-    
-    // Apply velocity in the direction of the mouse cursor
-    const speed = 300; // Faster magic projectile
-    this.physics.velocityFromRotation(angle, speed, bullet.body!.velocity);
+    // Normalize the direction vector
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    if (distance > 0) {
+      const normalizedX = deltaX / distance;
+      const normalizedY = deltaY / distance;
+      
+      // Apply velocity directly using setVelocity
+      const speed = 300;
+      bullet.setVelocity(normalizedX * speed, normalizedY * speed);
+      
+      // Set bullet rotation to face the direction it's traveling
+      const angle = Math.atan2(deltaY, deltaX);
+      bullet.setRotation(angle);
+    } else {
+      // If mouse is exactly on player, shoot right
+      bullet.setVelocity(300, 0);
+      bullet.setRotation(0);
+    }
     
     this.bullets.add(bullet);
     
     // Play shooting sound
     this.sound.play('spit', { volume: 0.3 });
     
-    // Remove bullet after 4 seconds or when it goes off screen
+    // Remove bullet after 4 seconds
     this.time.delayedCall(4000, () => {
       if (bullet.active) {
         bullet.destroy();
       }
     });
+    
+    console.log('Bullet fired:', bullet.x, bullet.y, 'toward:', worldX, worldY);
   }
 
   private updateEnemies() {
