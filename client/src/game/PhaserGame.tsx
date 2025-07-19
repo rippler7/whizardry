@@ -10,6 +10,12 @@ class DemoScene extends Phaser.Scene {
   private player?: Phaser.GameObjects.Rectangle;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd?: { [key: string]: Phaser.Input.Keyboard.Key };
+  private treasures: Phaser.GameObjects.GameObject[] = [];
+  private enemies: Phaser.GameObjects.GameObject[] = [];
+  private score: number = 0;
+  private scoreText?: Phaser.GameObjects.Text;
+  private level: number = 1;
+  private questionsAnswered: number = 0;
 
   constructor() {
     super({ key: 'DemoScene' });
@@ -53,11 +59,18 @@ class DemoScene extends Phaser.Scene {
     this.add.rectangle(450, 200, 24, 24, 0xe74c3c).setStrokeStyle(2, 0x8b0000);
     this.add.rectangle(550, 400, 24, 24, 0xe74c3c).setStrokeStyle(2, 0x8b0000);
 
-    // Create treasures (yellow circles)
-    this.add.circle(100, 100, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12);
-    this.add.circle(700, 100, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12);
-    this.add.circle(100, 450, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12);
-    this.add.circle(700, 450, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12);
+    // Create interactive treasures (yellow circles)
+    const treasure1 = this.add.circle(100, 100, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12).setInteractive();
+    const treasure2 = this.add.circle(700, 100, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12).setInteractive();
+    const treasure3 = this.add.circle(100, 450, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12).setInteractive();
+    const treasure4 = this.add.circle(700, 450, 16, 0xf1c40f).setStrokeStyle(2, 0xf39c12).setInteractive();
+    
+    this.treasures = [treasure1, treasure2, treasure3, treasure4];
+    
+    // Add treasure interaction
+    this.treasures.forEach((treasure, index) => {
+      treasure.on('pointerdown', () => this.collectTreasure(treasure, index));
+    });
 
     // Controls
     this.cursors = this.input.keyboard?.createCursorKeys();
@@ -82,11 +95,18 @@ class DemoScene extends Phaser.Scene {
       fontFamily: 'Arial'
     }).setOrigin(0.5);
 
-    // Simple game stats
-    this.add.text(20, 20, 'Level: 1', { fontSize: '16px', fill: '#ffffff' });
+    // Dynamic game stats
+    this.add.text(20, 20, `Level: ${this.level}`, { fontSize: '16px', fill: '#ffffff' });
     this.add.text(20, 40, 'Health: 100/100', { fontSize: '16px', fill: '#ff6b6b' });
-    this.add.text(20, 60, 'Score: 0', { fontSize: '16px', fill: '#4ecdc4' });
-    this.add.text(20, 80, 'Questions: 0/20', { fontSize: '16px', fill: '#ffe66d' });
+    this.scoreText = this.add.text(20, 60, `Score: ${this.score}`, { fontSize: '16px', fill: '#4ecdc4' });
+    this.add.text(20, 80, `Questions: ${this.questionsAnswered}/20`, { fontSize: '16px', fill: '#ffe66d' });
+    
+    // Click instructions
+    this.add.text(width / 2, height - 20, 'Click on treasures to answer questions!', {
+      fontSize: '12px',
+      fill: '#ffdd00',
+      fontFamily: 'Arial'
+    }).setOrigin(0.5);
   }
 
   update() {
@@ -123,6 +143,86 @@ class DemoScene extends Phaser.Scene {
       this.player.setFillStyle(0x5dade2);
     } else {
       this.player.setFillStyle(0x4a90e2);
+    }
+  }
+
+  private collectTreasure(treasure: Phaser.GameObjects.GameObject, index: number) {
+    // Sample educational questions
+    const questions = [
+      { q: "What is 5 + 3?", options: ["6", "7", "8", "9"], correct: "8" },
+      { q: "What is the capital of France?", options: ["London", "Berlin", "Paris", "Madrid"], correct: "Paris" },
+      { q: "What is 2 × 6?", options: ["10", "12", "14", "16"], correct: "12" },
+      { q: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Earth", "Mars"], correct: "Mercury" }
+    ];
+
+    const question = questions[index % questions.length];
+    
+    // Simple question modal using browser prompt (in a real game, this would be a proper UI)
+    const userAnswer = prompt(`Educational Question:\n\n${question.q}\n\nOptions: ${question.options.join(', ')}\n\nEnter your answer:`);
+    
+    if (userAnswer === question.correct) {
+      // Correct answer
+      this.score += 100;
+      this.questionsAnswered++;
+      
+      // Remove treasure and add particle effect
+      treasure.destroy();
+      this.createSuccessEffect(treasure.x as number, treasure.y as number);
+      
+      // Update score display
+      if (this.scoreText) {
+        this.scoreText.setText(`Score: ${this.score}`);
+      }
+      
+      // Show success message
+      const successText = this.add.text(treasure.x as number, treasure.y as number - 30, '+100!', {
+        fontSize: '20px',
+        fill: '#00ff00',
+        fontFamily: 'Arial'
+      }).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: successText,
+        y: successText.y - 50,
+        alpha: 0,
+        duration: 1500,
+        onComplete: () => successText.destroy()
+      });
+      
+    } else {
+      // Wrong answer
+      const wrongText = this.add.text(treasure.x as number, treasure.y as number - 30, 'Try Again!', {
+        fontSize: '16px',
+        fill: '#ff4444',
+        fontFamily: 'Arial'
+      }).setOrigin(0.5);
+      
+      this.tweens.add({
+        targets: wrongText,
+        y: wrongText.y - 30,
+        alpha: 0,
+        duration: 1000,
+        onComplete: () => wrongText.destroy()
+      });
+    }
+  }
+
+  private createSuccessEffect(x: number, y: number) {
+    // Create sparkle effect
+    for (let i = 0; i < 8; i++) {
+      const spark = this.add.circle(x, y, 3, 0xffff00);
+      const angle = (i / 8) * Math.PI * 2;
+      const distance = 50;
+      
+      this.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        duration: 800,
+        ease: 'Power2',
+        onComplete: () => spark.destroy()
+      });
     }
   }
 }
