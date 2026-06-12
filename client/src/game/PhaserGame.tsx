@@ -89,6 +89,7 @@ class DemoScene extends Phaser.Scene {
   private scoreText?: Phaser.GameObjects.Text;
   private level: number = 1;
   private questionsAnswered: number = 0;
+  private isModalOpen: boolean = false;
 
   constructor() {
     super({ key: 'DemoScene' });
@@ -184,6 +185,8 @@ class DemoScene extends Phaser.Scene {
 
   update() {
     if (!this.player || !this.cursors || !this.wasd) return;
+    
+    if (this.isModalOpen) return;
 
     const speed = 3;
     let moving = false;
@@ -230,17 +233,56 @@ class DemoScene extends Phaser.Scene {
 
     const question = questions[index % questions.length];
     
-    // Simple question modal using browser prompt (in a real game, this would be a proper UI)
-    const userAnswer = prompt(`Educational Question:\n\n${question.q}\n\nOptions: ${question.options.join(', ')}\n\nEnter your answer:`);
-    
-    if (userAnswer === question.correct) {
+    // Replace prompt() with asynchronous Phaser UI
+    this.scene.pause();
+    const { width, height } = this.scale;
+
+    const modalBg = this.add.rectangle(width / 2, height / 2, 640, 420, 0x000000, 0.85)
+      .setScrollFactor(0)
+      .setDepth(1000)
+      .setInteractive();
+
+    const title = this.add.text(width / 2, height / 2 - 150, question.q, {
+      fontSize: '24px',
+      fill: '#ffffff',
+      wordWrap: { width: 560 },
+      align: 'center'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const buttons: Phaser.GameObjects.Text[] = [];
+
+    question.options.forEach((option, i) => {
+      const button = this.add.text(width / 2, height / 2 - 30 + (i * 60), `${i + 1}. ${option}`, {
+        fontSize: '20px',
+        fill: '#7cff7c',
+        backgroundColor: '#1f3d1f',
+        padding: { x: 14, y: 8 }
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
+
+      button.on('pointerover', () => button.setStyle({ fill: '#ffff66' }));
+      button.on('pointerout', () => button.setStyle({ fill: '#7cff7c' }));
+      button.on('pointerdown', () => {
+        modalBg.destroy();
+        title.destroy();
+        buttons.forEach(b => b.destroy());
+        this.isModalOpen = false;
+        this.handleAnswer(option, question.correct, treasure);
+      });
+      buttons.push(button);
+    });
+  }
+
+  private handleAnswer(userAnswer: string, correctAnswer: string, treasure: Phaser.GameObjects.GameObject) {
+    if (userAnswer === correctAnswer) {
       // Correct answer
       this.score += 100;
       this.questionsAnswered++;
       
       // Remove treasure and add particle effect
+      const tX = treasure.x as number;
+      const tY = treasure.y as number;
       treasure.destroy();
-      this.createSuccessEffect(treasure.x as number, treasure.y as number);
+      this.createSuccessEffect(tX, tY);
       
       // Update score display
       if (this.scoreText) {
@@ -248,7 +290,7 @@ class DemoScene extends Phaser.Scene {
       }
       
       // Show success message
-      const successText = this.add.text(treasure.x as number, treasure.y as number - 30, '+100!', {
+      const successText = this.add.text(tX, tY - 30, '+100!', {
         fontSize: '20px',
         fill: '#00ff00',
         fontFamily: 'Arial'
@@ -264,7 +306,9 @@ class DemoScene extends Phaser.Scene {
       
     } else {
       // Wrong answer
-      const wrongText = this.add.text(treasure.x as number, treasure.y as number - 30, 'Try Again!', {
+      const tX = treasure.x as number;
+      const tY = treasure.y as number;
+      const wrongText = this.add.text(tX, tY - 30, 'Try Again!', {
         fontSize: '16px',
         fill: '#ff4444',
         fontFamily: 'Arial'

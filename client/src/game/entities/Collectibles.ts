@@ -162,7 +162,7 @@ export class Chest extends Collectible {
   }
   
   private handleAnswer(selectedAnswer: string, player: Player, modalElements: Phaser.GameObjects.GameObject[]): void {
-    const isCorrect = selectedAnswer === this.question.correctAnswer;
+    const isCorrect = this.normalizeAnswer(selectedAnswer) === this.normalizeAnswer(this.question.correctAnswer);
     
     // Update player stats
     player.answerQuestion(isCorrect);
@@ -193,6 +193,15 @@ export class Chest extends Collectible {
     });
   }
   
+  private normalizeAnswer(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFKC')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+  }
+
   private openChest(player: Player): void {
     this.collected = true;
     this.anims.play('chest_open');

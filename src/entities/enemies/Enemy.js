@@ -80,7 +80,35 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.target.y - this.y
         ).normalize();
 
-        this.setVelocity(direction.x * this.speed, direction.y * this.speed);
+        let velocityX = direction.x * this.speed;
+        let velocityY = direction.y * this.speed;
+
+        if (this.scene.layer3 || this.scene.mapWalls) {
+            const wallLayer = this.scene.layer3 || this.scene.mapWalls;
+            const nextX = this.x + velocityX * 0.02;
+            const nextY = this.y + velocityY * 0.02;
+            const tile = wallLayer.getTileAtWorldXY(nextX, nextY, true);
+
+            if (tile && tile.index > 0) {
+                const alternatives = [
+                    { x: velocityX, y: 0 },
+                    { x: 0, y: velocityY },
+                    { x: -velocityY, y: velocityX },
+                    { x: velocityY, y: -velocityX }
+                ];
+
+                for (const alt of alternatives) {
+                    const testTile = wallLayer.getTileAtWorldXY(this.x + alt.x * 0.02, this.y + alt.y * 0.02, true);
+                    if (!testTile || testTile.index <= 0) {
+                        velocityX = alt.x;
+                        velocityY = alt.y;
+                        break;
+                    }
+                }
+            }
+        }
+
+        this.setVelocity(velocityX, velocityY);
         this.updateDirection(direction);
     }
 

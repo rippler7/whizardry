@@ -48,7 +48,8 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
     setQuestionData(questionData) {
         this.questionData = questionData;
         if (this.questionData && this.questionData.choices) {
-            this.correctAnswerIndex = this.questionData.choices.indexOf(this.questionData.answer);
+            const correctAnswer = this.questionData.answer || this.questionData.correctAnswer;
+            this.correctAnswerIndex = this.questionData.choices.indexOf(correctAnswer);
         }
     }
 

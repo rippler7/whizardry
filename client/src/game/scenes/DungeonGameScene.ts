@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { QUESTIONS } from '../data/Questions';
 
 interface Question {
   id: number;
@@ -8,6 +9,66 @@ interface Question {
   category: string;
   difficulty: number;
 }
+
+const DEFAULT_QUESTIONS: Question[] = [
+  { id: 1, question: "What is 5 + 3?", options: ["6", "7", "8", "9"], correctAnswer: "8", category: "Math", difficulty: 1 },
+  { id: 2, question: "What is the capital of France?", options: ["London", "Berlin", "Paris", "Madrid"], correctAnswer: "Paris", category: "Geography", difficulty: 1 },
+  { id: 3, question: "What is 2 × 6?", options: ["10", "12", "14", "16"], correctAnswer: "12", category: "Math", difficulty: 1 },
+  { id: 4, question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Earth", "Mars"], correctAnswer: "Mercury", category: "Science", difficulty: 1 },
+  { id: 5, question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correctAnswer: "Pacific", category: "Geography", difficulty: 2 }
+];
+
+const normalizeAnswerText = (value: unknown): string => {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+};
+
+const isCorrectAnswer = (selectedAnswer: unknown, correctAnswer: unknown): boolean => {
+  return normalizeAnswerText(selectedAnswer) === normalizeAnswerText(correctAnswer);
+};
+
+// Helper to safely parse imported questions regardless of formatting
+const getValidQuestions = (): Question[] => {
+  let questionsArray = QUESTIONS;
+  if (!Array.isArray(QUESTIONS)) {
+    if (QUESTIONS && typeof QUESTIONS === 'object') {
+      questionsArray = Object.values(QUESTIONS);
+    } else {
+      return DEFAULT_QUESTIONS;
+    }
+  }
+  
+  if (questionsArray.length === 0) {
+    return DEFAULT_QUESTIONS;
+  }
+  
+  return questionsArray.map((q: any, i: number) => {
+    let options = ["Option 1", "Option 2", "Option 3", "Option 4"];
+    if (Array.isArray(q.options)) options = q.options;
+    else if (Array.isArray(q.choices)) options = q.choices;
+    else if (Array.isArray(q.answers)) options = q.answers;
+    else if (Array.isArray(q.a)) options = q.a;
+
+    const normalizedOptions = options.map((option: unknown) => String(option ?? '').trim());
+    const rawCorrectAnswer = q.correctAnswer ?? q.correct ?? q.answer ?? q.answerText ?? normalizedOptions[0];
+    const correctedAnswer = typeof rawCorrectAnswer === 'number' && Number.isInteger(rawCorrectAnswer)
+      ? normalizedOptions[rawCorrectAnswer] ?? normalizedOptions[0]
+      : String(rawCorrectAnswer ?? normalizedOptions[0] ?? '');
+
+    return {
+      id: q.id || i,
+      question: q.question || q.q || "Missing Question?",
+      options: normalizedOptions,
+      correctAnswer: correctedAnswer,
+      category: q.category || "General",
+      difficulty: q.difficulty || 1
+    };
+  });
+};
 
 export class DungeonGameScene extends Phaser.Scene {
   // Game objects
@@ -29,10 +90,12 @@ export class DungeonGameScene extends Phaser.Scene {
   private playerScore: number = 0;
   private questionsAnswered: number = 0;
   private correctAnswers: number = 0;
+  private levelCorrectAnswers: number = 0;
   private currentDungeon: number = 1;
   private maxDungeons: number = 5;
   private doorUnlocked: boolean = false;
   private bossVulnerability: number = 0; // 0-100%, boss takes 25% per correct answer
+  private isModalOpen: boolean = false;
 
   // UI elements
   private healthBar!: Phaser.GameObjects.Graphics;
@@ -41,40 +104,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private dungeonText!: Phaser.GameObjects.Text;
 
   // Educational questions for this dungeon
-  private dungeonQuestions: Question[] = [
-    {
-      id: 1,
-      question: "What is 8 + 7?",
-      options: ["13", "14", "15", "16"],
-      correctAnswer: "15",
-      category: "math",
-      difficulty: 1
-    },
-    {
-      id: 2,
-      question: "What is the capital of Japan?",
-      options: ["Seoul", "Tokyo", "Beijing", "Bangkok"],
-      correctAnswer: "Tokyo",
-      category: "geography",
-      difficulty: 1
-    },
-    {
-      id: 3,
-      question: "How many planets are in our solar system?",
-      options: ["7", "8", "9", "10"],
-      correctAnswer: "8",
-      category: "science",
-      difficulty: 2
-    },
-    {
-      id: 4,
-      question: "Who painted the Mona Lisa?",
-      options: ["Van Gogh", "Picasso", "Da Vinci", "Michelangelo"],
-      correctAnswer: "Da Vinci",
-      category: "history",
-      difficulty: 2
-    }
-  ];
+  private dungeonQuestions: Question[] = [];
 
   constructor() {
     super({ key: 'DungeonGameScene' });
@@ -84,6 +114,15 @@ export class DungeonGameScene extends Phaser.Scene {
     this.currentDungeon = data.dungeon || 1;
     this.playerHealth = data.health || 100;
     this.playerScore = data.score || 0;
+    this.questionsAnswered = data.questionsAnswered || 0;
+    this.correctAnswers = data.correctAnswers || 0;
+    
+    // Reset per-level state for when the scene restarts
+    this.levelCorrectAnswers = 0;
+    this.doorUnlocked = false;
+    this.isModalOpen = false;
+    this.bossVulnerability = 0;
+    this.boss = undefined;
   }
 
   preload() {
@@ -132,10 +171,12 @@ export class DungeonGameScene extends Phaser.Scene {
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, 0x2d4a22);
 
+    this.generateDungeonQuestions();
+
     // Create player with animated spritesheet
     this.player = this.physics.add.sprite(100, height / 2, 'player', 0);
     this.player.setCollideWorldBounds(true);
-    this.player.setScale(1.5); // Scale to make visible
+    this.player.setScale(1.125); // Increased by 25% from 0.9
     
     // Create player animations
     this.createPlayerAnimations();
@@ -148,14 +189,20 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create dungeon layout
     this.createDungeonLayout();
 
-    // Create enemies based on dungeon level
-    this.createEnemies();
+    // Create exit door
+    this.createExitDoor();
 
     // Create question chests
     this.createQuestionChests();
 
-    // Create exit door
-    this.createExitDoor();
+    // Create random obstacles
+    this.createRandomObstacles();
+
+    // Create enemies based on dungeon level
+    this.createEnemies();
+
+    // Create boss if this is the last dungeon
+    this.createBoss();
 
     // Setup controls
     this.setupControls();
@@ -167,6 +214,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.createUI();
 
     // Start background music
+    this.sound.stopAll();
     if (this.currentDungeon === this.maxDungeons) {
       this.sound.play('boss_battle', { volume: 0.3, loop: true });
     } else {
@@ -265,14 +313,80 @@ export class DungeonGameScene extends Phaser.Scene {
     walls.add(rightWallTop);
     walls.add(rightWallBottom);
 
-    // Add some obstacles in the middle
-    const obstacle1 = this.add.rectangle(width / 3, height / 3, 64, 64, wallColor);
-    const obstacle2 = this.add.rectangle(width * 2/3, height * 2/3, 64, 64, wallColor);
-    walls.add(obstacle1);
-    walls.add(obstacle2);
-
     // Store walls for collision detection
     this.registry.set('walls', walls);
+  }
+
+  private createRandomObstacles() {
+    const walls = this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup;
+    const wallColor = 0x8b4513;
+    const numObstacles = Phaser.Math.Between(3 + this.currentDungeon, 5 + this.currentDungeon);
+
+    for (let i = 0; i < numObstacles; i++) {
+      const w = Phaser.Math.Between(1, 3) * 32;
+      const h = Phaser.Math.Between(1, 3) * 32;
+      const pos = this.getValidSpawnPosition(w, h, true);
+      
+      if (pos) {
+        const obstacle = this.add.rectangle(pos.x, pos.y, w, h, wallColor);
+        walls.add(obstacle);
+      }
+    }
+  }
+
+  private getValidSpawnPosition(w: number = 64, h: number = 64, isObstacle: boolean = false, bounds?: {minX: number, maxX: number, minY: number, maxY: number}): { x: number, y: number } | null {
+    let x: number = 0, y: number = 0;
+    let valid = false;
+    const walls = this.registry.get('walls').getChildren();
+    const chests = this.chests.getChildren();
+    const enemies = this.enemies.getChildren();
+    const playerBounds = this.player.getBounds();
+    const playerHeight = playerBounds.height;
+    
+    // Give player some breathing room so they aren't trapped on spawn
+    Phaser.Geom.Rectangle.Inflate(playerBounds, 64, 64);
+    
+    const padding = isObstacle ? playerHeight * 2 : 16;
+    const checkRect = new Phaser.Geom.Rectangle(0, 0, w + padding, h + padding);
+    const doorBounds = this.door ? this.door.getBounds() : new Phaser.Geom.Rectangle(0, 0, 0, 0);
+    const bossBounds = new Phaser.Geom.Rectangle(this.scale.width / 2 - 80, this.scale.height / 2 - 80, 160, 160);
+
+    let attempts = 0;
+    while (!valid && attempts < 100) {
+        attempts++;
+        const minX = bounds ? bounds.minX : 100;
+        const maxX = bounds ? bounds.maxX : this.scale.width - 100;
+        const minY = bounds ? bounds.minY : 100;
+        const maxY = bounds ? bounds.maxY : this.scale.height - 100;
+        
+        x = Phaser.Math.Between(minX, maxX);
+        y = Phaser.Math.Between(minY, maxY);
+        checkRect.setPosition(x - checkRect.width / 2, y - checkRect.height / 2);
+
+        valid = true;
+
+        if (Phaser.Geom.Intersects.RectangleToRectangle(checkRect, playerBounds)) {
+            valid = false;
+            continue;
+        }
+        if (this.door && Phaser.Geom.Intersects.RectangleToRectangle(checkRect, doorBounds)) {
+            valid = false;
+            continue;
+        }
+        if (this.currentDungeon === this.maxDungeons && Phaser.Geom.Intersects.RectangleToRectangle(checkRect, bossBounds)) {
+            valid = false;
+            continue;
+        }
+
+        const allObstacles = [...walls, ...chests, ...enemies];
+        for (const obstacle of allObstacles) {
+            if (Phaser.Geom.Intersects.RectangleToRectangle(checkRect, (obstacle as any).getBounds())) {
+                valid = false;
+                break;
+            }
+        }
+    }
+    return valid ? { x, y } : null;
   }
 
   private createEnemies() {
@@ -280,8 +394,9 @@ export class DungeonGameScene extends Phaser.Scene {
     const enemyTypes = ['skeleton', 'zombie', 'chiroptera'];
 
     for (let i = 0; i < enemyCount; i++) {
-      const x = Phaser.Math.Between(200, this.scale.width - 200);
-      const y = Phaser.Math.Between(100, this.scale.height - 100);
+      const pos = this.getValidSpawnPosition();
+      if (!pos) continue;
+      const { x, y } = pos;
       const enemyType = enemyTypes[i % enemyTypes.length];
       
       // Use proper enemy sprites with correct mapping
@@ -297,6 +412,7 @@ export class DungeonGameScene extends Phaser.Scene {
       enemy.setData('health', 50 + this.currentDungeon * 10);
       enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
       enemy.setData('type', enemyType);
+      enemy.setData('wanderTimer', 0);
       
       // Create directional walking animations for enemies using original specifications
       if (enemyType === 'skeleton') {
@@ -377,43 +493,67 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
+  private generateDungeonQuestions(): void {
+    const maxDifficulty = Math.min(5, this.currentDungeon + 1);
+    const validQuestions = getValidQuestions();
+    const pool = validQuestions.filter((question) => question.difficulty <= maxDifficulty);
+
+    if (pool.length < 4) {
+      this.dungeonQuestions = [...validQuestions].sort(() => Math.random() - 0.5).slice(0, 4);
+      return;
+    }
+
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    this.dungeonQuestions = shuffled.slice(0, 4);
+  }
+
   private createQuestionChests() {
+    const { width, height } = this.scale;
     const chestTypes = ['chestBlue', 'chestGreen', 'chestRed', 'chestYellow'];
-    const positions = [
-      { x: 150, y: 150 },
-      { x: this.scale.width - 150, y: 150 },
-      { x: 150, y: this.scale.height - 150 },
-      { x: this.scale.width - 150, y: this.scale.height - 150 }
+    
+    // Define 4 quadrants to keep chests relatively equidistant from each other
+    const quadrants = [
+      { minX: 100, maxX: width / 2 - 50, minY: 100, maxY: height / 2 - 50 },
+      { minX: width / 2 + 50, maxX: width - 100, minY: 100, maxY: height / 2 - 50 },
+      { minX: 100, maxX: width / 2 - 50, minY: height / 2 + 50, maxY: height - 100 },
+      { minX: width / 2 + 50, maxX: width - 100, minY: height / 2 + 50, maxY: height - 100 }
     ];
 
-    positions.forEach((pos, index) => {
-      const chest = this.physics.add.sprite(pos.x, pos.y, chestTypes[index], 0);
+    chestTypes.forEach((type, index) => {
+      // Use getValidSpawnPosition within the designated quadrant to ensure safe placement and equidistant spreading
+      const pos = this.getValidSpawnPosition(48, 80, false, quadrants[index]);
+      
+      // Fallback coordinates just in case it fails to find a safe spot after 100 attempts
+      const x = pos ? pos.x : quadrants[index].minX + 50;
+      const y = pos ? pos.y : quadrants[index].minY + 50;
+
+      const chest = this.physics.add.sprite(x, y, type, 0);
       chest.setScale(1.0); // Normal scale since chests are properly sized now
       chest.setData('questionIndex', index);
       chest.setData('opened', false);
       chest.setInteractive();
       
       // Create chest opening animation using original specifications
-      const openAnimKey = `open-${chestTypes[index]}`;
+      const openAnimKey = `open-${type}`;
       if (!this.anims.exists(openAnimKey)) {
-        if (chestTypes[index] === 'chestRed' || chestTypes[index] === 'chestBlue') {
+        if (type === 'chestRed' || type === 'chestBlue') {
           this.anims.create({
             key: openAnimKey,
-            frames: this.anims.generateFrameNumbers(chestTypes[index], { start: 0, end: 3 }),
+            frames: this.anims.generateFrameNumbers(type, { start: 0, end: 3 }),
             frameRate: 8,
             repeat: 0
           });
         } else { // Green and Yellow chests
           this.anims.create({
             key: openAnimKey,
-            frames: this.anims.generateFrameNumbers(chestTypes[index], { start: 4, end: 7 }),
+            frames: this.anims.generateFrameNumbers(type, { start: 4, end: 7 }),
             frameRate: 8,
             repeat: 0
           });
         }
       }
       // Start with first frame (closed chest)
-      chest.setFrame(chestTypes[index] === 'chestGreen' || chestTypes[index] === 'chestYellow' ? 4 : 0);
+      chest.setFrame(type === 'chestGreen' || type === 'chestYellow' ? 4 : 0);
       
       chest.on('pointerdown', () => this.openChest(chest));
       
@@ -491,6 +631,32 @@ export class DungeonGameScene extends Phaser.Scene {
         });
       }
       this.boss.anims.play('walkDownOrc');
+
+      // Add animation event listeners to trigger damage only on attack cycles
+      this.boss.on('animationstart', this.onBossAttackFrame, this);
+      this.boss.on('animationrepeat', this.onBossAttackFrame, this);
+    }
+  }
+
+  private onBossAttackFrame(anim: Phaser.Animations.Animation) {
+    if (anim.key.startsWith('attack') && this.boss) {
+      const now = this.time.now;
+      const lastAttack = this.boss.getData('lastAttackTime') || 0;
+      
+      // Enforce an 850ms cooldown (animation cycle is 875ms) so the boss 
+      // waits for the animation to finish before it can trigger damage again
+      if (now - lastAttack < 850) {
+        return;
+      }
+      this.boss.setData('lastAttackTime', now);
+
+      const dist = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
+      const attackRange = this.bossVulnerability < 100 ? 100 : 50;
+      
+      if (dist <= attackRange + 15) {
+        this.player.setData('isInvulnerable', false); // Bypass normal invulnerability so every cycle hits
+        this.hitPlayer(this.player, this.boss);
+      }
     }
   }
 
@@ -524,8 +690,7 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Player vs boss (if exists)
     if (this.boss) {
-      this.physics.add.overlap(this.player, this.boss, this.hitPlayer, undefined, this);
-      this.physics.add.overlap(this.bullets, this.boss, this.hitBoss, undefined, this);
+      this.physics.add.overlap(this.boss, this.bullets, this.hitBoss, undefined, this);
       if (walls) {
         this.physics.add.collider(this.boss, walls);
       }
@@ -543,7 +708,7 @@ export class DungeonGameScene extends Phaser.Scene {
       fill: '#ffffff'
     });
 
-    this.questionsText = this.add.text(20, 45, `Questions: ${this.correctAnswers}/4`, {
+    this.questionsText = this.add.text(20, 45, `Questions: ${this.levelCorrectAnswers}/4`, {
       fontSize: '16px',
       fill: '#ffff00'
     });
@@ -594,6 +759,8 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
+    if (this.isModalOpen) return;
+
     this.handlePlayerMovement();
     this.handleShooting();
     this.updateBullets(delta);
@@ -682,7 +849,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private fireBullet() {
     const bullet = this.physics.add.sprite(this.player.x, this.player.y, 'bullet');
-    bullet.setScale(1.2); // Make it more visible as a magic orb
+    bullet.setScale(0.4); // Reduced to 1/3 of original (1.2 / 3)
     bullet.setTint(0x88ccff); // Blue tint for magic effect
     
     // Get mouse click position (using downX/downY like original)
@@ -696,7 +863,7 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Normalize direction and set speed properties like original
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const baseSpeed = 0.3; // Same as original
+    const baseSpeed = 0.375; // Increased by 25% (0.3 * 1.25)
     
     if (distance > 0) {
       bullet.setData('speedX', (deltaX / distance) * baseSpeed);
@@ -719,61 +886,43 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private updateEnemies() {
     this.enemies.children.entries.forEach((enemy: any) => {
-      // Simple AI: move towards player but slower
-      const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-      
-      if (distance < 200 && distance > 32) { // Don't move if too close
-        const speed = 25 + this.currentDungeon * 5; // Much slower
-        this.physics.moveToObject(enemy, this.player, speed);
-        
-        // Update animation based on movement direction
-        const enemyType = enemy.getData('type');
-        const deltaX = this.player.x - enemy.x;
-        const deltaY = this.player.y - enemy.y;
-        
-        if (enemyType === 'skeleton') {
-          if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            // Moving horizontally
-            if (deltaX > 0) {
-              enemy.anims.play('walkRightSkeleton', true);
-            } else {
-              enemy.anims.play('walkLeftSkeleton', true);
-            }
-          } else {
-            // Moving vertically
-            if (deltaY > 0) {
-              enemy.anims.play('walkDownSkeleton', true);
-            } else {
-              enemy.anims.play('walkUpSkeleton', true);
-            }
-          }
-        } else if (enemyType === 'zombie') {
-          if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            // Moving horizontally
-            if (deltaX > 0) {
-              enemy.anims.play('walkRightZombie', true);
-            } else {
-              enemy.anims.play('walkLeftZombie', true);
-            }
-          } else {
-            // Moving vertically
-            if (deltaY > 0) {
-              enemy.anims.play('walkDownZombie', true);
-            } else {
-              enemy.anims.play('walkUpZombie', true);
-            }
-          }
-        } else if (enemyType === 'chiroptera') {
-          // Bat flies left or right based on horizontal movement
-          if (deltaX > 0) {
-            enemy.anims.play('flyRight', true);
-          } else {
-            enemy.anims.play('flyLeft', true);
+      const distanceToPlayer = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+      const baseSpeed = 25 + this.currentDungeon * 5;
+
+      // AI: Chase player if close, otherwise wander
+      if (distanceToPlayer < 200 && distanceToPlayer > 32) {
+        // Chase player
+        this.physics.moveToObject(enemy, this.player, baseSpeed);
+      } else {
+        // Stop or Wander
+        if (distanceToPlayer <= 32) {
+          enemy.setVelocity(0, 0);
+        } else {
+          let wanderTimer = enemy.getData('wanderTimer') || 0;
+          if (this.time.now > wanderTimer) {
+            const wanderAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+            const wanderSpeed = baseSpeed * 0.5; // Wander slower
+            enemy.setVelocity(Math.cos(wanderAngle) * wanderSpeed, Math.sin(wanderAngle) * wanderSpeed);
+            enemy.setData('wanderTimer', this.time.now + Phaser.Math.Between(2000, 4000));
           }
         }
-      } else {
-        // Stop moving if too close
-        enemy.setVelocity(0, 0);
+      }
+
+      // Update animation based on velocity
+      const velocity = enemy.body.velocity;
+      const enemyType = enemy.getData('type');
+
+      if (Math.abs(velocity.x) < 1 && Math.abs(velocity.y) < 1) {
+        enemy.anims.stop();
+      } else if (enemyType === 'skeleton' || enemyType === 'zombie') {
+        const animSuffix = enemyType === 'skeleton' ? 'Skeleton' : 'Zombie';
+        if (Math.abs(velocity.x) > Math.abs(velocity.y)) {
+          enemy.anims.play(velocity.x > 0 ? `walkRight${animSuffix}` : `walkLeft${animSuffix}`, true);
+        } else {
+          enemy.anims.play(velocity.y > 0 ? `walkDown${animSuffix}` : `walkUp${animSuffix}`, true);
+        }
+      } else if (enemyType === 'chiroptera') {
+        enemy.anims.play(velocity.x > 0 ? 'flyRight' : 'flyLeft', true);
       }
     });
   }
@@ -789,7 +938,7 @@ export class DungeonGameScene extends Phaser.Scene {
     if (this.bossVulnerability < 100) {
       // Invulnerable: very slow movement
       if (distance > 100) {
-        this.physics.moveToObject(this.boss, this.player, 15); // Much slower
+        this.physics.moveToObject(this.boss, this.player, 18.75); // Increased from 15 (+25%)
         
         // Update boss animation based on movement direction
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -814,7 +963,7 @@ export class DungeonGameScene extends Phaser.Scene {
     } else {
       // Vulnerable: moderate movement
       if (distance > 50) {
-        this.physics.moveToObject(this.boss, this.player, 40); // Reduced from 80
+        this.physics.moveToObject(this.boss, this.player, 50); // Increased from 40 (+25%)
         
         // Update boss animation based on movement direction
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -842,21 +991,33 @@ export class DungeonGameScene extends Phaser.Scene {
   private openChest(chest: Phaser.Physics.Arcade.Sprite) {
     if (chest.getData('opened')) return;
     
-    const questionIndex = chest.getData('questionIndex');
-    const question = this.dungeonQuestions[questionIndex];
-    
+    const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, chest.x, chest.y);
+    if (distance > 80) {
+      this.showMessage('You are too far away to open this chest!');
+      return;
+    }
+
+    const questionIndex = Number(chest.getData('questionIndex')) || 0;
+    const validQuestions = getValidQuestions();
+    const question = this.dungeonQuestions[questionIndex] || validQuestions[questionIndex % validQuestions.length];
+
+    if (!question || !Array.isArray(question.options) || question.options.length === 0) {
+      this.showMessage('Question data is unavailable right now. Please try again.');
+      return;
+    }
+
     this.showQuestionModal(question, (isCorrect: boolean) => {
       if (isCorrect) {
         chest.setData('opened', true);
         chest.setTint(0x00ff00); // Green tint for opened
+        this.levelCorrectAnswers++;
         this.correctAnswers++;
         this.playerScore += 100;
-        this.bossVulnerability += 25; // 25% vulnerability per correct answer
         
         this.sound.play('star', { volume: 0.5 });
         
         // Check if door should unlock
-        if (this.correctAnswers >= 4) {
+        if (this.levelCorrectAnswers >= 4) {
           this.unlockDoor();
         }
         
@@ -876,17 +1037,95 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private showQuestionModal(question: Question, callback: (isCorrect: boolean) => void) {
-    const modalText = `${question.question}\n\nOptions:\n${question.options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}\n\nEnter number (1-4):`;
-    
-    const answer = prompt(modalText);
-    const answerIndex = parseInt(answer || '0') - 1;
-    
-    if (answerIndex >= 0 && answerIndex < question.options.length) {
-      const isCorrect = question.options[answerIndex] === question.correctAnswer;
-      callback(isCorrect);
-    } else {
-      callback(false);
-    }
+    this.isModalOpen = true;
+    this.physics.pause();
+
+    const modalBg = this.add.rectangle(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      640,
+      420,
+      0x000000,
+      0.85
+    ).setScrollFactor(0).setDepth(1000);
+
+    const title = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2 - 170,
+      'Answer this question to open the chest',
+      {
+        fontSize: '18px',
+        fill: '#ffd54a',
+        align: 'center',
+        fontFamily: 'Arial'
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const questionText = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2 - 120,
+      question.question,
+      {
+        fontSize: '22px',
+        fill: '#ffffff',
+        align: 'center',
+        wordWrap: { width: 560 }
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const buttons: Phaser.GameObjects.Text[] = [];
+
+    question.options.forEach((option, index) => {
+      const button = this.add.text(
+        this.scale.width / 2,
+        this.scale.height / 2 - 40 + index * 60,
+        `${index + 1}. ${option}`,
+        {
+          fontSize: '18px',
+          fill: '#7cff7c',
+          backgroundColor: '#1f3d1f',
+          padding: { x: 14, y: 8 }
+        }
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive();
+
+      button.on('pointerover', () => button.setStyle({ fill: '#ffff66' }));
+      button.on('pointerout', () => button.setStyle({ fill: '#7cff7c' }));
+      button.on('pointerdown', () => {
+        this.cleanupQuestionModal([modalBg, title, questionText, ...buttons]);
+        callback(isCorrectAnswer(option, question.correctAnswer));
+      });
+
+      buttons.push(button);
+    });
+
+    const closeHint = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2 + 180,
+      'Choose an answer to continue',
+      {
+        fontSize: '14px',
+        fill: '#bbbbbb',
+        align: 'center'
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const modalElements = [modalBg, title, questionText, closeHint, ...buttons];
+
+    this.input.keyboard!.once('keydown-ONE', () => this.answerFromKey(0, question, callback, modalElements));
+    this.input.keyboard!.once('keydown-TWO', () => this.answerFromKey(1, question, callback, modalElements));
+    this.input.keyboard!.once('keydown-THREE', () => this.answerFromKey(2, question, callback, modalElements));
+    this.input.keyboard!.once('keydown-FOUR', () => this.answerFromKey(3, question, callback, modalElements));
+  }
+
+  private answerFromKey(index: number, question: Question, callback: (isCorrect: boolean) => void, modalElements: Phaser.GameObjects.GameObject[]) {
+    this.cleanupQuestionModal(modalElements);
+    callback(isCorrectAnswer(question.options[index], question.correctAnswer));
+  }
+
+  private cleanupQuestionModal(elements: Phaser.GameObjects.GameObject[]) {
+    elements.forEach((element) => element.destroy());
+    this.physics.resume();
+    this.isModalOpen = false;
   }
 
   private unlockDoor() {
@@ -897,9 +1136,10 @@ export class DungeonGameScene extends Phaser.Scene {
     // Play gate opening animation
     this.door.anims.play('openGate');
     
-    // Create boss if final dungeon
-    if (this.currentDungeon === this.maxDungeons && !this.boss) {
-      this.createBoss();
+    // Make boss vulnerable if final dungeon
+    if (this.currentDungeon === this.maxDungeons && this.boss) {
+      this.bossVulnerability = 100;
+      this.boss.clearTint(); // Remove invulnerable tint
     }
   }
 
@@ -916,6 +1156,7 @@ export class DungeonGameScene extends Phaser.Scene {
       }
       
       // Game completed!
+      this.sound.stopAll();
       this.scene.start('GameOverScene', {
         victory: true,
         playerStats: {
@@ -927,15 +1168,29 @@ export class DungeonGameScene extends Phaser.Scene {
       });
     } else {
       // Go to next dungeon
+      this.sound.stopAll();
       this.scene.start('DungeonGameScene', {
         dungeon: this.currentDungeon + 1,
         health: this.playerHealth,
-        score: this.playerScore
+        score: this.playerScore,
+        questionsAnswered: this.questionsAnswered,
+        correctAnswers: this.correctAnswers
       });
     }
   }
 
   private hitPlayer(player: any, enemy: any) {
+    if (player.getData('isInvulnerable')) return;
+    
+    player.setData('isInvulnerable', true);
+    player.setTint(0xff0000);
+    this.time.delayedCall(1000, () => {
+      if (player && player.active) {
+        player.setData('isInvulnerable', false);
+        player.clearTint();
+      }
+    });
+
     this.playerHealth -= 20;
     this.sound.play('hurt', { volume: 0.4 });
     
@@ -970,32 +1225,28 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
-  private hitBoss(bullet: any, boss: any) {
+  private hitBoss(boss: any, bullet: any) {
     bullet.destroy();
     
-    if (this.bossVulnerability === 0) {
-      this.showMessage('Boss is invulnerable! Answer questions first!');
+    if (this.bossVulnerability < 100) {
+      this.showMessage('Boss is invulnerable! Answer all questions first!');
       return;
     }
     
-    const damageMultiplier = this.bossVulnerability / 100;
-    const damage = 50 * damageMultiplier;
+    const damage = 50;
     
     const health = boss.getData('health') - damage;
     boss.setData('health', health);
     
     if (health <= 0) {
+      this.boss = undefined;
       boss.destroy();
       this.playerScore += 500;
       this.showMessage('Boss defeated! Proceed to exit!');
     } else {
       boss.setTint(0xff0000);
       this.time.delayedCall(200, () => {
-        if (this.bossVulnerability >= 100) {
-          boss.clearTint();
-        } else {
-          boss.setTint(0x8888ff); // Return to invulnerable tint
-        }
+        if (boss && boss.active) boss.clearTint();
       });
     }
   }
@@ -1014,6 +1265,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private gameOver() {
+    this.sound.stopAll();
     this.scene.start('GameOverScene', {
       victory: false,
       playerStats: {
@@ -1027,7 +1279,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private updateUI() {
     this.scoreText.setText(`Score: ${this.playerScore}`);
-    this.questionsText.setText(`Questions: ${this.correctAnswers}/4`);
+    this.questionsText.setText(`Questions: ${this.levelCorrectAnswers}/4`);
   }
 
 

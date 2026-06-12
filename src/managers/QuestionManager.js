@@ -1,5 +1,14 @@
 import { Questions } from '../data/Questions.js';
 
+const shuffleArray = (items) => {
+    const shuffled = [...items];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+};
+
 export class QuestionManager {
     constructor(scene) {
         this.scene = scene;
@@ -25,8 +34,8 @@ export class QuestionManager {
     }
 
     setupQuestionSets() {
-        // Shuffle questions
-        this.shuffledSet = Phaser.Utils.Array.Shuffle([...this.questions]);
+        // Shuffle the full question pool so each level starts with a fresh set.
+        this.shuffledSet = shuffleArray(this.questions);
         
         // Create choice sets for each question
         for (let n = 0; n < this.shuffledSet.length; n++) {
@@ -88,8 +97,8 @@ export class QuestionManager {
     }
 
     setupChestQuestions() {
-        // Shuffle chest questions
-        this.masterChestQuestions = Phaser.Utils.Array.Shuffle([...this.chestQuestions]);
+        // Shuffle chest questions on every scene init so new levels feel fresh.
+        this.masterChestQuestions = shuffleArray(this.chestQuestions);
         
         // Generate choice sets for chest questions
         for (let n = 0; n < this.masterChestQuestions.length; n++) {

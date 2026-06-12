@@ -27,7 +27,8 @@ export class Door extends Phaser.Physics.Arcade.Sprite {
 
     setQuestionData(questionData) {
         this.questionData = questionData;
-        this.keyRequired = questionData.correctAnswer;
+        this.questionData.correctAnswer = questionData.correctAnswer || questionData.answer || '';
+        this.keyRequired = this.questionData.correctAnswer;
     }
 
     interact(player) {
@@ -169,7 +170,7 @@ export class Door extends Phaser.Physics.Arcade.Sprite {
     }
 
     selectChoice(index, choice) {
-        const correctAnswer = this.questionData.correctAnswer;
+        const correctAnswer = this.questionData.correctAnswer || this.questionData.answer || '';
         const isCorrect = choice === correctAnswer;
         
         // Clean up UI

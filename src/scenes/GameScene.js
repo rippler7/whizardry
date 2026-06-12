@@ -477,7 +477,10 @@ export class GameScene extends Phaser.Scene {
 
     checkGameOver() {
         if (this.player.health <= 0) {
-            this.gameOver(false);
+            if (!this.deathHandled) {
+                this.deathHandled = true;
+                this.time.delayedCall(600, () => this.gameOver(false));
+            }
         } else if (this.enemies.children.entries.length === 0 || this.gameState.isGameComplete()) {
             this.gameOver(true);
         }
@@ -528,9 +531,8 @@ export class GameScene extends Phaser.Scene {
 
     // Physics collision callbacks
     playerHitEnemy(player, enemy) {
-        if (enemy.takeDamage && enemy.active) {
-            // Enemy damages player
-            if (player.takeDamage) {
+        if (enemy.takeDamage && enemy.active && player.takeDamage) {
+            if (!player.invulnerable) {
                 player.takeDamage(enemy.damage || 10);
             }
         }

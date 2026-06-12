@@ -184,7 +184,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     
     // Create bullet
     const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
-    bullet.setScale(0.5);
+    bullet.setScale(0.05);
     bullet.setDepth(50);
     
     // Set bullet velocity
@@ -195,7 +195,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     );
     
     // Destroy bullet after time
-    this.scene.time.delayedCall(2000, () => {
+    this.scene.time.delayedCall(4000, () => {
       if (bullet.active) {
         bullet.destroy();
       }
