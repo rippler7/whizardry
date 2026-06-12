@@ -99,6 +99,8 @@ export class DungeonGameScene extends Phaser.Scene {
   private bossVulnerability: number = 0; // 0-100%, boss takes 25% per correct answer
   private isModalOpen: boolean = false;
   private usedQuestionIds: number[] = [];
+  
+  private playerShadow!: Phaser.GameObjects.Ellipse;
 
   // UI elements
   private healthBar!: Phaser.GameObjects.Graphics;
@@ -139,6 +141,13 @@ export class DungeonGameScene extends Phaser.Scene {
     this.load.spritesheet('spider', '/assets/sprites/spider2.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
     this.load.spritesheet('Boss', '/assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('gate', '/assets/sprites/rpg_gate5.png', { frameWidth: 145, frameHeight: 96, endFrame: 15 });
+    this.load.image('wall_texture', '/textures/cobbledsquare.jpg');
+    this.load.image('ground_easy', '/textures/grass.png');
+    this.load.image('ground_medium', '/textures/sand.jpg');
+    this.load.image('ground_hard', '/textures/asphalt.png');
+    this.load.image('ground_easy', '/assets/sprites/grass_3.png');
+    this.load.image('ground_medium', '/assets/sprites/sand_3.png');
+    this.load.image('ground_hard', '/assets/sprites/dirty_3.png');
     this.load.spritesheet('redcrystal', '/assets/sprites/crystal-qubodup-ccby3-32-red.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
     this.load.spritesheet('bluecrystal', '/assets/sprites/crystal-qubodup-ccby3-32-blue.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
     this.load.spritesheet('greencrystal', '/assets/sprites/crystal-qubodup-ccby3-32-green.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
@@ -174,23 +183,38 @@ export class DungeonGameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    // Determine ground color based on difficulty
-    let groundColor = 0x2d4a22; // easy (green)
+    // Determine ground texture based on difficulty
+    let groundTexture = 'ground_easy';
     if (this.gameDifficulty === 'medium') {
-      groundColor = 0xc3b091; // medium (khaki)
+      groundTexture = 'ground_medium';
     } else if (this.gameDifficulty === 'hard') {
-      groundColor = 0x4a148c; // hard (purple)
+      groundTexture = 'ground_hard';
     }
 
-    // Background
-    this.add.rectangle(width / 2, height / 2, width, height, groundColor);
+    // Background - Anchor to top left and explicitly send to the absolute back
+    if (this.textures.exists(groundTexture)) {
+      const ground = this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
+      
+      if (this.currentDungeon === 3 || this.currentDungeon === 4) {
+        ground.setTint(0xe8e0cc); // Very slight khaki tint
+      } else if (this.currentDungeon === 5) {
+        ground.setTint(0xd8c8e8); // Very slight purple tint
+      }
+    } else {
+      // Safe fallback if image is missing
+      const fallbackColors: { [key: string]: number } = { 'easy': 0x2d4a22, 'medium': 0xc3b091, 'hard': 0x4a148c };
+      const color = fallbackColors[this.gameDifficulty] || 0x2d4a22;
+      this.add.rectangle(0, 0, width, height, color).setOrigin(0, 0).setDepth(-10);
+    }
 
     this.generateDungeonQuestions();
 
     // Create player with animated spritesheet
+    this.playerShadow = this.add.ellipse(100, height / 2 + 26, 28, 12, 0x000000, 0.4).setDepth(1);
     this.player = this.physics.add.sprite(100, height / 2, 'player', 0);
     this.player.setCollideWorldBounds(true);
     this.player.setScale(1.125); // Increased by 25% from 0.9
+    this.player.setDepth(5);
     
     // Create player animations
     this.createPlayerAnimations();
@@ -305,28 +329,41 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // Create walls around the dungeon with physics bodies
     const wallThickness = 32;
-    const wallColor = 0x8b4513;
 
     // Create walls group for collision
     const walls = this.physics.add.staticGroup();
+    const hasWallTex = this.textures.exists('wall_texture');
 
-    // Top wall
-    const topWall = this.add.rectangle(width / 2, wallThickness / 2, width, wallThickness, wallColor);
+    // Helper to safely create a wall tile or a fallback rectangle
+    const createWall = (x: number, y: number, w: number, h: number) => {
+      if (hasWallTex) {
+        return this.add.tileSprite(x, y, w, h, 'wall_texture').setOrigin(0, 0).setDepth(0);
+      }
+      return this.add.rectangle(x, y, w, h, 0x555555).setOrigin(0, 0).setDepth(0);
+    };
+
+    // Top wall 
+    const topWall = createWall(0, 0, width, wallThickness);
     walls.add(topWall);
 
     // Bottom wall
-    const bottomWall = this.add.rectangle(width / 2, height - wallThickness / 2, width, wallThickness, wallColor);
+    const bottomWall = createWall(0, height - wallThickness, width, wallThickness);
     walls.add(bottomWall);
 
     // Left wall
-    const leftWall = this.add.rectangle(wallThickness / 2, height / 2, wallThickness, height, wallColor);
+    const leftWall = createWall(0, 0, wallThickness, height);
     walls.add(leftWall);
 
     // Right wall (with gap for door)
-    const rightWallTop = this.add.rectangle(width - wallThickness / 2, height / 4, wallThickness, height / 2, wallColor);
-    const rightWallBottom = this.add.rectangle(width - wallThickness / 2, height * 3/4, wallThickness, height / 2, wallColor);
+    const rightWallTop = createWall(width - wallThickness, 0, wallThickness, height / 2 - 48);
+    const rightWallBottom = createWall(width - wallThickness, height / 2 + 48, wallThickness, height / 2 - 48);
     walls.add(rightWallTop);
     walls.add(rightWallBottom);
+
+    // Ensure all static bodies are perfectly aligned with their new 0,0 origins
+    walls.getChildren().forEach(wall => {
+      ((wall as Phaser.GameObjects.TileSprite).body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+    });
 
     // Store walls for collision detection
     this.registry.set('walls', walls);
@@ -334,17 +371,65 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createRandomObstacles() {
     const walls = this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup;
-    const wallColor = 0x8b4513;
-    const numObstacles = Phaser.Math.Between(3 + this.currentDungeon, 5 + this.currentDungeon);
+    // Fill the wider map with a dense number of obstacles.
+    // getValidSpawnPosition automatically enforces the player-height gap rule!
+    const numObstacles = Phaser.Math.Between(30 + this.currentDungeon * 2, 45 + this.currentDungeon * 2);
+    const blockSize = 64; // 2x scale (enlarged from 32px to 64px base size)
+
+    // Define Tetris-like shapes using grid coordinates (each block is 64x64)
+    const shapes = [
+      // Horizontal Line
+      [{x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}],
+      // Vertical Line
+      [{x: 0, y: 0}, {x: 0, y: 1}, {x: 0, y: 2}],
+      // L-Shape
+      [{x: 0, y: 0}, {x: 0, y: 1}, {x: 0, y: 2}, {x: 1, y: 2}],
+      // Reverse L-Shape
+      [{x: 1, y: 0}, {x: 1, y: 1}, {x: 1, y: 2}, {x: 0, y: 2}],
+      // T-Shape
+      [{x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}, {x: 1, y: 1}],
+      // Cross / Plus
+      [{x: 1, y: 0}, {x: 0, y: 1}, {x: 1, y: 1}, {x: 2, y: 1}, {x: 1, y: 2}],
+      // Square 2x2
+      [{x: 0, y: 0}, {x: 1, y: 0}, {x: 0, y: 1}, {x: 1, y: 1}],
+      // Small Wall
+      [{x: 0, y: 0}, {x: 1, y: 0}]
+    ];
 
     for (let i = 0; i < numObstacles; i++) {
-      const w = Phaser.Math.Between(1, 3) * 32;
-      const h = Phaser.Math.Between(1, 3) * 32;
+      const shape = shapes[Phaser.Math.Between(0, shapes.length - 1)];
+      
+      // Calculate the full bounding box of the chosen shape
+      const minX = Math.min(...shape.map(b => b.x));
+      const maxX = Math.max(...shape.map(b => b.x));
+      const minY = Math.min(...shape.map(b => b.y));
+      const maxY = Math.max(...shape.map(b => b.y));
+      
+      const w = (maxX - minX + 1) * blockSize;
+      const h = (maxY - minY + 1) * blockSize;
+
       const pos = this.getValidSpawnPosition(w, h, true);
       
       if (pos) {
-        const obstacle = this.add.rectangle(pos.x, pos.y, w, h, wallColor);
-        walls.add(obstacle);
+        const startX = pos.x - w / 2 + blockSize / 2;
+        const startY = pos.y - h / 2 + blockSize / 2;
+
+        shape.forEach(block => {
+          let obstacle;
+          const blockX = startX + (block.x - minX) * blockSize;
+          const blockY = startY + (block.y - minY) * blockSize;
+          
+          if (this.textures.exists('wall_texture')) {
+            obstacle = this.add.tileSprite(blockX, blockY, blockSize, blockSize, 'wall_texture').setDepth(0);
+          } else {
+            obstacle = this.add.rectangle(blockX, blockY, blockSize, blockSize, 0x666666).setDepth(0);
+          }
+          
+          walls.add(obstacle);
+          if (obstacle.body) {
+            (obstacle.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+          }
+        });
       }
     }
   }
@@ -367,7 +452,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const bossBounds = new Phaser.Geom.Rectangle(this.scale.width / 2 - 80, this.scale.height / 2 - 80, 160, 160);
 
     let attempts = 0;
-    while (!valid && attempts < 100) {
+    while (!valid && attempts < 200) {
         attempts++;
         const minX = bounds ? bounds.minX : 100;
         const maxX = bounds ? bounds.maxX : this.scale.width - 100;
@@ -405,8 +490,6 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createEnemies() {
-    const enemyCount = Math.min(2 + this.currentDungeon, 6);
-    
     // Adjust enemy pool based on difficulty
     let enemyTypes = ['skeleton', 'chiroptera'];
     if (this.gameDifficulty === 'medium') {
@@ -415,11 +498,16 @@ export class DungeonGameScene extends Phaser.Scene {
       enemyTypes = ['skeleton', 'chiroptera', 'spider', 'zombie', 'zombie2'];
     }
 
-    for (let i = 0; i < enemyCount; i++) {
+    // Minimum 5 enemies (2 bats + 3 random) on level 1, scaling up each level
+    const batCount = 1 + this.currentDungeon;
+    const randomCount = 1 + (this.currentDungeon * 2);
+    const totalEnemies = batCount + randomCount;
+
+    for (let i = 0; i < totalEnemies; i++) {
       const pos = this.getValidSpawnPosition();
       if (!pos) continue;
       const { x, y } = pos;
-      const enemyType = enemyTypes[i % enemyTypes.length];
+      const enemyType = i < batCount ? 'chiroptera' : enemyTypes[Phaser.Math.Between(0, enemyTypes.length - 1)];
       
       // Use proper enemy sprites with correct mapping
       const spriteMap: { [key: string]: string } = {
@@ -444,6 +532,19 @@ export class DungeonGameScene extends Phaser.Scene {
       enemy.setData('maxHealth', hp);
       enemy.setData('type', enemyType);
       enemy.setData('wanderTimer', 0);
+      
+      let shadowYOffset = 20;
+      let shadowWidth = 32;
+      if (enemyType === 'skeleton') { shadowYOffset = 30; shadowWidth = 40; }
+      else if (enemyType === 'zombie' || enemyType === 'zombie2') { shadowYOffset = 16; shadowWidth = 24; }
+      else if (enemyType === 'spider') { shadowYOffset = 28; shadowWidth = 40; }
+      else if (enemyType === 'chiroptera') { shadowYOffset = 30; shadowWidth = 30; }
+
+      const shadowHeight = Math.round(shadowWidth / 2.5);
+      const shadow = this.add.ellipse(x, y + shadowYOffset, shadowWidth, shadowHeight, 0x000000, 0.4).setDepth(1);
+      enemy.setData('shadow', shadow);
+      enemy.setData('shadowOffset', shadowYOffset);
+      enemy.setDepth(5);
       
       // Create directional walking animations for enemies using original specifications
       if (enemyType === 'skeleton') {
@@ -711,6 +812,10 @@ export class DungeonGameScene extends Phaser.Scene {
       this.boss.setData('maxHealth', bossHp);
       this.boss.setTint(0x8888ff); // Blue tint when invulnerable
       
+      const shadow = this.add.ellipse(this.scale.width / 2, this.scale.height / 2 + 44, 60, 20, 0x000000, 0.4).setDepth(1);
+      this.boss.setData('shadow', shadow);
+      this.boss.setDepth(5);
+      
       // Create boss animations using original specifications
       if (!this.anims.exists('walkDownOrc')) {
         this.anims.create({
@@ -868,6 +973,40 @@ export class DungeonGameScene extends Phaser.Scene {
         fontFamily: 'Arial'
       }).setOrigin(0.5);
     }
+
+    // Exit to Menu Button (Top Right)
+    const exitBtnWidth = 160;
+    const exitBtnHeight = 45;
+    const exitBtnX = this.scale.width - exitBtnWidth / 2 - 20;
+    const exitBtnY = 40;
+
+    const exitBtnBg = this.add.rectangle(exitBtnX, exitBtnY, exitBtnWidth, exitBtnHeight, 0x4a2511)
+      .setStrokeStyle(3, 0xd4af37) // Gold border for RPG theme
+      .setInteractive({ useHandCursor: true })
+      .setScrollFactor(0)
+      .setDepth(1000);
+
+    const exitBtnText = this.add.text(exitBtnX, exitBtnY, 'Exit to Menu', {
+      fontSize: '18px',
+      fill: '#f4d03f', // Gold-ish text
+      fontFamily: 'Arial',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    exitBtnBg.on('pointerover', () => {
+      exitBtnBg.setFillStyle(0x6b3619); // Brighter wood color on hover
+      exitBtnText.setFill('#ffffff');
+    });
+
+    exitBtnBg.on('pointerout', () => {
+      exitBtnBg.setFillStyle(0x4a2511);
+      exitBtnText.setFill('#f4d03f');
+    });
+
+    exitBtnBg.on('pointerdown', () => {
+      this.sound.stopAll();
+      this.scene.start('MainMenuScene');
+    });
   }
 
   private updateHealthBar() {
@@ -898,6 +1037,10 @@ export class DungeonGameScene extends Phaser.Scene {
     
     if (this.boss) {
       this.updateBoss();
+    }
+
+    if (this.playerShadow && !this.player.getData('isDead')) {
+      this.playerShadow.setPosition(this.player.x, this.player.y + 26);
     }
   }
 
@@ -1028,7 +1171,7 @@ export class DungeonGameScene extends Phaser.Scene {
       if (enemy.getData('isDead')) return;
 
       const distanceToPlayer = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-      let baseSpeed = 25 + this.currentDungeon * 5;
+      let baseSpeed = (25 + this.currentDungeon * 5) * 1.75;
       const enemyType = enemy.getData('type');
       
       if (enemyType === 'zombie2') {
@@ -1090,6 +1233,11 @@ export class DungeonGameScene extends Phaser.Scene {
           enemy.anims.play('walkSpider', true);
         }
       }
+      
+      const shadow = enemy.getData('shadow');
+      if (shadow) {
+        shadow.setPosition(enemy.x, enemy.y + enemy.getData('shadowOffset'));
+      }
     });
   }
 
@@ -1104,7 +1252,7 @@ export class DungeonGameScene extends Phaser.Scene {
     if (this.bossVulnerability < 100) {
       // Invulnerable: very slow movement
       if (distance > 100) {
-        this.physics.moveToObject(this.boss, this.player, 18.75); // Increased from 15 (+25%)
+        this.physics.moveToObject(this.boss, this.player, 32.8125); // Increased by 1.75x
         
         // Update boss animation based on movement direction
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -1129,7 +1277,7 @@ export class DungeonGameScene extends Phaser.Scene {
     } else {
       // Vulnerable: moderate movement
       if (distance > 50) {
-        this.physics.moveToObject(this.boss, this.player, 50); // Increased from 40 (+25%)
+        this.physics.moveToObject(this.boss, this.player, 87.5); // Increased by 1.75x
         
         // Update boss animation based on movement direction
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -1151,6 +1299,11 @@ export class DungeonGameScene extends Phaser.Scene {
         this.boss.setVelocity(0, 0);
         this.boss.anims.play('attackDownOrc', true); // Attack animation when close
       }
+    }
+    
+    const shadow = this.boss.getData('shadow');
+    if (shadow) {
+      shadow.setPosition(this.boss.x, this.boss.y + 44);
     }
   }
 
@@ -1209,7 +1362,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const modalBg = this.add.rectangle(
       this.scale.width / 2,
       this.scale.height / 2,
-      640,
+      Math.min(640, this.scale.width * 0.9),
       420,
       0x000000,
       0.85
@@ -1235,7 +1388,7 @@ export class DungeonGameScene extends Phaser.Scene {
         fontSize: '22px',
         fill: '#ffffff',
         align: 'center',
-        wordWrap: { width: 560 }
+        wordWrap: { width: Math.min(560, this.scale.width * 0.8) }
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
@@ -1370,6 +1523,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.updateHealthBar();
     
     if (this.playerHealth <= 0) {
+      if (this.playerShadow) this.playerShadow.destroy();
       this.playerHealth = 0;
       this.updateHealthBar();
       
@@ -1403,6 +1557,8 @@ export class DungeonGameScene extends Phaser.Scene {
     enemy.setData('health', health);
     
     if (health <= 0) {
+      const shadow = enemy.getData('shadow');
+      if (shadow) shadow.destroy();
       enemy.setData('isDead', true);
       enemy.body.enable = false;
       
@@ -1460,6 +1616,8 @@ export class DungeonGameScene extends Phaser.Scene {
     boss.setData('health', health);
     
     if (health <= 0) {
+      const shadow = boss.getData('shadow');
+      if (shadow) shadow.destroy();
       boss.setData('isDead', true);
       boss.body.enable = false;
       boss.clearTint();

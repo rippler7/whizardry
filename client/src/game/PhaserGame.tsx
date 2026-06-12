@@ -232,7 +232,7 @@ class DemoScene extends Phaser.Scene {
     this.scene.pause();
     const { width, height } = this.scale;
 
-    const modalBg = this.add.rectangle(width / 2, height / 2, 640, 420, 0x000000, 0.85)
+    const modalBg = this.add.rectangle(width / 2, height / 2, Math.min(640, width * 0.9), 420, 0x000000, 0.85)
       .setScrollFactor(0)
       .setDepth(1000)
       .setInteractive();
@@ -240,7 +240,7 @@ class DemoScene extends Phaser.Scene {
     const title = this.add.text(width / 2, height / 2 - 150, question.q, {
       fontSize: '24px',
       fill: '#ffffff',
-      wordWrap: { width: 560 },
+      wordWrap: { width: Math.min(560, width * 0.8) },
       align: 'center'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
@@ -348,10 +348,13 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 800,
-      height: 600,
+      width: 1600,
+      height: 1000,
       parent: containerRef.current,
       backgroundColor: '#1a1a2e',
+      pixelArt: false,
+      roundPixels: true,
+      resolution: window.devicePixelRatio || 1,
       scene: [MainMenuScene, DungeonGameScene, GameOverScene],
       physics: {
         default: 'arcade',
@@ -363,8 +366,9 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 800,
-        height: 600
+        width: 1600,
+        height: 1000,
+        expandParent: false
       }
     };
 
@@ -382,8 +386,12 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
   return (
     <div 
       ref={containerRef} 
-      className="w-full h-full flex items-center justify-center bg-black"
-      style={{ minHeight: '600px' }}
+      className="bg-black flex items-center justify-center [&>canvas]:max-w-full [&>canvas]:max-h-full [&>canvas]:object-contain"
+      style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        overflow: 'hidden' 
+      }}
     />
   );
 };

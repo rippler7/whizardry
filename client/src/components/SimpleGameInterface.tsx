@@ -45,15 +45,6 @@ export const SimpleGameInterface: React.FC = () => {
             Exit to Menu
           </Button>
         </div>
-
-        <div className="absolute top-4 right-4 z-10 bg-black/80 text-white p-3 rounded-lg">
-          <div className="text-sm">
-            <div>Player: {playerName}</div>
-            <div>✓ Phaser 3 Engine Active</div>
-            <div>✓ Educational System</div>
-            <div>✓ Interactive Gameplay</div>
-          </div>
-        </div>
       </div>
     );
   }
