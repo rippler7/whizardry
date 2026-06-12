@@ -386,7 +386,7 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
   return (
     <div 
       ref={containerRef} 
-      className="bg-black flex items-center justify-center [&>canvas]:max-w-full [&>canvas]:max-h-full [&>canvas]:object-contain"
+      className="bg-black flex items-center justify-center"
       style={{ 
         width: '100vw', 
         height: '100vh', 
