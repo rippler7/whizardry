@@ -95,6 +95,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private currentDungeon: number = 1;
   private maxDungeons: number = 5;
   private doorUnlocked: boolean = false;
+  private gameDifficulty: string = 'easy';
   private bossVulnerability: number = 0; // 0-100%, boss takes 25% per correct answer
   private isModalOpen: boolean = false;
 
@@ -117,6 +118,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.playerScore = data.score || 0;
     this.questionsAnswered = data.questionsAnswered || 0;
     this.correctAnswers = data.correctAnswers || 0;
+    this.gameDifficulty = data.difficulty || 'easy';
     
     // Reset per-level state for when the scene restarts
     this.levelCorrectAnswers = 0;
@@ -132,6 +134,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.load.spritesheet('skeleton', '/assets/sprites/skeleton.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('zombie', '/assets/sprites/zombies.png', { frameWidth: 32, frameHeight: 32, endFrame: 95 });
     this.load.spritesheet('bat', '/assets/sprites/chiroptera.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
+    this.load.spritesheet('spider', '/assets/sprites/spider2.png', { frameWidth: 64, frameHeight: 64, endFrame: 15 });
     this.load.spritesheet('Boss', '/assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('gate', '/assets/sprites/rpg_gate1.png', { frameWidth: 32, frameHeight: 32, endFrame: 15 });
     this.load.spritesheet('redcrystal', '/assets/sprites/crystal-qubodup-ccby3-32-red.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
@@ -169,8 +172,16 @@ export class DungeonGameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
+    // Determine ground color based on difficulty
+    let groundColor = 0x2d4a22; // easy (green)
+    if (this.gameDifficulty === 'medium') {
+      groundColor = 0xc3b091; // medium (khaki)
+    } else if (this.gameDifficulty === 'hard') {
+      groundColor = 0x4a148c; // hard (purple)
+    }
+
     // Background
-    this.add.rectangle(width / 2, height / 2, width, height, 0x2d4a22);
+    this.add.rectangle(width / 2, height / 2, width, height, groundColor);
 
     this.generateDungeonQuestions();
 
@@ -393,7 +404,14 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createEnemies() {
     const enemyCount = Math.min(2 + this.currentDungeon, 6);
-    const enemyTypes = ['skeleton', 'zombie', 'chiroptera'];
+    
+    // Adjust enemy pool based on difficulty
+    let enemyTypes = ['skeleton', 'chiroptera'];
+    if (this.gameDifficulty === 'medium') {
+      enemyTypes = ['skeleton', 'chiroptera', 'spider'];
+    } else if (this.gameDifficulty === 'hard') {
+      enemyTypes = ['skeleton', 'chiroptera', 'spider', 'zombie', 'zombie2'];
+    }
 
     for (let i = 0; i < enemyCount; i++) {
       const pos = this.getValidSpawnPosition();
@@ -405,14 +423,23 @@ export class DungeonGameScene extends Phaser.Scene {
       const spriteMap: { [key: string]: string } = {
         'skeleton': 'skeleton',
         'zombie': 'zombie',
-        'chiroptera': 'bat'
+        'zombie2': 'zombie',
+        'chiroptera': 'bat',
+        'spider': 'spider'
       };
       
       const spriteKey = spriteMap[enemyType] || 'skeleton';
       const enemy = this.physics.add.sprite(x, y, spriteKey, 0);
       enemy.setScale(1.0); // Normal scale since sprites are properly sized
-      enemy.setData('health', 50 + this.currentDungeon * 10);
-      enemy.setData('maxHealth', 50 + this.currentDungeon * 10);
+      
+      let hp = 50 + this.currentDungeon * 10;
+      if (enemyType === 'zombie') {
+        hp *= 3; // Zombies are 3x tougher in Hard mode
+      } else if (enemyType === 'zombie2') {
+        hp *= 2; // Zombie2 is 2x tougher
+      }
+      enemy.setData('health', hp);
+      enemy.setData('maxHealth', hp);
       enemy.setData('type', enemyType);
       enemy.setData('wanderTimer', 0);
       
@@ -479,6 +506,40 @@ export class DungeonGameScene extends Phaser.Scene {
           });
         }
         enemy.anims.play('walkDownZombie'); // Default
+      } else if (enemyType === 'zombie2') {
+        if (!this.anims.exists('walkUpZombie2')) {
+          this.anims.create({
+            key: 'walkUpZombie2',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 36, end: 41 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'walkDownZombie2',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 0, end: 5 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'walkLeftZombie2',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 12, end: 17 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'walkRightZombie2',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 24, end: 29 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'zombie2Die',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 48, end: 53 }),
+            frameRate: 8,
+            repeat: 0
+          });
+        }
+        enemy.anims.play('walkDownZombie2'); // Default
       } else if (enemyType === 'chiroptera') {
         if (!this.anims.exists('flyLeft')) {
           this.anims.create({
@@ -495,6 +556,18 @@ export class DungeonGameScene extends Phaser.Scene {
           });
         }
         enemy.anims.play('flyLeft'); // Default
+      } else if (enemyType === 'spider') {
+        if (!this.anims.exists('walkSpider') && this.textures.exists('spider')) {
+          this.anims.create({
+            key: 'walkSpider',
+            frames: this.anims.generateFrameNumbers('spider', { start: 0, end: 3 }),
+            frameRate: 8,
+            repeat: -1
+          });
+        }
+        if (this.anims.exists('walkSpider')) {
+          enemy.anims.play('walkSpider'); // Default
+        }
       }
       
       this.enemies.add(enemy);
@@ -595,8 +668,9 @@ export class DungeonGameScene extends Phaser.Scene {
     if (this.currentDungeon === this.maxDungeons) {
       this.boss = this.physics.add.sprite(this.scale.width / 2, this.scale.height / 2, 'Boss', 0);
       this.boss.setScale(1.5); // Proper scale for boss
-      this.boss.setData('health', 400);
-      this.boss.setData('maxHealth', 400);
+      const bossHp = 5 * (50 + this.currentDungeon * 10);
+      this.boss.setData('health', bossHp);
+      this.boss.setData('maxHealth', bossHp);
       this.boss.setTint(0x8888ff); // Blue tint when invulnerable
       
       // Create boss animations using original specifications
@@ -681,7 +755,11 @@ export class DungeonGameScene extends Phaser.Scene {
     // Player vs walls
     if (walls) {
       this.physics.add.collider(this.player, walls);
-      this.physics.add.collider(this.enemies, walls);
+      // Allow spiders to bypass walls using a process callback filter
+      this.physics.add.collider(this.enemies, walls, undefined, (obj1: any, obj2: any) => {
+        const enemy = obj1.getData && obj1.getData('type') ? obj1 : obj2;
+        return enemy.getData('type') !== 'spider';
+      });
       this.physics.add.collider(this.bullets, walls, (bullet: any) => {
         bullet.destroy(); // Bullets destroyed when hitting walls
       });
@@ -912,13 +990,17 @@ export class DungeonGameScene extends Phaser.Scene {
       if (enemy.getData('isDead')) return;
 
       const distanceToPlayer = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-      const baseSpeed = 25 + this.currentDungeon * 5;
+      let baseSpeed = 25 + this.currentDungeon * 5;
       const enemyType = enemy.getData('type');
+      
+      if (enemyType === 'zombie2') {
+        baseSpeed *= 1.5; // Move 50% faster
+      }
 
       // AI: Chase player if close, otherwise wander
       if (distanceToPlayer < 200) {
-        if (enemyType === 'chiroptera') {
-          // Bat behavior: maintain distance and shoot
+        if (enemyType === 'chiroptera' || enemyType === 'spider') {
+          // Bat/Spider behavior: maintain distance and shoot
           if (distanceToPlayer > 120) {
             this.physics.moveToObject(enemy, this.player, baseSpeed);
           } else {
@@ -952,8 +1034,8 @@ export class DungeonGameScene extends Phaser.Scene {
 
       if (Math.abs(velocity.x) < 1 && Math.abs(velocity.y) < 1) {
         enemy.anims.stop();
-      } else if (enemyType === 'skeleton' || enemyType === 'zombie') {
-        const animSuffix = enemyType === 'skeleton' ? 'Skeleton' : 'Zombie';
+      } else if (enemyType === 'skeleton' || enemyType === 'zombie' || enemyType === 'zombie2') {
+        const animSuffix = enemyType === 'skeleton' ? 'Skeleton' : (enemyType === 'zombie' ? 'Zombie' : 'Zombie2');
         if (Math.abs(velocity.x) > Math.abs(velocity.y)) {
           enemy.anims.play(velocity.x > 0 ? `walkRight${animSuffix}` : `walkLeft${animSuffix}`, true);
         } else {
@@ -961,6 +1043,10 @@ export class DungeonGameScene extends Phaser.Scene {
         }
       } else if (enemyType === 'chiroptera') {
         enemy.anims.play(velocity.x > 0 ? 'flyRight' : 'flyLeft', true);
+      } else if (enemyType === 'spider') {
+        if (this.anims.exists('walkSpider')) {
+          enemy.anims.play('walkSpider', true);
+        }
       }
     });
   }
@@ -1201,7 +1287,8 @@ export class DungeonGameScene extends Phaser.Scene {
           score: this.playerScore,
           health: this.playerHealth,
           questionsAnswered: this.questionsAnswered,
-          correctAnswers: this.correctAnswers
+          correctAnswers: this.correctAnswers,
+          difficulty: this.gameDifficulty
         }
       });
     } else {
@@ -1212,7 +1299,8 @@ export class DungeonGameScene extends Phaser.Scene {
         health: this.playerHealth,
         score: this.playerScore,
         questionsAnswered: this.questionsAnswered,
-        correctAnswers: this.correctAnswers
+        correctAnswers: this.correctAnswers,
+        difficulty: this.gameDifficulty
       });
     }
   }
@@ -1283,6 +1371,9 @@ export class DungeonGameScene extends Phaser.Scene {
       const enemyType = enemy.getData('type');
       if (enemyType === 'skeleton' && this.anims.exists('skeletonDie')) {
         enemy.anims.play('skeletonDie');
+        enemy.once('animationcomplete', () => enemy.destroy());
+      } else if (enemyType === 'zombie2' && this.anims.exists('zombie2Die')) {
+        enemy.anims.play('zombie2Die');
         enemy.once('animationcomplete', () => enemy.destroy());
       } else {
         enemy.anims.stop();
@@ -1356,7 +1447,11 @@ export class DungeonGameScene extends Phaser.Scene {
   private fireEnemyBullet(enemy: any, target: any) {
     const bullet = this.physics.add.sprite(enemy.x, enemy.y, 'bullet');
     bullet.setScale(0.4); 
-    bullet.setTint(0xff4444); // Red tint for enemy magic effect
+    if (enemy.getData('type') === 'spider') {
+      bullet.setTint(0xffffff); // White tint for spider projectile
+    } else {
+      bullet.setTint(0xff4444); // Red tint for bat magic effect
+    }
     
     const deltaX = target.x - enemy.x;
     const deltaY = target.y - enemy.y;
@@ -1388,7 +1483,8 @@ export class DungeonGameScene extends Phaser.Scene {
         score: this.playerScore,
         health: 0,
         questionsAnswered: this.questionsAnswered,
-        correctAnswers: this.correctAnswers
+        correctAnswers: this.correctAnswers,
+        difficulty: this.gameDifficulty
       }
     });
   }

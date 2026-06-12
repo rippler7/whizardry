@@ -32,26 +32,27 @@ class MainMenuScene extends Phaser.Scene {
       fontFamily: 'Arial'
     }).setOrigin(0.5);
     
-    // Start button
-    const startButton = this.add.text(width / 2, height / 2, 'START GAME', {
-      fontSize: '28px',
-      fill: '#00ff00',
-      fontFamily: 'Arial',
-      backgroundColor: '#003300',
-      padding: { x: 20, y: 10 }
-    }).setOrigin(0.5).setInteractive();
-    
-    startButton.on('pointerdown', () => {
-      this.scene.start('DungeonGameScene', { dungeon: 1, health: 100, score: 0 });
-    });
-    
-    startButton.on('pointerover', () => {
-      startButton.setScale(1.1);
-    });
-    
-    startButton.on('pointerout', () => {
-      startButton.setScale(1.0);
-    });
+    // Difficulty selection buttons
+    const createButton = (yOffset: number, text: string, color: string, diff: string) => {
+      const btn = this.add.text(width / 2, height / 2 + yOffset, text, {
+        fontSize: '24px',
+        fill: '#ffffff',
+        fontFamily: 'Arial',
+        backgroundColor: color,
+        padding: { x: 20, y: 10 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      
+      btn.on('pointerdown', () => {
+        this.scene.start('DungeonGameScene', { dungeon: 1, health: 100, score: 0, difficulty: diff });
+      });
+      
+      btn.on('pointerover', () => btn.setScale(1.1));
+      btn.on('pointerout', () => btn.setScale(1.0));
+    };
+
+    createButton(-20, 'EASY', '#2d4a22', 'easy');
+    createButton(40, 'MEDIUM', '#8b7355', 'medium');
+    createButton(100, 'HARD', '#4a148c', 'hard');
     
     // Instructions
     this.add.text(width / 2, height * 0.75, 'Instructions:', {
