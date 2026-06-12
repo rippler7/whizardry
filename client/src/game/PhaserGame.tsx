@@ -107,7 +107,7 @@ class DemoScene extends Phaser.Scene {
     this.add.rectangle(width / 2, height / 2, width, height, 0x2d4a22);
 
     // Title
-    this.add.text(width / 2, 50, 'Dungeon Quest - Modernized', {
+    this.add.text(width / 2, 50, 'Dungeon Quest', {
       fontSize: '28px',
       fill: '#ffffff',
       fontFamily: 'Arial'
@@ -160,12 +160,6 @@ class DemoScene extends Phaser.Scene {
     this.add.text(width / 2, height - 60, 'Features: Enhanced AI • Dungeon Progression • Educational Content', {
       fontSize: '12px',
       fill: '#cccccc',
-      fontFamily: 'Arial'
-    }).setOrigin(0.5);
-
-    this.add.text(width / 2, height - 40, 'Modernized from PHP/SQL to React/JSON Architecture', {
-      fontSize: '12px',
-      fill: '#99ff99',
       fontFamily: 'Arial'
     }).setOrigin(0.5);
 
