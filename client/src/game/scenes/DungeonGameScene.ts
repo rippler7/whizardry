@@ -98,6 +98,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private gameDifficulty: string = 'easy';
   private bossVulnerability: number = 0; // 0-100%, boss takes 25% per correct answer
   private isModalOpen: boolean = false;
+  private usedQuestionIds: number[] = [];
 
   // UI elements
   private healthBar!: Phaser.GameObjects.Graphics;
@@ -119,6 +120,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.questionsAnswered = data.questionsAnswered || 0;
     this.correctAnswers = data.correctAnswers || 0;
     this.gameDifficulty = data.difficulty || 'easy';
+    this.usedQuestionIds = data.usedQuestionIds || [];
     
     // Reset per-level state for when the scene restarts
     this.levelCorrectAnswers = 0;
@@ -134,9 +136,9 @@ export class DungeonGameScene extends Phaser.Scene {
     this.load.spritesheet('skeleton', '/assets/sprites/skeleton.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('zombie', '/assets/sprites/zombies.png', { frameWidth: 32, frameHeight: 32, endFrame: 95 });
     this.load.spritesheet('bat', '/assets/sprites/chiroptera.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
-    this.load.spritesheet('spider', '/assets/sprites/spider2.png', { frameWidth: 64, frameHeight: 64, endFrame: 15 });
+    this.load.spritesheet('spider', '/assets/sprites/spider2.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
     this.load.spritesheet('Boss', '/assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
-    this.load.spritesheet('gate', '/assets/sprites/rpg_gate1.png', { frameWidth: 32, frameHeight: 32, endFrame: 15 });
+    this.load.spritesheet('gate', '/assets/sprites/rpg_gate5.png', { frameWidth: 145, frameHeight: 96, endFrame: 15 });
     this.load.spritesheet('redcrystal', '/assets/sprites/crystal-qubodup-ccby3-32-red.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
     this.load.spritesheet('bluecrystal', '/assets/sprites/crystal-qubodup-ccby3-32-blue.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
     this.load.spritesheet('greencrystal', '/assets/sprites/crystal-qubodup-ccby3-32-green.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
@@ -504,6 +506,12 @@ export class DungeonGameScene extends Phaser.Scene {
             frameRate: 8,
             repeat: -1
           });
+          this.anims.create({
+            key: 'zombieDie',
+            frames: this.anims.generateFrameNumbers('zombie', { start: 48, end: 53 }),
+            frameRate: 8,
+            repeat: 0
+          });
         }
         enemy.anims.play('walkDownZombie'); // Default
       } else if (enemyType === 'zombie2') {
@@ -564,6 +572,18 @@ export class DungeonGameScene extends Phaser.Scene {
             frameRate: 8,
             repeat: -1
           });
+          this.anims.create({
+            key: 'attackSpider',
+            frames: this.anims.generateFrameNumbers('spider', { start: 13, end: 16 }),
+            frameRate: 8,
+            repeat: -1
+          });
+          this.anims.create({
+            key: 'spiderDie',
+            frames: this.anims.generateFrameNumbers('spider', { start: 51, end: 54 }),
+            frameRate: 8,
+            repeat: 0
+          });
         }
         if (this.anims.exists('walkSpider')) {
           enemy.anims.play('walkSpider'); // Default
@@ -575,17 +595,34 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private generateDungeonQuestions(): void {
-    const maxDifficulty = Math.min(5, this.currentDungeon + 1);
     const validQuestions = getValidQuestions();
-    const pool = validQuestions.filter((question) => question.difficulty <= maxDifficulty);
+    const pool = validQuestions.filter((question) => {
+      if (this.gameDifficulty === 'hard') {
+        return question.difficulty >= 4;
+      } else if (this.gameDifficulty === 'medium') {
+        return question.difficulty >= 3 && question.difficulty <= 4;
+      } else {
+        return question.difficulty >= 1 && question.difficulty <= 2;
+      }
+    });
 
-    if (pool.length < 4) {
-      this.dungeonQuestions = [...validQuestions].sort(() => Math.random() - 0.5).slice(0, 4);
-      return;
+    // Filter out questions we've already seen in previous levels
+    let availablePool = pool.filter(q => !this.usedQuestionIds.includes(q.id));
+
+    // If we run out of unique questions for this difficulty, fallback to the full difficulty pool
+    if (availablePool.length < 4) {
+      availablePool = pool;
     }
 
-    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const shuffled = [...availablePool].sort(() => Math.random() - 0.5);
     this.dungeonQuestions = shuffled.slice(0, 4);
+
+    // Mark these selected questions as used for future levels
+    this.dungeonQuestions.forEach(q => {
+      if (!this.usedQuestionIds.includes(q.id)) {
+        this.usedQuestionIds.push(q.id);
+      }
+    });
   }
 
   private createQuestionChests() {
@@ -643,25 +680,26 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createExitDoor() {
-    this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 0);
-    this.door.setScale(1.5); // Scale to make visible
-    this.door.setTint(0x888888); // Initially locked (gray)
+    this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 15);
+    this.door.setScale(0.75); // Half of 1.5
     
     // Create gate animations using original specifications
     if (!this.anims.exists('openGate')) {
       this.anims.create({
         key: 'openGate',
-        frames: this.anims.generateFrameNumbers('gate', { start: 0, end: 3 }),
+        frames: this.anims.generateFrameNumbers('gate', { start: 0, end: 15 }),
         frameRate: 8,
         repeat: false
       });
       this.anims.create({
         key: 'closeGate',
-        frames: this.anims.generateFrameNumbers('gate', { start: 4, end: 7 }),
+        frames: this.anims.generateFrameNumbers('gate', { start: 15, end: 0 }),
         frameRate: 8,
         repeat: false
       });
     }
+
+    this.door.anims.play('closeGate');
   }
 
   private createBoss() {
@@ -1033,7 +1071,11 @@ export class DungeonGameScene extends Phaser.Scene {
       const velocity = enemy.body.velocity;
 
       if (Math.abs(velocity.x) < 1 && Math.abs(velocity.y) < 1) {
-        enemy.anims.stop();
+        if (enemyType === 'spider' && distanceToPlayer <= 120 && this.anims.exists('attackSpider')) {
+          enemy.anims.play('attackSpider', true);
+        } else {
+          enemy.anims.stop();
+        }
       } else if (enemyType === 'skeleton' || enemyType === 'zombie' || enemyType === 'zombie2') {
         const animSuffix = enemyType === 'skeleton' ? 'Skeleton' : (enemyType === 'zombie' ? 'Zombie' : 'Zombie2');
         if (Math.abs(velocity.x) > Math.abs(velocity.y)) {
@@ -1254,8 +1296,6 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private unlockDoor() {
     this.doorUnlocked = true;
-    this.door.clearTint(); // Remove gray tint
-    this.door.setTint(0x00ff00); // Green tint when unlocked
     
     // Play gate opening animation
     this.door.anims.play('openGate');
@@ -1288,7 +1328,8 @@ export class DungeonGameScene extends Phaser.Scene {
           health: this.playerHealth,
           questionsAnswered: this.questionsAnswered,
           correctAnswers: this.correctAnswers,
-          difficulty: this.gameDifficulty
+          difficulty: this.gameDifficulty,
+          usedQuestionIds: this.usedQuestionIds
         }
       });
     } else {
@@ -1300,7 +1341,8 @@ export class DungeonGameScene extends Phaser.Scene {
         score: this.playerScore,
         questionsAnswered: this.questionsAnswered,
         correctAnswers: this.correctAnswers,
-        difficulty: this.gameDifficulty
+        difficulty: this.gameDifficulty,
+        usedQuestionIds: this.usedQuestionIds
       });
     }
   }
@@ -1372,8 +1414,14 @@ export class DungeonGameScene extends Phaser.Scene {
       if (enemyType === 'skeleton' && this.anims.exists('skeletonDie')) {
         enemy.anims.play('skeletonDie');
         enemy.once('animationcomplete', () => enemy.destroy());
+      } else if (enemyType === 'zombie' && this.anims.exists('zombieDie')) {
+        enemy.anims.play('zombieDie');
+        enemy.once('animationcomplete', () => enemy.destroy());
       } else if (enemyType === 'zombie2' && this.anims.exists('zombie2Die')) {
         enemy.anims.play('zombie2Die');
+        enemy.once('animationcomplete', () => enemy.destroy());
+      } else if (enemyType === 'spider' && this.anims.exists('spiderDie')) {
+        enemy.anims.play('spiderDie');
         enemy.once('animationcomplete', () => enemy.destroy());
       } else {
         enemy.anims.stop();
@@ -1484,7 +1532,8 @@ export class DungeonGameScene extends Phaser.Scene {
         health: 0,
         questionsAnswered: this.questionsAnswered,
         correctAnswers: this.correctAnswers,
-        difficulty: this.gameDifficulty
+        difficulty: this.gameDifficulty,
+        usedQuestionIds: this.usedQuestionIds
       }
     });
   }
