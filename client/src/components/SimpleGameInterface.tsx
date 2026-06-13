@@ -35,16 +35,6 @@ export const SimpleGameInterface: React.FC = () => {
           }
         }} />
         
-        {/* Game overlay UI */}
-        <div className="absolute top-4 left-4 z-10">
-          <Button 
-            onClick={handleExitGame}
-            variant="secondary"
-            size="sm"
-          >
-            Exit to Menu
-          </Button>
-        </div>
       </div>
     );
   }
@@ -53,10 +43,9 @@ export const SimpleGameInterface: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-            Dungeon Quest
+          <CardTitle className="flex justify-center mb-2">
+            <img src="assets/sprites/logo.png" alt="Dungeon Quest" className="h-32 object-contain" />
           </CardTitle>
-          <p className="text-muted-foreground">Educational RPG Adventure</p>
           <div className="text-sm text-green-400 mt-2">
             ✓ Successfully Modernized from PHP/SQL to React/JSON
           </div>

@@ -13,24 +13,18 @@ class MainMenuScene extends Phaser.Scene {
     super({ key: 'MainMenuScene' });
   }
 
+  preload() {
+    this.load.image('logo', 'assets/sprites/logo.png');
+  }
+
   create() {
     const { width, height } = this.scale;
     
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
     
-    // Title
-    this.add.text(width / 2, height / 3, 'DUNGEON QUEST', {
-      fontSize: '48px',
-      fill: '#ffffff',
-      fontFamily: 'Arial Black'
-    }).setOrigin(0.5);
-    
-    this.add.text(width / 2, height / 3 + 60, 'Educational RPG Adventure', {
-      fontSize: '20px',
-      fill: '#ffaa00',
-      fontFamily: 'Arial'
-    }).setOrigin(0.5);
+    // Logo
+    this.add.image(width / 2, height / 3, 'logo').setOrigin(0.5);
     
     // Difficulty selection buttons
     const createButton = (yOffset: number, text: string, color: string, diff: string) => {

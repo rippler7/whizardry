@@ -17,7 +17,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
   zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 15, scoreReward: 75 },
   bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 150, detectionRange: 250, experienceReward: 10, scoreReward: 50 },
   spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
-  boss: { type: 'boss', health: 3500, speed: 50, damage: 30, attackRange: 80, detectionRange: 400, experienceReward: 100, scoreReward: 500 }
+  boss: { type: 'boss', health: 10500, speed: 50, damage: 30, attackRange: 80, detectionRange: 400, experienceReward: 100, scoreReward: 500 }
 };
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -34,9 +34,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected walls: Phaser.Physics.Arcade.StaticGroup | null = null;
   protected shadow!: Phaser.GameObjects.Ellipse;
   protected shadowOffset: number = 20;
-  protected evasionTimer: number = 0;
   protected evasionDirection: { x: number; y: number } = { x: 0, y: 0 };
-  protected evasionAttempts: number = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: any, hp: number, speed: number) {
     super(scene, x, y, texture);
@@ -179,42 +177,29 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
       // Always prioritize detecting player proximity or clear path
       if (!directObstacle || distanceToTarget < 24) {
         // Path is clear or player is right next to us! Chase directly immediately.
-        this.evasionTimer = 0;
-        this.evasionAttempts = 0;
+        this.evasionDirection = { x: 0, y: 0 };
       } else {
         // Obstacle is present. Decide whether to continue direction or change direction.
-        if (this.evasionTimer > 0) {
-          this.evasionTimer -= this.scene.game.loop.delta;
-          if (!this.checkWallCollision(this.x + this.evasionDirection.x * 0.2, this.y + this.evasionDirection.y * 0.2)) {
-            this.setVelocity(this.evasionDirection.x, this.evasionDirection.y);
-            this.lastDirection = { ...this.evasionDirection };
-            this.updateMovementAnimation(this.evasionDirection.x, this.evasionDirection.y);
-            return;
-          } else {
-            this.evasionTimer = 0; // Hit an obstacle while evading, forces recalculation
-          }
+        let canContinueEvasion = false;
+        if (this.evasionDirection.x !== 0 || this.evasionDirection.y !== 0) {
+          canContinueEvasion = !this.checkWallCollision(this.x + this.evasionDirection.x * 0.3, this.y + this.evasionDirection.y * 0.3);
         }
 
         if (this.state === 'patrol') {
           this.setNewPatrolTarget();
           this.setVelocity(0, 0);
-          this.evasionAttempts = 0;
+          this.evasionDirection = { x: 0, y: 0 };
           return;
         }
 
-        // Continue the previous scaling direction up to 3 times
-        if (this.evasionAttempts > 0 && this.evasionAttempts < 3) {
-          if (!this.checkWallCollision(this.x + this.evasionDirection.x * 0.3, this.y + this.evasionDirection.y * 0.3)) {
-            velocityX = this.evasionDirection.x;
-            velocityY = this.evasionDirection.y;
-            this.evasionTimer = 400;
-            this.evasionAttempts++;
-            
-            this.setVelocity(velocityX, velocityY);
-            this.lastDirection = { x: velocityX, y: velocityY };
-            this.updateMovementAnimation(velocityX, velocityY);
-            return;
-          }
+        if (canContinueEvasion) {
+          velocityX = this.evasionDirection.x;
+          velocityY = this.evasionDirection.y;
+          
+          this.setVelocity(velocityX, velocityY);
+          this.lastDirection = { x: velocityX, y: velocityY };
+          this.updateMovementAnimation(velocityX, velocityY);
+          return;
         }
 
         // Change direction: calculate a BRAND NEW scaling direction around the obstacle
@@ -260,12 +245,10 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
           velocityX = evX;
           velocityY = evY;
           this.evasionDirection = { x: velocityX, y: velocityY };
-          this.evasionTimer = 1400; // Commit to evasion for 1400ms
-          this.evasionAttempts = 1; // Start counting attempts
         } else {
           velocityX = 0;
           velocityY = 0;
-          this.evasionAttempts = 0;
+          this.evasionDirection = { x: 0, y: 0 };
         }
       }
     }
@@ -721,6 +704,7 @@ export class Boss extends Enemy {
   private phase: number = 1;
   private maxPhases: number = 3;
   private phaseChangeHealth: number[];
+  private isPatrollingToChest: boolean = false;
   
   constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
     super(scene, x, y, 'Boss', 'boss', player, hp, speed);
@@ -785,14 +769,67 @@ export class Boss extends Enemy {
     this.checkPhaseChange();
   }
   
-  protected handleChase(): void {
+  protected setNewPatrolTarget(): void {
     const scene = this.scene as any;
-    let currentSpeed = this.config.speed;
+    this.isPatrollingToChest = false;
     
-    // Replicate classic mechanic: Boss moves much slower when it is invulnerable!
-    if (scene.bossVulnerability !== undefined && scene.bossVulnerability < 100) {
-      currentSpeed = currentSpeed * 0.4;
+    if (scene.chests && scene.chests.getChildren().length > 0) {
+      let nearestChest: any = null;
+      let minDistance = Infinity;
+      
+      // Find the chest that is currently closest to the player
+      scene.chests.getChildren().forEach((chest: any) => {
+        if (!chest.getData('opened')) {
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, chest.x, chest.y);
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearestChest = chest;
+          }
+        }
+      });
+      
+      if (nearestChest) {
+        const range = 80;
+        this.patrolTarget = {
+          x: nearestChest.x + Phaser.Math.Between(-range, range),
+          y: nearestChest.y + Phaser.Math.Between(-range, range)
+        };
+        
+        const worldBounds = this.scene.physics.world.bounds;
+        this.patrolTarget.x = Phaser.Math.Clamp(this.patrolTarget.x, 50, worldBounds.width - 50);
+        this.patrolTarget.y = Phaser.Math.Clamp(this.patrolTarget.y, 50, worldBounds.height - 50);
+        this.isPatrollingToChest = true;
+        return;
+      }
     }
+    
+    super.setNewPatrolTarget();
+  }
+
+  protected handlePatrol(): void {
+    const distanceToTarget = Phaser.Math.Distance.Between(
+      this.x, this.y, this.patrolTarget.x, this.patrolTarget.y
+    );
+    
+    if (distanceToTarget < 32) {
+      this.state = 'idle';
+      this.stateTimer = Phaser.Math.Between(1000, 3000);
+      this.setVelocity(0, 0);
+      return;
+    }
+    
+    const scene = this.scene as any;
+    let currentSpeed = this.config.speed * 0.5; // Normal wandering is 0.5x speed
+    
+    if (this.isPatrollingToChest) {
+      currentSpeed = this.config.speed * 2; // Full 2x base speed when going straight to a chest
+    }
+    
+    this.moveTowardsTarget(this.patrolTarget.x, this.patrolTarget.y, currentSpeed);
+  }
+
+  protected handleChase(): void {
+    let currentSpeed = this.config.speed;
     
     if (this.canSeePlayer()) {
       this.moveTowardsTarget(this.player.x, this.player.y, currentSpeed);
@@ -802,7 +839,7 @@ export class Boss extends Enemy {
   }
 
   private checkPhaseChange(): void {
-    const newPhase = this.maxPhases - this.phaseChangeHealth.filter(threshold => this.getData('health') <= threshold).length;
+    const newPhase = 1 + this.phaseChangeHealth.filter(threshold => this.getData('health') <= threshold).length;
     
     if (newPhase !== this.phase) {
       this.phase = newPhase;

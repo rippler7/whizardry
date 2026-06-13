@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { QUESTIONS } from '../data/Questions';
 import { Enemy, Skeleton, Zombie, Zombie2, Bat, Spider, Boss } from '../entities/Enemy';
+import questionsData from '../entities/questions.json';
 
 interface Question {
   id: number;
@@ -33,11 +33,11 @@ const isCorrectAnswer = (selectedAnswer: unknown, correctAnswer: unknown): boole
 };
 
 // Helper to safely parse imported questions regardless of formatting
-const getValidQuestions = (): Question[] => {
-  let questionsArray = QUESTIONS;
-  if (!Array.isArray(QUESTIONS)) {
-    if (QUESTIONS && typeof QUESTIONS === 'object') {
-      questionsArray = Object.values(QUESTIONS);
+const getValidQuestions = (rawData: any): Question[] => {
+  let questionsArray = rawData;
+  if (!Array.isArray(rawData)) {
+    if (rawData && typeof rawData === 'object') {
+      questionsArray = Object.values(rawData);
     } else {
       return DEFAULT_QUESTIONS;
     }
@@ -145,6 +145,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.load.spritesheet('Boss', 'assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('gate', 'assets/sprites/rpg_gate5.png', { frameWidth: 145, frameHeight: 96, endFrame: 15 });
     this.load.image('wall_texture', 'textures/cobbledsquare.jpg');
+    this.load.spritesheet('tilea2', 'assets/sprites/tilea2.png', { frameWidth: 32, frameHeight: 32 });
     this.load.image('ground_easy', 'textures/grass.png');
     this.load.image('ground_medium', 'textures/sand.jpg');
     this.load.image('ground_hard', 'textures/asphalt.png');
@@ -205,7 +206,69 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     // Background - Anchor to top left and explicitly send to the absolute back
-    if (this.textures.exists(groundTexture)) {
+    if (this.gameDifficulty === 'easy' && this.textures.exists('tilea2')) {
+      // Cellular Automata to generate organically clumped grass (25% - 80% coverage)
+      const tileSize = 64;
+      const cols = Math.ceil(width / tileSize);
+      const rows = Math.ceil(height / tileSize);
+      const grid: number[][] = [];
+      const fillPercent = Phaser.Math.FloatBetween(0.25, 0.80);
+
+      // 1. Initialize the grid with random noise
+      for (let y = 0; y < rows; y++) {
+        grid[y] = [];
+        for (let x = 0; x < cols; x++) {
+          grid[y][x] = Math.random() < fillPercent ? 1 : 0;
+        }
+      }
+
+      // 2. Smooth the noise out to create clumps
+      for (let i = 0; i < 3; i++) {
+        const newGrid = grid.map(arr => [...arr]);
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            let neighbors = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const nx = x + dx, ny = y + dy;
+                if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+                  neighbors += grid[ny][nx];
+                } else {
+                  neighbors++; // Encourage clumping near the walls
+                }
+              }
+            }
+            if (neighbors > 4) newGrid[y][x] = 1;
+            else if (neighbors < 4) newGrid[y][x] = 0;
+          }
+        }
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            grid[y][x] = newGrid[y][x];
+          }
+        }
+      }
+
+      // 3. Render the clumped map
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const isDense = grid[y][x] === 1;
+          const frame = isDense ? 0 : 1; // Assuming frame 0 is dense, frame 1 is patchy
+          
+          const tile = this.add.image(x * tileSize, y * tileSize, 'tilea2', frame)
+            .setOrigin(0, 0)
+            .setDisplaySize(tileSize, tileSize)
+            .setDepth(-10);
+            
+          if (this.currentDungeon === 3 || this.currentDungeon === 4) {
+            tile.setTint(0xe8e0cc);
+          } else if (this.currentDungeon === 5) {
+            tile.setTint(0xd8c8e8);
+          }
+        }
+      }
+    } else if (this.textures.exists(groundTexture)) {
       const ground = this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
       
       if (this.currentDungeon === 3 || this.currentDungeon === 4) {
@@ -398,7 +461,12 @@ export class DungeonGameScene extends Phaser.Scene {
     const walls = this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup;
     // Fill the wider map with a dense number of obstacles.
     // getValidSpawnPosition automatically enforces the player-height gap rule!
-    const numObstacles = Phaser.Math.Between(30 + this.currentDungeon * 2, 45 + this.currentDungeon * 2);
+    let numObstacles = Phaser.Math.Between(30 + this.currentDungeon * 2, 45 + this.currentDungeon * 2);
+    
+    if (this.currentDungeon === this.maxDungeons) {
+      numObstacles = Phaser.Math.Between(60, 80); // Spawn significantly more obstacles on the boss level
+    }
+    
     const blockSize = 64; // 2x scale (enlarged from 32px to 64px base size)
 
     // Define Tetris-like shapes using grid coordinates (each block is 64x64)
@@ -468,16 +536,21 @@ export class DungeonGameScene extends Phaser.Scene {
     const playerBounds = this.player.getBounds();
     const playerHeight = playerBounds.height;
     
+    // Boss is scaled to 1.5x with a 64px frame (96px visual height, 84px physics height).
+    // Use 100px minimum gap for Dungeon 5 to ensure it is strictly greater than the boss's height.
+    const requiredGap = this.currentDungeon === this.maxDungeons ? 100 : playerHeight;
+    
     // Give player some breathing room so they aren't trapped on spawn
     Phaser.Geom.Rectangle.Inflate(playerBounds, 64, 64);
     
-    const padding = isObstacle ? playerHeight * 2 : 16;
+    const padding = isObstacle ? requiredGap * 2 : 16;
     const checkRect = new Phaser.Geom.Rectangle(0, 0, w + padding, h + padding);
     const doorBounds = this.door ? this.door.getBounds() : new Phaser.Geom.Rectangle(0, 0, 0, 0);
     const bossBounds = new Phaser.Geom.Rectangle(this.scale.width / 2 - 80, this.scale.height / 2 - 80, 160, 160);
 
     let attempts = 0;
-    while (!valid && attempts < 200) {
+    const maxAttempts = this.currentDungeon === this.maxDungeons ? 500 : 200;
+    while (!valid && attempts < maxAttempts) {
         attempts++;
         const minX = bounds ? bounds.minX : 100;
         const maxX = bounds ? bounds.maxX : this.scale.width - 100;
@@ -562,10 +635,10 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private generateDungeonQuestions(): void {
-    const validQuestions = getValidQuestions();
+    const validQuestions = getValidQuestions(questionsData);
     const pool = validQuestions.filter((question) => {
       if (this.gameDifficulty === 'hard') {
-        return question.difficulty >= 4;
+        return question.difficulty >= 5;
       } else if (this.gameDifficulty === 'medium') {
         return question.difficulty >= 3 && question.difficulty <= 4;
       } else {
@@ -682,12 +755,12 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createBoss() {
     if (this.currentDungeon === this.maxDungeons) {
-      const bossHp = 5 * (50 + this.currentDungeon * 10);
+      const bossHp = 15 * (50 + this.currentDungeon * 10);
       const baseSpeed = (55 + this.currentDungeon * 5) * 1.75;
       this.boss = new Boss(this, this.scale.width / 2, this.scale.height / 2, this.player, bossHp, baseSpeed);
       this.boss.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
       this.boss.setScale(1.5); // Proper scale for boss
-      this.boss.setTint(0x8888ff); // Blue tint when invulnerable
+      this.boss.setTint(0x00ff00); // 100% pure green tint when invulnerable
     }
   }
 
@@ -739,6 +812,14 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createUI() {
+    // Determine background color based on difficulty for the stats panel
+    let statsBgColor = 0x2d4a22; // easy
+    if (this.gameDifficulty === 'medium') statsBgColor = 0x8b7355;
+    else if (this.gameDifficulty === 'hard') statsBgColor = 0x4a148c;
+
+    // Add semi-transparent background behind stats for readability
+    this.add.rectangle(10, 10, 220, 115, statsBgColor, 0.75).setOrigin(0, 0).setScrollFactor(0);
+
     // Health bar
     this.healthBar = this.add.graphics();
     this.updateHealthBar();
@@ -991,7 +1072,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     const questionIndex = Number(chest.getData('questionIndex')) || 0;
-    const validQuestions = getValidQuestions();
+    const validQuestions = getValidQuestions(questionsData);
     const question = this.dungeonQuestions[questionIndex] || validQuestions[questionIndex % validQuestions.length];
 
     if (!question || !Array.isArray(question.options) || question.options.length === 0) {
