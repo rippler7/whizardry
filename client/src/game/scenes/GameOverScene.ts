@@ -28,6 +28,63 @@ export class GameOverScene extends Phaser.Scene {
       fontFamily: 'Arial Black'
     }).setOrigin(0.5);
 
+    // Audio Controls
+    const audioY = 40;
+    const sliderWidth = 100;
+    const sliderX = width - 140;
+    const iconX = sliderX - 35;
+
+    // --- Mute Button Container ---
+    const muteBtn = this.add.container(iconX, audioY);
+    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37);
+    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px', fontFamily: 'Arial' }).setOrigin(0.5);
+    muteBtn.add([muteBg, muteIcon]);
+    muteBtn.setSize(40, 40);
+    muteBtn.setInteractive({ useHandCursor: true });
+
+    muteBtn.on('pointerover', () => muteBg.setFillStyle(0x6b3619));
+    muteBtn.on('pointerout', () => muteBg.setFillStyle(0x4a2511));
+
+    // --- Volume Slider ---
+    const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 30, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888);
+    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5);
+    const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 10, 0xffffff).setInteractive({ draggable: true, useHandCursor: true });
+
+    const syncAudioUI = () => {
+      const isMuted = this.sound.mute || this.sound.volume === 0;
+      muteIcon.setText(isMuted ? '🔇' : '🔊');
+      fill.width = this.sound.volume * sliderWidth;
+      handle.x = sliderX + (this.sound.volume * sliderWidth);
+    };
+    
+    syncAudioUI(); // Instantly sync on load in case the game is already muted
+
+    muteBtn.on('pointerdown', () => {
+      if (this.sound.volume === 0) {
+        this.sound.volume = 0.5;
+        this.sound.mute = false;
+      } else {
+        this.sound.mute = !this.sound.mute;
+      }
+      syncAudioUI();
+    });
+
+    const updateVolumeFromPointer = (pointerX: number) => {
+      const newX = Phaser.Math.Clamp(pointerX, sliderX, sliderX + sliderWidth);
+      const newVol = (newX - sliderX) / sliderWidth;
+      this.sound.volume = newVol;
+      if (newVol > 0 && this.sound.mute) {
+        this.sound.mute = false;
+      }
+      syncAudioUI();
+    };
+
+    trackHitArea.on('pointerdown', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
+    
+    this.input.setDraggable(handle);
+    handle.on('drag', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
+
     // Stats
     const statsY = height / 2 - 50;
     this.add.text(width / 2, statsY, 'Final Statistics:', {
