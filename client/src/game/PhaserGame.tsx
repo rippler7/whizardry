@@ -55,10 +55,11 @@ class MainMenuScene extends Phaser.Scene {
       fontFamily: 'Arial'
     }).setOrigin(0.5);
     
+    const isDesktop = this.sys.game.device.os.desktop;
     const instructions = [
-      'Use WASD or Arrow Keys to move',
-      'SPACE to shoot (aim with mouse)',
-      'Click chests to answer questions',
+      isDesktop ? 'Use WASD or Arrow Keys to move' : 'Use the Left Side of screen to move',
+      isDesktop ? 'SPACE/Click to shoot (aim with mouse)' : 'Tap the Right Side of screen to shoot',
+      isDesktop ? 'Click chests to answer questions' : 'Tap chests to answer questions',
       'Answer all 4 questions to unlock the door',
       'Reach dungeon 5 and defeat the boss!'
     ];

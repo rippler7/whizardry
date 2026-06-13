@@ -376,7 +376,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     
     // Emit death event
-    this.scene.events.emit('enemyDefeated', this.config.type);
+    this.scene.events.emit('enemyDefeated', this.config.type, this.x, this.y);
   }
 }
 
@@ -664,37 +664,35 @@ export class Spider extends Enemy {
   protected performAttack(): void {
     this.anims.play('attackSpider', true);
     
-    const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
-    bullet.setScale(0.4);
-    bullet.setTint(0xffffff); // White web projectile
-    bullet.setDepth(50);
-    bullet.setData('damage', this.config.damage);
-    
-    const scene = this.scene as any;
-    if (scene.enemyBullets) {
-      scene.enemyBullets.add(bullet);
-    } else {
-      this.scene.physics.add.overlap(bullet, this.player, () => {
-        this.player.takeDamage(this.config.damage);
-        bullet.destroy();
-      });
-    }
-
-    const dx = this.player.x - this.x;
-    const dy = this.player.y - this.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
     const baseSpeed = 0.25;
+    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
+    const spreadAngles = [baseAngle - 0.25, baseAngle, baseAngle + 0.25]; // Shoot left, center, and right
     
-    if (distance > 0) {
-      bullet.setData('speedX', (dx / distance) * baseSpeed);
-      bullet.setData('speedY', (dy / distance) * baseSpeed);
-    } else {
-      bullet.setData('speedX', baseSpeed);
-      bullet.setData('speedY', 0);
-    }
-    bullet.setData('born', 0);
-    
-    this.scene.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
+    spreadAngles.forEach(angle => {
+      const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
+      bullet.setScale(0.4);
+      bullet.setTint(0xffffff); // White web projectile
+      bullet.setDepth(50);
+      bullet.setData('damage', this.config.damage);
+      bullet.setData('isSpiderWeb', true);
+      
+      const scene = this.scene as any;
+      if (scene.enemyBullets) {
+        scene.enemyBullets.add(bullet);
+      } else {
+        this.scene.physics.add.overlap(bullet, this.player, () => {
+          this.player.takeDamage(this.config.damage);
+          bullet.destroy();
+        });
+      }
+
+      bullet.setData('speedX', Math.cos(angle) * baseSpeed);
+      bullet.setData('speedY', Math.sin(angle) * baseSpeed);
+      bullet.setData('born', 0);
+      
+      this.scene.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
+    });
+
     this.scene.sound.play('spit', { volume: 0.3 });
   }
 }
@@ -822,7 +820,7 @@ export class Boss extends Enemy {
     let currentSpeed = this.config.speed * 0.5; // Normal wandering is 0.5x speed
     
     if (this.isPatrollingToChest) {
-      currentSpeed = this.config.speed * 2; // Full 2x base speed when going straight to a chest
+      currentSpeed = 120; // Match player walking speed (120) when going straight to a chest
     }
     
     this.moveTowardsTarget(this.patrolTarget.x, this.patrolTarget.y, currentSpeed);

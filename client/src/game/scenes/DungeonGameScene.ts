@@ -78,6 +78,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private chests!: Phaser.Physics.Arcade.Group;
   private bullets!: Phaser.Physics.Arcade.Group;
   private enemyBullets!: Phaser.Physics.Arcade.Group;
+  private droppedItems!: Phaser.Physics.Arcade.Group;
   private door!: Phaser.Physics.Arcade.Sprite;
   public boss?: Boss;
 
@@ -85,6 +86,13 @@ export class DungeonGameScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: { [key: string]: Phaser.Input.Keyboard.Key };
   private shootKey!: Phaser.Input.Keyboard.Key;
+  
+  // Mobile controls
+  private movePointer: Phaser.Input.Pointer | null = null;
+  private joystickBase!: Phaser.GameObjects.Arc;
+  private joystickThumb!: Phaser.GameObjects.Arc;
+  private joystickActive: boolean = false;
+  private moveVector: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 0);
 
   // Game state
   private playerHealth: number = 100;
@@ -101,6 +109,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private isModalOpen: boolean = false;
   private usedQuestionIds: number[] = [];
   private isTouchingDoor: boolean = false;
+  private enemiesFrozenUntil: number = 0;
   
   private playerShadow!: Phaser.GameObjects.Ellipse;
 
@@ -133,6 +142,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.bossVulnerability = 0;
     this.boss = undefined;
     this.isTouchingDoor = false;
+    this.enemiesFrozenUntil = 0;
+    this.resetJoystick();
   }
 
   preload() {
@@ -310,6 +321,46 @@ export class DungeonGameScene extends Phaser.Scene {
     this.chests = this.physics.add.group();
     this.bullets = this.physics.add.group();
     this.enemyBullets = this.physics.add.group();
+    this.droppedItems = this.physics.add.group();
+
+    if (!this.anims.exists('spin-greencrystal')) {
+      this.anims.create({
+        key: 'spin-greencrystal',
+        frames: this.anims.generateFrameNumbers('greencrystal', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1
+      });
+    }
+    
+    if (!this.anims.exists('spin-redcrystal')) {
+      this.anims.create({
+        key: 'spin-redcrystal',
+        frames: this.anims.generateFrameNumbers('redcrystal', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1
+      });
+    }
+
+    if (!this.anims.exists('spin-bluecrystal')) {
+      this.anims.create({
+        key: 'spin-bluecrystal',
+        frames: this.anims.generateFrameNumbers('bluecrystal', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1
+      });
+    }
+
+    if (!this.anims.exists('spin-yellowcrystal')) {
+      this.anims.create({
+        key: 'spin-yellowcrystal',
+        frames: this.anims.generateFrameNumbers('yellowcrystal', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1
+      });
+    }
+
+    // Listen to enemy deaths to drop items
+    this.events.on('enemyDefeated', this.handleEnemyDefeated, this);
 
     // Create dungeon layout
     this.createDungeonLayout();
@@ -331,6 +382,9 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // Setup controls
     this.setupControls();
+
+    // Setup mobile touch controls
+    this.setupMobileControls();
 
     // Setup collisions
     this.setupCollisions();
@@ -770,6 +824,74 @@ export class DungeonGameScene extends Phaser.Scene {
     this.shootKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
   }
 
+  private setupMobileControls() {
+    // Ensure we can handle multi-touch (left thumb moving, right thumb shooting)
+    this.input.addPointer(2);
+
+    // If playing on a desktop machine, skip the joystick setup 
+    // and just allow mouse clicks to shoot!
+    if (this.sys.game.device.os.desktop) {
+      this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
+        if (this.isModalOpen || this.player.getData('isDead')) return;
+        if (currentlyOver.length > 0) return; // Prevent shooting when clicking UI or chests
+        this.fireBullet(pointer.worldX, pointer.worldY);
+      });
+      return;
+    }
+
+    // Create virtual joystick graphics
+    this.joystickBase = this.add.circle(0, 0, 50, 0x888888, 0.5).setDepth(2000).setScrollFactor(0).setVisible(false);
+    this.joystickThumb = this.add.circle(0, 0, 25, 0xcccccc, 0.8).setDepth(2001).setScrollFactor(0).setVisible(false);
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
+      if (this.isModalOpen || this.player.getData('isDead')) return;
+      if (currentlyOver.length > 0) return; // Prevent shooting/moving when clicking UI or chests
+
+      // Touch on the left half initiates the joystick
+      if (pointer.x < this.scale.width / 2 && !this.joystickActive) {
+        this.movePointer = pointer;
+        this.joystickActive = true;
+        this.joystickBase.setPosition(pointer.x, pointer.y).setVisible(true);
+        this.joystickThumb.setPosition(pointer.x, pointer.y).setVisible(true);
+      } else {
+        // Touch on the right half (or a 2nd finger) fires a bullet
+        this.fireBullet(pointer.worldX, pointer.worldY);
+      }
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.isModalOpen || this.player.getData('isDead')) return;
+
+      if (this.joystickActive && pointer === this.movePointer) {
+        const distance = Phaser.Math.Distance.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
+        const angle = Phaser.Math.Angle.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
+        
+        const maxRadius = 50;
+        const clampedDist = Math.min(distance, maxRadius);
+        
+        this.joystickThumb.x = this.joystickBase.x + Math.cos(angle) * clampedDist;
+        this.joystickThumb.y = this.joystickBase.y + Math.sin(angle) * clampedDist;
+        
+        this.moveVector.x = Math.cos(angle) * (clampedDist / maxRadius);
+        this.moveVector.y = Math.sin(angle) * (clampedDist / maxRadius);
+      }
+    });
+
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (this.joystickActive && pointer === this.movePointer) {
+        // If it was a very quick tap on the left side, allow it to fire a bullet instead of moving
+        const duration = pointer.upTime - pointer.downTime;
+        const distance = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.upX, pointer.upY);
+        
+        if (duration < 250 && distance < 15) {
+          this.fireBullet(pointer.worldX, pointer.worldY);
+        }
+
+        this.resetJoystick();
+      }
+    });
+  }
+
   private setupCollisions() {
     // Get walls from registry
     const walls = this.registry.get('walls');
@@ -787,6 +909,8 @@ export class DungeonGameScene extends Phaser.Scene {
       });
       this.physics.add.collider(this.enemyBullets, walls, (bullet: any) => {
         bullet.destroy(); // Enemy bullets destroyed when hitting walls
+      }, (bullet: any, wall: any) => {
+        return !bullet.getData('isSpiderWeb'); // Let spider webs pass through
       });
     }
     
@@ -798,6 +922,9 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Bullets vs enemies
     this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, undefined, this);
+    
+    // Player vs dropped items
+    this.physics.add.overlap(this.player, this.droppedItems, this.collectItem, undefined, this);
     
     // Player vs door
     this.physics.add.overlap(this.player, this.door, this.tryExitDungeon, undefined, this);
@@ -847,7 +974,11 @@ export class DungeonGameScene extends Phaser.Scene {
       fontFamily: 'Arial'
     }).setOrigin(0.5);
 
-    this.add.text(this.scale.width / 2, 40, 'WASD to move • SPACE to shoot • Click chests for questions', {
+    const controlsText = this.sys.game.device.os.desktop 
+      ? 'WASD to move • SPACE/Click to shoot • Click chests for questions'
+      : 'Left Side to move • Right Side to shoot • Tap chests for questions';
+
+    this.add.text(this.scale.width / 2, 40, controlsText, {
       fontSize: '14px',
       fill: '#ffff88',
       fontFamily: 'Arial'
@@ -921,11 +1052,21 @@ export class DungeonGameScene extends Phaser.Scene {
     this.handleShooting();
     this.updateBullets(delta);
     
-    this.enemies.getChildren().forEach((enemy: any) => {
-      if (enemy.update) enemy.update();
-    });
-    if (this.boss && this.boss.update) {
-      this.boss.update();
+    if (time >= this.enemiesFrozenUntil) {
+      this.enemies.getChildren().forEach((enemy: any) => {
+        if (enemy.update) enemy.update();
+      });
+      if (this.boss && this.boss.update) {
+        this.boss.update();
+      }
+    } else {
+      // Enforce 0 velocity while frozen just in case physics collisions try to bump them
+      this.enemies.getChildren().forEach((enemy: any) => {
+        if (enemy.setVelocity) enemy.setVelocity(0, 0);
+      });
+      if (this.boss && this.boss.setVelocity) {
+        this.boss.setVelocity(0, 0);
+      }
     }
 
     if (this.playerShadow && !this.player.getData('isDead')) {
@@ -1025,15 +1166,15 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
-  private fireBullet() {
+  private fireBullet(targetX?: number, targetY?: number) {
     const bullet = this.physics.add.sprite(this.player.x, this.player.y, 'bullet');
     bullet.setScale(0.4); // Reduced to 1/3 of original (1.2 / 3)
     bullet.setTint(0x88ccff); // Blue tint for magic effect
     
-    // Get mouse click position (using downX/downY like original)
+    // Use the exact touch coordinate if provided, otherwise fallback to the active pointer
     const pointer = this.input.activePointer;
-    const mouseX = pointer.worldX;
-    const mouseY = pointer.worldY;
+    const mouseX = targetX !== undefined ? targetX : pointer.worldX;
+    const mouseY = targetY !== undefined ? targetY : pointer.worldY;
     
     // Calculate direction from player to mouse click (like original code)
     const deltaX = mouseX - this.player.x;
@@ -1104,6 +1245,11 @@ export class DungeonGameScene extends Phaser.Scene {
         this.time.delayedCall(1000, () => {
           chest.clearTint();
         });
+        
+        if (this.gameDifficulty === 'hard') {
+          this.player.setData('isInvulnerable', false); // Bypass i-frames to guarantee penalty
+          this.hitPlayer(this.player, null, 10);
+        }
       }
       
       this.questionsAnswered++;
@@ -1111,9 +1257,18 @@ export class DungeonGameScene extends Phaser.Scene {
     });
   }
 
+  private resetJoystick() {
+    this.joystickActive = false;
+    this.movePointer = null;
+    if (this.joystickBase) this.joystickBase.setVisible(false);
+    if (this.joystickThumb) this.joystickThumb.setVisible(false);
+    if (this.moveVector) this.moveVector.set(0, 0);
+  }
+
   private showQuestionModal(question: Question, callback: (isCorrect: boolean) => void) {
     this.isModalOpen = true;
     this.physics.pause();
+    this.resetJoystick();
 
     const modalBg = this.add.rectangle(
       this.scale.width / 2,
@@ -1175,7 +1330,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
     const closeHint = this.add.text(
       this.scale.width / 2,
-      this.scale.height / 2 + 180,
+      this.scale.height - 50,
       'Choose an answer to continue',
       {
         fontSize: '14px',
@@ -1264,6 +1419,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private hitPlayer(player: any, enemy: any, damage?: number) {
     if (player.getData('isDead')) return;
+    if (player.getData('isInvincible')) return; // Check for yellow crystal invincibility
     if (player.getData('isInvulnerable')) return;
     
     // Default to the provided damage, or extract it from the Enemy config, or fallback to 20
@@ -1277,7 +1433,9 @@ export class DungeonGameScene extends Phaser.Scene {
     this.time.delayedCall(1000, () => {
       if (player && player.active) {
         player.setData('isInvulnerable', false);
-        player.clearTint();
+        if (!player.getData('isInvincible')) {
+          player.clearTint();
+        }
       }
     });
 
@@ -1301,6 +1459,7 @@ export class DungeonGameScene extends Phaser.Scene {
       player.body.enable = false;
       player.anims.stop();
       player.setTint(0xff0000);
+      this.resetJoystick();
       
       this.tweens.add({
         targets: player,
@@ -1376,5 +1535,151 @@ export class DungeonGameScene extends Phaser.Scene {
     this.questionsText.setText(`Questions: ${this.levelCorrectAnswers}/4`);
   }
 
+  private handleEnemyDefeated(enemyType: string, x: number, y: number) {
+    if (enemyType === 'bat') {
+      let dropChance = 0;
+      if (this.gameDifficulty === 'easy') dropChance = 0.6;
+      else if (this.gameDifficulty === 'medium') dropChance = 0.5;
+      else if (this.gameDifficulty === 'hard') dropChance = 0.3;
+
+      if (Math.random() < dropChance) {
+        const crystal = this.physics.add.sprite(x, y, 'greencrystal');
+        crystal.anims.play('spin-greencrystal');
+        crystal.setScale(0.8);
+        crystal.setDepth(4);
+        this.droppedItems.add(crystal);
+      }
+    }
+    else if (enemyType === 'zombie2' && this.currentDungeon === 5) {
+      if (Math.random() < 0.50) {
+        const crystal = this.physics.add.sprite(x, y, 'bluecrystal');
+        crystal.anims.play('spin-bluecrystal');
+        crystal.setScale(0.8);
+        crystal.setDepth(4);
+        this.droppedItems.add(crystal);
+      }
+    }
+    else if ((enemyType === 'zombie' && (this.currentDungeon === 4 || this.currentDungeon === 5)) || 
+             (enemyType === 'zombie2' && this.currentDungeon === 4)) {
+      if (Math.random() < 0.20) {
+        const crystal = this.physics.add.sprite(x, y, 'redcrystal');
+        crystal.anims.play('spin-redcrystal');
+        crystal.setScale(0.8);
+        crystal.setDepth(4);
+        this.droppedItems.add(crystal);
+      }
+    }
+    else if (enemyType === 'spider' && this.currentDungeon === 5 && this.gameDifficulty === 'hard') {
+      if (Math.random() < (1 / 3)) {
+        const crystal = this.physics.add.sprite(x, y, 'yellowcrystal');
+        crystal.anims.play('spin-yellowcrystal');
+        crystal.setScale(0.8);
+        crystal.setDepth(4);
+        this.droppedItems.add(crystal);
+      }
+    }
+  }
+
+  private collectItem(player: any, item: any) {
+    const isRedCrystal = item.texture.key === 'redcrystal';
+    const isBlueCrystal = item.texture.key === 'bluecrystal';
+    const isYellowCrystal = item.texture.key === 'yellowcrystal';
+    item.destroy();
+    
+    if (isYellowCrystal) {
+      this.player.setData('isInvincible', true);
+      this.player.setTint(0xffff33); // 80% yellow tint
+      
+      this.sound.play('star', { volume: 0.5 });
+      
+      const invulnText = this.add.text(this.player.x, this.player.y - 30, 'INVINCIBLE!', {
+        fontSize: '16px', fill: '#ffff33', fontFamily: 'Arial', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(100);
+      
+      this.tweens.add({
+        targets: invulnText, y: invulnText.y - 30, alpha: 0, duration: 1000, onComplete: () => invulnText.destroy()
+      });
+
+      // Flicker effect starting at 4 seconds
+      this.time.delayedCall(4000, () => {
+        let blinkCount = 0;
+        this.time.addEvent({
+          delay: 100,
+          repeat: 9, // 10 times total = 1000ms
+          callback: () => {
+            if (this.player.getData('isDead')) return;
+            blinkCount++;
+            if (blinkCount % 2 === 0) {
+              this.player.setTint(0xffff33);
+            } else {
+              this.player.clearTint();
+            }
+          }
+        });
+      });
+
+      // Remove invincibility at exactly 5 seconds
+      this.time.delayedCall(5000, () => {
+        if (!this.player.getData('isDead')) {
+          this.player.setData('isInvincible', false);
+          this.player.clearTint();
+        }
+      });
+      return;
+    }
+
+    if (isBlueCrystal) {
+      this.enemiesFrozenUntil = this.time.now + 3000;
+      
+      this.enemies.getChildren().forEach((enemy: any) => {
+        if (enemy.setVelocity) enemy.setVelocity(0, 0);
+        if (enemy.anims) enemy.anims.stop();
+      });
+      if (this.boss) {
+        this.boss.setVelocity(0, 0);
+        this.boss.anims.stop();
+      }
+      
+      this.sound.play('star', { volume: 0.5 });
+      
+      const freezeText = this.add.text(this.player.x, this.player.y - 30, 'TIME FREEZE!', {
+        fontSize: '16px', fill: '#00ffff', fontFamily: 'Arial', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(100);
+      
+      this.tweens.add({
+        targets: freezeText, y: freezeText.y - 30, alpha: 0, duration: 1000, onComplete: () => freezeText.destroy()
+      });
+      return;
+    }
+
+    if (isRedCrystal) {
+      this.playerHealth = this.playerMaxHealth;
+    } else {
+      this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 10);
+    }
+    this.updateHealthBar();
+    
+    this.sound.play('star', { volume: 0.5 });
+    
+    // Floating text feedback
+    const textStr = isRedCrystal ? 'MAX HP!' : '+10 HP';
+    const textColor = isRedCrystal ? '#ff4444' : '#00ff00';
+    const healText = this.add.text(this.player.x, this.player.y - 30, textStr, {
+      fontSize: '16px',
+      fill: textColor,
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(100);
+    
+    this.tweens.add({
+      targets: healText,
+      y: healText.y - 30,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => healText.destroy()
+    });
+  }
 
 }
