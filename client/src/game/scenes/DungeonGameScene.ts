@@ -1129,7 +1129,8 @@ export class DungeonGameScene extends Phaser.Scene {
       bullet.body.setVelocityY(delta * speedY * 50);
       
       // Remove bullet after lifetime expires (original used 1750ms)
-      if (born > 1750) {
+      const lifespan = bullet.getData('lifespan') || 1750;
+      if (born > lifespan) {
         bullet.setActive(false);
         bullet.setVisible(false);
         bullet.destroy();
@@ -1143,28 +1144,45 @@ export class DungeonGameScene extends Phaser.Scene {
     const speed = 120; // Reduced from 160
     let isMoving = false;
     
-    if (this.cursors.left.isDown || this.wasd.A.isDown) {
-      this.player.setVelocityX(-speed);
-      this.player.anims.play('walk-left', true);
+    if (this.joystickActive && (this.moveVector.x !== 0 || this.moveVector.y !== 0)) {
+      // Mobile joystick movement
+      this.player.setVelocityX(this.moveVector.x * speed);
+      this.player.setVelocityY(this.moveVector.y * speed);
       isMoving = true;
-    } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-      this.player.setVelocityX(speed);
-      this.player.anims.play('walk-right', true);
-      isMoving = true;
+      
+      // Determine primary direction for animation
+      if (Math.abs(this.moveVector.x) > Math.abs(this.moveVector.y)) {
+        if (this.moveVector.x < 0) this.player.anims.play('walk-left', true);
+        else this.player.anims.play('walk-right', true);
+      } else {
+        if (this.moveVector.y < 0) this.player.anims.play('walk-up', true);
+        else this.player.anims.play('walk-down', true);
+      }
     } else {
-      this.player.setVelocityX(0);
-    }
-    
-    if (this.cursors.up.isDown || this.wasd.W.isDown) {
-      this.player.setVelocityY(-speed);
-      if (!isMoving) this.player.anims.play('walk-up', true);
-      isMoving = true;
-    } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-      this.player.setVelocityY(speed);
-      if (!isMoving) this.player.anims.play('walk-down', true);
-      isMoving = true;
-    } else {
-      this.player.setVelocityY(0);
+      // Keyboard movement
+      if (this.cursors.left.isDown || this.wasd.A.isDown) {
+        this.player.setVelocityX(-speed);
+        this.player.anims.play('walk-left', true);
+        isMoving = true;
+      } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
+        this.player.setVelocityX(speed);
+        this.player.anims.play('walk-right', true);
+        isMoving = true;
+      } else {
+        this.player.setVelocityX(0);
+      }
+      
+      if (this.cursors.up.isDown || this.wasd.W.isDown) {
+        this.player.setVelocityY(-speed);
+        if (!isMoving) this.player.anims.play('walk-up', true);
+        isMoving = true;
+      } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
+        this.player.setVelocityY(speed);
+        if (!isMoving) this.player.anims.play('walk-down', true);
+        isMoving = true;
+      } else {
+        this.player.setVelocityY(0);
+      }
     }
     
     // Play idle animation when not moving
@@ -1223,6 +1241,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
     
     bullet.setData('born', 0); // Track lifetime like original
+    bullet.setData('lifespan', 738.28125); // Limit range to 75% of current 984.375ms
     
     this.bullets.add(bullet);
     
