@@ -412,5 +412,805 @@
     "options": ["Spain", "Turkey", "Egypt", "Morocco"],
     "difficulty": 5,
     "category": "general information"
+  },
+  {
+    "id": 109,
+    "question": "What unseen force keeps us from floating off the Earth?",
+    "correctAnswer": "Gravity",
+    "options": ["Magnetism", "Gravity", "Friction", "Tension"],
+    "difficulty": 1,
+    "category": "physics"
+  },
+  {
+    "id": 110,
+    "question": "Which animal is traditionally known as man's best friend?",
+    "correctAnswer": "Dog",
+    "options": ["Cat", "Dog", "Horse", "Bird"],
+    "difficulty": 1,
+    "category": "biology"
+  },
+  {
+    "id": 111,
+    "question": "How many colors are traditionally seen in a rainbow?",
+    "correctAnswer": "7",
+    "options": ["5", "6", "7", "8"],
+    "difficulty": 1,
+    "category": "general info"
+  },
+  {
+    "id": 112,
+    "question": "What type of celestial body is our Sun?",
+    "correctAnswer": "A star",
+    "options": ["A planet", "A meteor", "A star", "A comet"],
+    "difficulty": 1,
+    "category": "astronomy"
+  },
+  {
+    "id": 113,
+    "question": "Which ancient civilization built the Great Pyramids?",
+    "correctAnswer": "Egyptians",
+    "options": ["Romans", "Greeks", "Egyptians", "Mayans"],
+    "difficulty": 1,
+    "category": "history"
+  },
+  {
+    "id": 114,
+    "question": "What is the chemical symbol for Oxygen?",
+    "correctAnswer": "O",
+    "options": ["Ox", "O", "Om", "Oy"],
+    "difficulty": 1,
+    "category": "chemistry"
+  },
+  {
+    "id": 115,
+    "question": "What part of speech is a word that describes a noun?",
+    "correctAnswer": "Adjective",
+    "options": ["Verb", "Adverb", "Adjective", "Pronoun"],
+    "difficulty": 1,
+    "category": "grammar"
+  },
+  {
+    "id": 116,
+    "question": "Which famous video game features a character named Mario?",
+    "correctAnswer": "Super Mario Bros",
+    "options": ["Sonic the Hedgehog", "Super Mario Bros", "Zelda", "Tetris"],
+    "difficulty": 1,
+    "category": "trivia"
+  },
+  {
+    "id": 117,
+    "question": "What insect do caterpillars metamorphose into?",
+    "correctAnswer": "Butterflies",
+    "options": ["Spiders", "Beetles", "Butterflies", "Ants"],
+    "difficulty": 1,
+    "category": "science"
+  },
+  {
+    "id": 118,
+    "question": "What happens to liquid water when it is heated to a boil?",
+    "correctAnswer": "It turns to steam",
+    "options": ["It freezes", "It turns to steam", "It becomes solid", "It disappears"],
+    "difficulty": 1,
+    "category": "physics"
+  },
+  {
+    "id": 119,
+    "question": "What is the hardest substance found in the human body?",
+    "correctAnswer": "Tooth enamel",
+    "options": ["Bones", "Skull", "Nails", "Tooth enamel"],
+    "difficulty": 1,
+    "category": "biology"
+  },
+  {
+    "id": 120,
+    "question": "How many months are in a standard year?",
+    "correctAnswer": "12",
+    "options": ["10", "11", "12", "13"],
+    "difficulty": 1,
+    "category": "general info"
+  },
+  {
+    "id": 121,
+    "question": "Which planet is the largest in our solar system?",
+    "correctAnswer": "Jupiter",
+    "options": ["Saturn", "Jupiter", "Earth", "Neptune"],
+    "difficulty": 1,
+    "category": "astronomy"
+  },
+  {
+    "id": 122,
+    "question": "What famous ship sank in the Atlantic Ocean in 1912?",
+    "correctAnswer": "Titanic",
+    "options": ["Santa Maria", "Mayflower", "Titanic", "Britannic"],
+    "difficulty": 1,
+    "category": "history"
+  },
+  {
+    "id": 123,
+    "question": "What state of matter is water at room temperature?",
+    "correctAnswer": "Liquid",
+    "options": ["Solid", "Liquid", "Gas", "Plasma"],
+    "difficulty": 1,
+    "category": "chemistry"
+  },
+  {
+    "id": 124,
+    "question": "What is the plural form of the word 'child'?",
+    "correctAnswer": "Children",
+    "options": ["Childs", "Childrens", "Children", "Chilren"],
+    "difficulty": 1,
+    "category": "grammar"
+  },
+  {
+    "id": 125,
+    "question": "How many wheels does a standard bicycle have?",
+    "correctAnswer": "2",
+    "options": ["1", "2", "3", "4"],
+    "difficulty": 1,
+    "category": "trivia"
+  },
+  {
+    "id": 126,
+    "question": "What is the calm center of a hurricane called?",
+    "correctAnswer": "The eye",
+    "options": ["The core", "The middle", "The pupil", "The eye"],
+    "difficulty": 1,
+    "category": "science"
+  },
+  {
+    "id": 127,
+    "question": "What biological feature allows fish to breathe underwater?",
+    "correctAnswer": "Gills",
+    "options": ["Lungs", "Pores", "Gills", "Fins"],
+    "difficulty": 1,
+    "category": "biology"
+  },
+  {
+    "id": 128,
+    "question": "What common tool is used to measure temperature?",
+    "correctAnswer": "Thermometer",
+    "options": ["Barometer", "Thermometer", "Seismograph", "Altimeter"],
+    "difficulty": 1,
+    "category": "physics"
+  },
+  {
+    "id": 129,
+    "question": "Which travels faster, light or sound?",
+    "correctAnswer": "Light",
+    "options": ["Sound", "Light", "They travel the same speed", "It depends on the temperature"],
+    "difficulty": 2,
+    "category": "physics"
+  },
+  {
+    "id": 130,
+    "question": "What is the most common blood type in humans?",
+    "correctAnswer": "O positive",
+    "options": ["A positive", "B negative", "AB positive", "O positive"],
+    "difficulty": 2,
+    "category": "biology"
+  },
+  {
+    "id": 131,
+    "question": "In what country is the Taj Mahal located?",
+    "correctAnswer": "India",
+    "options": ["Egypt", "Turkey", "India", "China"],
+    "difficulty": 2,
+    "category": "general info"
+  },
+  {
+    "id": 132,
+    "question": "Which planet is most famous for its prominent ring system?",
+    "correctAnswer": "Saturn",
+    "options": ["Uranus", "Jupiter", "Saturn", "Neptune"],
+    "difficulty": 2,
+    "category": "astronomy"
+  },
+  {
+    "id": 133,
+    "question": "Who was the first female pilot to fly solo across the Atlantic Ocean?",
+    "correctAnswer": "Amelia Earhart",
+    "options": ["Bessie Coleman", "Harriet Quimby", "Amelia Earhart", "Sally Ride"],
+    "difficulty": 2,
+    "category": "history"
+  },
+  {
+    "id": 134,
+    "question": "What is the chemical formula for carbon dioxide?",
+    "correctAnswer": "CO2",
+    "options": ["CO", "CO2", "H2O", "O2"],
+    "difficulty": 2,
+    "category": "chemistry"
+  },
+  {
+    "id": 135,
+    "question": "Which of these words is a verb?",
+    "correctAnswer": "Run",
+    "options": ["Happy", "Quickly", "Run", "Table"],
+    "difficulty": 2,
+    "category": "grammar"
+  },
+  {
+    "id": 136,
+    "question": "What is the main ingredient in guacamole?",
+    "correctAnswer": "Avocado",
+    "options": ["Tomato", "Avocado", "Lime", "Onion"],
+    "difficulty": 2,
+    "category": "trivia"
+  },
+  {
+    "id": 137,
+    "question": "What primarily causes the tides in Earth's oceans?",
+    "correctAnswer": "The Moon's gravity",
+    "options": ["The Earth's rotation", "Wind patterns", "The Moon's gravity", "The Sun's heat"],
+    "difficulty": 2,
+    "category": "science"
+  },
+  {
+    "id": 138,
+    "question": "What type of energy is stored inside a battery?",
+    "correctAnswer": "Chemical energy",
+    "options": ["Kinetic energy", "Thermal energy", "Chemical energy", "Nuclear energy"],
+    "difficulty": 2,
+    "category": "physics"
+  },
+  {
+    "id": 139,
+    "question": "How many bones are in the adult human body?",
+    "correctAnswer": "206",
+    "options": ["201", "206", "210", "215"],
+    "difficulty": 2,
+    "category": "biology"
+  },
+  {
+    "id": 140,
+    "question": "What is widely considered the longest river in the world?",
+    "correctAnswer": "The Nile",
+    "options": ["The Amazon", "The Nile", "The Yangtze", "The Mississippi"],
+    "difficulty": 2,
+    "category": "general info"
+  },
+  {
+    "id": 141,
+    "question": "What is the name of the galaxy that contains our Solar System?",
+    "correctAnswer": "Milky Way",
+    "options": ["Andromeda", "Sombrero", "Milky Way", "Whirlpool"],
+    "difficulty": 2,
+    "category": "astronomy"
+  },
+  {
+    "id": 142,
+    "question": "In what year did humans first walk on the moon?",
+    "correctAnswer": "1969",
+    "options": ["1965", "1969", "1971", "1973"],
+    "difficulty": 2,
+    "category": "history"
+  },
+  {
+    "id": 143,
+    "question": "What is the chemical symbol for Iron?",
+    "correctAnswer": "Fe",
+    "options": ["Ir", "Fe", "In", "I"],
+    "difficulty": 2,
+    "category": "chemistry"
+  },
+  {
+    "id": 144,
+    "question": "What do you call a word having the same meaning as another word?",
+    "correctAnswer": "Synonym",
+    "options": ["Antonym", "Homophone", "Synonym", "Acronym"],
+    "difficulty": 2,
+    "category": "grammar"
+  },
+  {
+    "id": 145,
+    "question": "What is the capital city of Japan?",
+    "correctAnswer": "Tokyo",
+    "options": ["Kyoto", "Osaka", "Seoul", "Tokyo"],
+    "difficulty": 2,
+    "category": "trivia"
+  },
+  {
+    "id": 146,
+    "question": "What is the scientific study of weather and the atmosphere called?",
+    "correctAnswer": "Meteorology",
+    "options": ["Geology", "Meteorology", "Astronomy", "Ecology"],
+    "difficulty": 2,
+    "category": "science"
+  },
+  {
+    "id": 147,
+    "question": "Which organs filter waste from the human bloodstream?",
+    "correctAnswer": "Kidneys",
+    "options": ["Lungs", "Kidneys", "Liver", "Heart"],
+    "difficulty": 2,
+    "category": "biology"
+  },
+  {
+    "id": 148,
+    "question": "What colors are combined to make white light?",
+    "correctAnswer": "All colors",
+    "options": ["Red and Blue", "All colors", "Yellow and Green", "Black and Gray"],
+    "difficulty": 2,
+    "category": "physics"
+  },
+  {
+    "id": 149,
+    "question": "Which of Newton's laws states that every action has an equal and opposite reaction?",
+    "correctAnswer": "Third Law",
+    "options": ["First Law", "Second Law", "Third Law", "Fourth Law"],
+    "difficulty": 3,
+    "category": "physics"
+  },
+  {
+    "id": 150,
+    "question": "What is the largest species of shark alive today?",
+    "correctAnswer": "Whale shark",
+    "options": ["Great White shark", "Whale shark", "Tiger shark", "Hammerhead shark"],
+    "difficulty": 3,
+    "category": "biology"
+  },
+  {
+    "id": 151,
+    "question": "Diamonds are primarily composed of what element?",
+    "correctAnswer": "Carbon",
+    "options": ["Silicon", "Calcium", "Carbon", "Oxygen"],
+    "difficulty": 3,
+    "category": "general info"
+  },
+  {
+    "id": 152,
+    "question": "Which planet in our solar system uniquely rotates on its side?",
+    "correctAnswer": "Uranus",
+    "options": ["Venus", "Uranus", "Neptune", "Jupiter"],
+    "difficulty": 3,
+    "category": "astronomy"
+  },
+  {
+    "id": 153,
+    "question": "Who served as the 16th President of the United States?",
+    "correctAnswer": "Abraham Lincoln",
+    "options": ["George Washington", "Thomas Jefferson", "Abraham Lincoln", "Theodore Roosevelt"],
+    "difficulty": 3,
+    "category": "history"
+  },
+  {
+    "id": 154,
+    "question": "What is the atomic number of Carbon?",
+    "correctAnswer": "6",
+    "options": ["4", "6", "8", "12"],
+    "difficulty": 3,
+    "category": "chemistry"
+  },
+  {
+    "id": 155,
+    "question": "What verb tense is used in the sentence 'I will go'?",
+    "correctAnswer": "Future",
+    "options": ["Past", "Present", "Future", "Perfect"],
+    "difficulty": 3,
+    "category": "grammar"
+  },
+  {
+    "id": 156,
+    "question": "Who wrote the famous tragedy 'Hamlet'?",
+    "correctAnswer": "William Shakespeare",
+    "options": ["Charles Dickens", "William Shakespeare", "Homer", "Jane Austen"],
+    "difficulty": 3,
+    "category": "trivia"
+  },
+  {
+    "id": 157,
+    "question": "What is the thickest layer of the Earth, located just below the crust?",
+    "correctAnswer": "The mantle",
+    "options": ["The inner core", "The outer core", "The lithosphere", "The mantle"],
+    "difficulty": 3,
+    "category": "science"
+  },
+  {
+    "id": 158,
+    "question": "What unit is electrical resistance measured in?",
+    "correctAnswer": "Ohm",
+    "options": ["Volt", "Ampere", "Ohm", "Watt"],
+    "difficulty": 3,
+    "category": "physics"
+  },
+  {
+    "id": 159,
+    "question": "What part of the brain primarily controls motor movement and balance?",
+    "correctAnswer": "Cerebellum",
+    "options": ["Cerebrum", "Brainstem", "Hypothalamus", "Cerebellum"],
+    "difficulty": 3,
+    "category": "biology"
+  },
+  {
+    "id": 160,
+    "question": "What is the official currency of the United Kingdom?",
+    "correctAnswer": "Pound Sterling",
+    "options": ["Euro", "Dollar", "Franc", "Pound Sterling"],
+    "difficulty": 3,
+    "category": "general info"
+  },
+  {
+    "id": 161,
+    "question": "What is the closest star system to our Solar System?",
+    "correctAnswer": "Alpha Centauri",
+    "options": ["Sirius", "Alpha Centauri", "Proxima b", "Andromeda"],
+    "difficulty": 3,
+    "category": "astronomy"
+  },
+  {
+    "id": 162,
+    "question": "Which ancient Roman city was famously destroyed by Mount Vesuvius in 79 AD?",
+    "correctAnswer": "Pompeii",
+    "options": ["Rome", "Pompeii", "Sparta", "Athens"],
+    "difficulty": 3,
+    "category": "history"
+  },
+  {
+    "id": 163,
+    "question": "What is the most abundant chemical element in the observable universe?",
+    "correctAnswer": "Hydrogen",
+    "options": ["Oxygen", "Carbon", "Helium", "Hydrogen"],
+    "difficulty": 3,
+    "category": "chemistry"
+  },
+  {
+    "id": 164,
+    "question": "What is the past participle form of the verb 'write'?",
+    "correctAnswer": "Written",
+    "options": ["Wrote", "Writing", "Written", "Writes"],
+    "difficulty": 3,
+    "category": "grammar"
+  },
+  {
+    "id": 165,
+    "question": "How many keys are on a standard classical piano?",
+    "correctAnswer": "88",
+    "options": ["64", "72", "88", "96"],
+    "difficulty": 3,
+    "category": "trivia"
+  },
+  {
+    "id": 166,
+    "question": "Approximately what is the speed of sound in air at room temperature?",
+    "correctAnswer": "343 m/s",
+    "options": ["150 m/s", "343 m/s", "500 m/s", "1000 m/s"],
+    "difficulty": 3,
+    "category": "science"
+  },
+  {
+    "id": 167,
+    "question": "What type of blood cells are primarily responsible for fighting infections?",
+    "correctAnswer": "White blood cells",
+    "options": ["Red blood cells", "Platelets", "Plasma", "White blood cells"],
+    "difficulty": 3,
+    "category": "biology"
+  },
+  {
+    "id": 168,
+    "question": "Which subatomic particle carries a positive electric charge?",
+    "correctAnswer": "Proton",
+    "options": ["Electron", "Neutron", "Proton", "Photon"],
+    "difficulty": 3,
+    "category": "physics"
+  },
+  {
+    "id": 169,
+    "question": "What is the standard SI unit of force?",
+    "correctAnswer": "Newton",
+    "options": ["Joule", "Watt", "Newton", "Pascal"],
+    "difficulty": 4,
+    "category": "physics"
+  },
+  {
+    "id": 170,
+    "question": "Which vitamin is naturally produced by the human body when exposed to sunlight?",
+    "correctAnswer": "Vitamin D",
+    "options": ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D"],
+    "difficulty": 4,
+    "category": "biology"
+  },
+  {
+    "id": 171,
+    "question": "Which desert is classified as the largest hot desert in the world?",
+    "correctAnswer": "Sahara",
+    "options": ["Gobi", "Kalahari", "Mojave", "Sahara"],
+    "difficulty": 4,
+    "category": "general info"
+  },
+  {
+    "id": 172,
+    "question": "What is the name of the largest moon orbiting Mars?",
+    "correctAnswer": "Phobos",
+    "options": ["Deimos", "Europa", "Phobos", "Titan"],
+    "difficulty": 4,
+    "category": "astronomy"
+  },
+  {
+    "id": 173,
+    "question": "Who was officially the first Emperor of the Roman Empire?",
+    "correctAnswer": "Augustus",
+    "options": ["Julius Caesar", "Augustus", "Nero", "Caligula"],
+    "difficulty": 4,
+    "category": "history"
+  },
+  {
+    "id": 174,
+    "question": "What is the atomic chemical symbol for Silver?",
+    "correctAnswer": "Ag",
+    "options": ["Si", "Ag", "Au", "Sv"],
+    "difficulty": 4,
+    "category": "chemistry"
+  },
+  {
+    "id": 175,
+    "question": "In English grammar, a gerund always ends in which suffix?",
+    "correctAnswer": "-ing",
+    "options": ["-ed", "-s", "-ly", "-ing"],
+    "difficulty": 4,
+    "category": "grammar"
+  },
+  {
+    "id": 176,
+    "question": "In Greek mythology, who is the ruler and god of the sea?",
+    "correctAnswer": "Poseidon",
+    "options": ["Zeus", "Hades", "Apollo", "Poseidon"],
+    "difficulty": 4,
+    "category": "trivia"
+  },
+  {
+    "id": 177,
+    "question": "What is the hardest naturally occurring mineral on the Mohs scale?",
+    "correctAnswer": "Diamond",
+    "options": ["Topaz", "Quartz", "Diamond", "Corundum"],
+    "difficulty": 4,
+    "category": "science"
+  },
+  {
+    "id": 178,
+    "question": "Which physicist is credited with developing the theory of general relativity?",
+    "correctAnswer": "Albert Einstein",
+    "options": ["Isaac Newton", "Niels Bohr", "Albert Einstein", "Max Planck"],
+    "difficulty": 4,
+    "category": "physics"
+  },
+  {
+    "id": 179,
+    "question": "Which small gland in the brain is responsible for producing melatonin?",
+    "correctAnswer": "Pineal gland",
+    "options": ["Pituitary gland", "Thyroid", "Hypothalamus", "Pineal gland"],
+    "difficulty": 4,
+    "category": "biology"
+  },
+  {
+    "id": 180,
+    "question": "In which ocean is the Mariana Trench, the deepest oceanic trench, located?",
+    "correctAnswer": "Pacific Ocean",
+    "options": ["Atlantic Ocean", "Indian Ocean", "Southern Ocean", "Pacific Ocean"],
+    "difficulty": 4,
+    "category": "general info"
+  },
+  {
+    "id": 181,
+    "question": "Under what galaxy classification does the Milky Way fall?",
+    "correctAnswer": "Spiral",
+    "options": ["Elliptical", "Irregular", "Lenticular", "Spiral"],
+    "difficulty": 4,
+    "category": "astronomy"
+  },
+  {
+    "id": 182,
+    "question": "In what year did the French Revolution famously begin?",
+    "correctAnswer": "1789",
+    "options": ["1776", "1789", "1804", "1812"],
+    "difficulty": 4,
+    "category": "history"
+  },
+  {
+    "id": 183,
+    "question": "What is the primary hydrocarbon component found in natural gas?",
+    "correctAnswer": "Methane",
+    "options": ["Ethane", "Propane", "Butane", "Methane"],
+    "difficulty": 4,
+    "category": "chemistry"
+  },
+  {
+    "id": 184,
+    "question": "What part of speech is a word that modifies a verb, an adjective, or another adverb?",
+    "correctAnswer": "Adverb",
+    "options": ["Noun", "Pronoun", "Preposition", "Adverb"],
+    "difficulty": 4,
+    "category": "grammar"
+  },
+  {
+    "id": 185,
+    "question": "What is the capital city of Australia?",
+    "correctAnswer": "Canberra",
+    "options": ["Sydney", "Melbourne", "Brisbane", "Canberra"],
+    "difficulty": 4,
+    "category": "trivia"
+  },
+  {
+    "id": 186,
+    "question": "What natural disaster does a seismograph measure?",
+    "correctAnswer": "Earthquakes",
+    "options": ["Tornadoes", "Tsunamis", "Earthquakes", "Volcanic eruptions"],
+    "difficulty": 4,
+    "category": "science"
+  },
+  {
+    "id": 187,
+    "question": "What is the longest and strongest bone in the human body?",
+    "correctAnswer": "Femur",
+    "options": ["Tibia", "Fibula", "Humerus", "Femur"],
+    "difficulty": 4,
+    "category": "biology"
+  },
+  {
+    "id": 188,
+    "question": "What is the standard SI unit of power?",
+    "correctAnswer": "Watt",
+    "options": ["Joule", "Volt", "Ampere", "Watt"],
+    "difficulty": 4,
+    "category": "physics"
+  },
+  {
+    "id": 189,
+    "question": "What is the approximate value of the Planck constant?",
+    "correctAnswer": "6.626 x 10^-34 J*s",
+    "options": ["3.141 x 10^-15 J*s", "6.626 x 10^-34 J*s", "2.998 x 10^8 m/s", "1.602 x 10^-19 C"],
+    "difficulty": 5,
+    "category": "physics"
+  },
+  {
+    "id": 190,
+    "question": "What is widely considered the rarest blood type among humans globally?",
+    "correctAnswer": "AB negative",
+    "options": ["O negative", "A negative", "B negative", "AB negative"],
+    "difficulty": 5,
+    "category": "biology"
+  },
+  {
+    "id": 191,
+    "question": "Which lake is recognized as the deepest and oldest freshwater lake in the world?",
+    "correctAnswer": "Lake Baikal",
+    "options": ["Lake Superior", "Lake Victoria", "Lake Baikal", "Lake Tanganyika"],
+    "difficulty": 5,
+    "category": "general info"
+  },
+  {
+    "id": 192,
+    "question": "What is the astronomical designation of the supermassive black hole at the center of the Milky Way?",
+    "correctAnswer": "Sagittarius A*",
+    "options": ["Cygnus X-1", "Centaurus A", "M87*", "Sagittarius A*"],
+    "difficulty": 5,
+    "category": "astronomy"
+  },
+  {
+    "id": 193,
+    "question": "Which king of Macedon successfully conquered the vast Persian Empire?",
+    "correctAnswer": "Alexander the Great",
+    "options": ["Philip II", "Alexander the Great", "Ptolemy I", "Cassander"],
+    "difficulty": 5,
+    "category": "history"
+  },
+  {
+    "id": 194,
+    "question": "Which elemental metal has the highest melting point?",
+    "correctAnswer": "Tungsten",
+    "options": ["Iron", "Titanium", "Tungsten", "Platinum"],
+    "difficulty": 5,
+    "category": "chemistry"
+  },
+  {
+    "id": 195,
+    "question": "Which grammatical mood is used to express a wish or a contrary-to-fact condition?",
+    "correctAnswer": "Subjunctive",
+    "options": ["Indicative", "Imperative", "Subjunctive", "Conditional"],
+    "difficulty": 5,
+    "category": "grammar"
+  },
+  {
+    "id": 196,
+    "question": "What is the unofficial national flower of Japan, celebrated during Hanami?",
+    "correctAnswer": "Cherry Blossom",
+    "options": ["Lotus", "Chrysanthemum", "Cherry Blossom", "Orchid"],
+    "difficulty": 5,
+    "category": "trivia"
+  },
+  {
+    "id": 197,
+    "question": "What scale is used to measure the intensity and damage of tornadoes?",
+    "correctAnswer": "Enhanced Fujita",
+    "options": ["Richter", "Mercalli", "Enhanced Fujita", "Beaufort"],
+    "difficulty": 5,
+    "category": "science"
+  },
+  {
+    "id": 198,
+    "question": "What phenomenon describes the change in frequency of a wave in relation to an observer?",
+    "correctAnswer": "Doppler Effect",
+    "options": ["Coriolis Effect", "Zeeman Effect", "Doppler Effect", "Compton Effect"],
+    "difficulty": 5,
+    "category": "physics"
+  },
+  {
+    "id": 199,
+    "question": "Which part of the human eye expands and contracts to control the amount of light entering?",
+    "correctAnswer": "Iris",
+    "options": ["Cornea", "Retina", "Lens", "Iris"],
+    "difficulty": 5,
+    "category": "biology"
+  },
+  {
+    "id": 200,
+    "question": "Which country possesses the longest total coastline in the world?",
+    "correctAnswer": "Canada",
+    "options": ["Russia", "Australia", "Indonesia", "Canada"],
+    "difficulty": 5,
+    "category": "general info"
+  },
+  {
+    "id": 201,
+    "question": "Who is credited with discovering the four largest moons of Jupiter in 1610?",
+    "correctAnswer": "Galileo Galilei",
+    "options": ["Johannes Kepler", "Nicolaus Copernicus", "Galileo Galilei", "Isaac Newton"],
+    "difficulty": 5,
+    "category": "astronomy"
+  },
+  {
+    "id": 202,
+    "question": "In what year did the Soviet Union officially dissolve and collapse?",
+    "correctAnswer": "1991",
+    "options": ["1989", "1990", "1991", "1993"],
+    "difficulty": 5,
+    "category": "history"
+  },
+  {
+    "id": 203,
+    "question": "What is the term for a substance that speeds up a chemical reaction without being consumed?",
+    "correctAnswer": "Catalyst",
+    "options": ["Inhibitor", "Reagent", "Catalyst", "Enzyme"],
+    "difficulty": 5,
+    "category": "chemistry"
+  },
+  {
+    "id": 204,
+    "question": "What is the correct plural form of the word 'ox'?",
+    "correctAnswer": "Oxen",
+    "options": ["Oxes", "Oxen", "Oxi", "Ox"],
+    "difficulty": 5,
+    "category": "grammar"
+  },
+  {
+    "id": 205,
+    "question": "What is the official primary language spoken in Brazil?",
+    "correctAnswer": "Portuguese",
+    "options": ["Spanish", "English", "Portuguese", "French"],
+    "difficulty": 5,
+    "category": "trivia"
+  },
+  {
+    "id": 206,
+    "question": "Which layer of Earth's atmosphere contains the protective ozone layer?",
+    "correctAnswer": "Stratosphere",
+    "options": ["Troposphere", "Stratosphere", "Mesosphere", "Thermosphere"],
+    "difficulty": 5,
+    "category": "science"
+  },
+  {
+    "id": 207,
+    "question": "What enzyme found in human saliva begins the chemical breakdown of starches?",
+    "correctAnswer": "Amylase",
+    "options": ["Pepsin", "Lipase", "Protease", "Amylase"],
+    "difficulty": 5,
+    "category": "biology"
+  },
+  {
+    "id": 208,
+    "question": "What physics principle states that energy cannot be created or destroyed, only transformed?",
+    "correctAnswer": "Conservation of Energy",
+    "options": ["Heisenberg Uncertainty Principle", "Conservation of Energy", "Entropy", "Thermodynamic Equilibrium"],
+    "difficulty": 5,
+    "category": "physics"
   }
 ]

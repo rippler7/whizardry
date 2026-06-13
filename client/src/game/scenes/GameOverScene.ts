@@ -127,7 +127,12 @@ export class GameOverScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive();
 
     playAgainButton.on('pointerdown', () => {
-      this.scene.start('DungeonGameScene', { dungeon: 1, health: 100, score: 0 });
+      this.scene.start('DungeonGameScene', { 
+        dungeon: 1, 
+        health: 100, 
+        score: 0,
+        difficulty: stats.difficulty || 'easy'
+      });
     });
 
     playAgainButton.on('pointerover', () => {
