@@ -77,11 +77,7 @@ class PreloaderScene extends Phaser.Scene {
     this.load.audio('boss_battle', ['assets/audio/BoxCat_Games_-_05_-_Battle_Boss.mp3', 'assets/audio/BoxCat_Games_-_05_-_Battle_Boss.ogg']);
     this.load.audio('spit', ['assets/audio/spit.mp3', 'assets/audio/spit.ogg']);
     this.load.audio('star', 'assets/audio/star.ogg');
-    this.load.audio('hurt', ['assets/audio/hurt.mp3', 'assets/audio/hurt.ogg']);
-    this.load.audio('enemy-death', ['assets/audio/enemy-death.mp3', 'assets/audio/enemy-death.ogg']);
     this.load.audio('hurt_male', 'assets/audio/hurt_male.ogg');
-    this.load.audio('zombienoise', 'assets/audio/zombienoise.ogg');
-    this.load.audio('burst', 'assets/audio/burst.ogg');
     this.load.audio('gameover_theme', 'assets/audio/Kevin MacLeod - Teller of the Tales.ogg');
     this.load.audio('victory_theme', 'assets/audio/BoxCat_Games_-_25_-_Victory.ogg');
     this.load.audio('close_door', 'assets/audio/close_door.ogg');
