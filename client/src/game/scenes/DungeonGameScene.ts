@@ -146,65 +146,6 @@ export class DungeonGameScene extends Phaser.Scene {
     this.resetJoystick();
   }
 
-  preload() {
-    // Load sprites using your original specifications
-    this.load.spritesheet('player', 'assets/sprites/mageHero.png', { frameWidth: 32, frameHeight: 48, endFrame: 15 });
-    this.load.spritesheet('skeleton', 'assets/sprites/skeleton.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
-    this.load.spritesheet('zombie', 'assets/sprites/zombies.png', { frameWidth: 32, frameHeight: 32, endFrame: 95 });
-    this.load.spritesheet('bat', 'assets/sprites/chiroptera.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
-    this.load.spritesheet('spider', 'assets/sprites/spider2.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
-    this.load.spritesheet('Boss', 'assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
-    this.load.spritesheet('gate', 'assets/sprites/rpg_gate5.png', { frameWidth: 145, frameHeight: 96, endFrame: 15 });
-    this.load.image('wall_texture', 'textures/cobbledsquare.jpg');
-    this.load.spritesheet('tilea2', 'assets/sprites/tilea2.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.image('ground_easy', 'textures/grass.png');
-    this.load.image('ground_medium', 'textures/sand.jpg');
-    this.load.image('ground_hard', 'textures/asphalt.png');
-    this.load.image('ground_easy', 'assets/sprites/grass_3.png');
-    this.load.image('ground_medium', 'assets/sprites/sand_3.png');
-    this.load.image('ground_hard', 'assets/sprites/dirty_3.png');
-    this.load.spritesheet('redcrystal', 'assets/sprites/crystal-qubodup-ccby3-32-red.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
-    this.load.spritesheet('bluecrystal', 'assets/sprites/crystal-qubodup-ccby3-32-blue.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
-    this.load.spritesheet('greencrystal', 'assets/sprites/crystal-qubodup-ccby3-32-green.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
-    this.load.spritesheet('yellowcrystal', 'assets/sprites/crystal-qubodup-ccby3-32-yellow.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
-    this.load.spritesheet('chestRed', 'assets/sprites/chestRed_faceRight.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
-    this.load.spritesheet('chestBlue', 'assets/sprites/chestBlue_faceRight.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
-    this.load.spritesheet('chestGreen', 'assets/sprites/chestGreen_faceLeft.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
-    this.load.spritesheet('chestYellow', 'assets/sprites/chestYellow_faceLeft.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
-    
-    // Load other sprites
-    this.load.image('bullet', 'assets/sprites/bullet.png');
-    this.load.image('door', 'assets/sprites/gameDoor1.png');
-    
-    // Load audio files
-    this.load.audio('enchanted_forest', ['assets/audio/enchanted_forest.mp3', 'assets/audio/enchanted_forest_loop.ogg']);
-    this.load.audio('boss_battle', ['assets/audio/BoxCat_Games_-_05_-_Battle_Boss.mp3', 'assets/audio/BoxCat_Games_-_05_-_Battle_Boss.ogg']);
-    this.load.audio('spit', ['assets/audio/spit.mp3', 'assets/audio/spit.ogg']);
-    this.load.audio('star', ['assets/audio/star.mp3', 'assets/audio/star.ogg']);
-    this.load.audio('star', 'assets/audio/star.ogg');
-    this.load.audio('hurt', ['assets/audio/hurt.mp3', 'assets/audio/hurt.ogg']);
-    this.load.audio('enemy-death', ['assets/audio/enemy-death.mp3', 'assets/audio/enemy-death.ogg']);
-    this.load.audio('hurt_male', 'assets/audio/hurt_male.ogg');
-    this.load.audio('zombienoise', 'assets/audio/zombienoise.ogg');
-    this.load.audio('burst', 'assets/audio/burst.ogg');
-    this.load.audio('gameover_theme', 'assets/audio/Kevin MacLeod - Teller of the Tales.ogg');
-    this.load.audio('victory_theme', 'assets/audio/BoxCat_Games_-_25_-_Victory.ogg');
-    this.load.audio('close_door', 'assets/audio/close_door.ogg');
-    this.load.audio('open_door', 'assets/audio/open_door.ogg');
-    this.load.audio('door_lock', 'assets/audio/door_lock.ogg');
-    this.load.audio('arcade1', 'assets/audio/arcade1.ogg');
-    
-    this.load.on('filecomplete', (key: string) => {
-      console.log('Asset loaded:', key);
-    });
-    
-    this.load.on('loaderror', (file: any) => {
-      console.warn('Asset failed to load:', file.key, file.src);
-    });
-  }
-
-
-
   create() {
     const { width, height } = this.scale;
 
