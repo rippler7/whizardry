@@ -1,322 +1,416 @@
 [
   {
-    "id": 21,
-    "question": "Which planet is known as the Red Planet?",
-    "correctAnswer": "Mars",
-    "options": ["Venus", "Mars", "Jupiter", "Mercury"],
+    "id": 61,
+    "question": "Which planet is closest to the Sun?",
+    "correctAnswer": "Mercury",
+    "options": ["Venus", "Mercury", "Mars", "Earth"],
     "difficulty": 1,
     "category": "astronomy"
   },
   {
-    "id": 22,
-    "question": "What is 6 + 7?",
-    "correctAnswer": "13",
-    "options": ["12", "13", "14", "15"],
+    "id": 62,
+    "question": "What is the largest organ in the human body?",
+    "correctAnswer": "Skin",
+    "options": ["Heart", "Liver", "Skin", "Brain"],
     "difficulty": 1,
-    "category": "math"
+    "category": "biology"
   },
   {
-    "id": 23,
-    "question": "Which ocean is on the east coast of the United States?",
-    "correctAnswer": "Atlantic Ocean",
-    "options": ["Pacific Ocean", "Indian Ocean", "Atlantic Ocean", "Arctic Ocean"],
+    "id": 63,
+    "question": "What is the chemical symbol for gold?",
+    "correctAnswer": "Au",
+    "options": ["Ag", "Au", "Gd", "Go"],
     "difficulty": 1,
-    "category": "geography"
+    "category": "chemistry"
   },
   {
-    "id": 24,
-    "question": "What do bees make?",
-    "correctAnswer": "Honey",
-    "options": ["Milk", "Honey", "Silk", "Wax paper"],
+    "id": 64,
+    "question": "Which punctuation mark ends a question?",
+    "correctAnswer": "Question mark",
+    "options": ["Comma", "Period", "Question mark", "Colon"],
     "difficulty": 1,
-    "category": "science"
+    "category": "grammar"
   },
   {
-    "id": 25,
-    "question": "Who was the first president of the United States?",
-    "correctAnswer": "George Washington",
-    "options": ["Abraham Lincoln", "George Washington", "Thomas Jefferson", "John Adams"],
+    "id": 65,
+    "question": "Who discovered America in 1492?",
+    "correctAnswer": "Christopher Columbus",
+    "options": ["Marco Polo", "Christopher Columbus", "Ferdinand Magellan", "James Cook"],
     "difficulty": 1,
     "category": "history"
   },
   {
-    "id": 26,
-    "question": "How many sides does a triangle have?",
-    "correctAnswer": "3",
-    "options": ["3", "4", "5", "6"],
+    "id": 66,
+    "question": "How many days are there in a leap year?",
+    "correctAnswer": "366",
+    "options": ["365", "366", "364", "367"],
     "difficulty": 1,
-    "category": "math"
+    "category": "general information"
   },
   {
-    "id": 27,
-    "question": "What star is closest to Earth?",
-    "correctAnswer": "The Sun",
-    "options": ["Sirius", "The Sun", "Polaris", "Alpha Centauri"],
-    "difficulty": 1,
-    "category": "astronomy"
-  },
-  {
-    "id": 28,
-    "question": "Which country is shaped like a boot?",
-    "correctAnswer": "Italy",
-    "options": ["Spain", "Italy", "Greece", "Portugal"],
-    "difficulty": 1,
-    "category": "geography"
-  },
-  {
-    "id": 29,
-    "question": "What is 9 × 4?",
-    "correctAnswer": "36",
-    "options": ["32", "34", "36", "40"],
-    "difficulty": 2,
-    "category": "math"
-  },
-  {
-    "id": 30,
-    "question": "Which planet has the most visible rings?",
-    "correctAnswer": "Saturn",
-    "options": ["Mars", "Saturn", "Venus", "Earth"],
+    "id": 67,
+    "question": "What is Earth's natural satellite?",
+    "correctAnswer": "The Moon",
+    "options": ["Mars", "The Moon", "Europa", "Titan"],
     "difficulty": 2,
     "category": "astronomy"
   },
   {
-    "id": 31,
-    "question": "What organ pumps blood through the body?",
-    "correctAnswer": "Heart",
-    "options": ["Lungs", "Brain", "Heart", "Liver"],
+    "id": 68,
+    "question": "Which blood type is known as the universal donor?",
+    "correctAnswer": "O negative",
+    "options": ["A positive", "B positive", "AB positive", "O negative"],
     "difficulty": 2,
-    "category": "science"
+    "category": "biology"
   },
   {
-    "id": 32,
-    "question": "Which river runs through Egypt?",
-    "correctAnswer": "Nile River",
-    "options": ["Amazon River", "Nile River", "Yangtze River", "Danube River"],
+    "id": 69,
+    "question": "What is H2O commonly known as?",
+    "correctAnswer": "Water",
+    "options": ["Hydrogen", "Oxygen", "Water", "Salt"],
     "difficulty": 2,
-    "category": "geography"
+    "category": "chemistry"
   },
   {
-    "id": 33,
-    "question": "Who painted the Mona Lisa?",
-    "correctAnswer": "Leonardo da Vinci",
-    "options": ["Michelangelo", "Leonardo da Vinci", "Raphael", "Donatello"],
+    "id": 70,
+    "question": "Which word is a noun?",
+    "correctAnswer": "Teacher",
+    "options": ["Run", "Quickly", "Teacher", "Blue"],
+    "difficulty": 2,
+    "category": "grammar"
+  },
+  {
+    "id": 71,
+    "question": "Which wall divided Berlin until 1989?",
+    "correctAnswer": "Berlin Wall",
+    "options": ["Great Wall", "Berlin Wall", "Hadrian's Wall", "Iron Curtain"],
     "difficulty": 2,
     "category": "history"
   },
   {
-    "id": 34,
-    "question": "What is 50 ÷ 5?",
-    "correctAnswer": "10",
-    "options": ["5", "10", "15", "20"],
+    "id": 72,
+    "question": "How many continents are there?",
+    "correctAnswer": "7",
+    "options": ["5", "6", "7", "8"],
     "difficulty": 2,
-    "category": "math"
+    "category": "general information"
   },
   {
-    "id": 35,
-    "question": "What force pulls objects toward Earth?",
-    "correctAnswer": "Gravity",
-    "options": ["Magnetism", "Gravity", "Friction", "Electricity"],
+    "id": 73,
+    "question": "What is the brightest star in the night sky?",
+    "correctAnswer": "Sirius",
+    "options": ["Betelgeuse", "Rigel", "Sirius", "Polaris"],
     "difficulty": 2,
-    "category": "science"
+    "category": "astronomy"
   },
   {
-    "id": 36,
-    "question": "Which continent is Brazil in?",
-    "correctAnswer": "South America",
-    "options": ["Africa", "South America", "Europe", "Asia"],
+    "id": 74,
+    "question": "Which organ produces insulin?",
+    "correctAnswer": "Pancreas",
+    "options": ["Liver", "Pancreas", "Kidney", "Spleen"],
     "difficulty": 2,
-    "category": "geography"
+    "category": "biology"
   },
   {
-    "id": 37,
-    "question": "What is 12²?",
-    "correctAnswer": "144",
-    "options": ["124", "132", "144", "156"],
-    "difficulty": 3,
-    "category": "math"
+    "id": 75,
+    "question": "Which gas do plants absorb from the atmosphere?",
+    "correctAnswer": "Carbon dioxide",
+    "options": ["Nitrogen", "Carbon dioxide", "Oxygen", "Hydrogen"],
+    "difficulty": 2,
+    "category": "chemistry"
   },
   {
-    "id": 38,
-    "question": "Which galaxy contains our Solar System?",
-    "correctAnswer": "Milky Way",
-    "options": ["Andromeda", "Milky Way", "Sombrero Galaxy", "Whirlpool Galaxy"],
+    "id": 76,
+    "question": "Which sentence is correctly capitalized?",
+    "correctAnswer": "I live in Canada.",
+    "options": [
+      "i live in Canada.",
+      "I live in Canada.",
+      "I Live in canada.",
+      "i Live in canada."
+    ],
+    "difficulty": 2,
+    "category": "grammar"
+  },
+  {
+    "id": 77,
+    "question": "Who wrote the Declaration of Independence?",
+    "correctAnswer": "Thomas Jefferson",
+    "options": ["George Washington", "Thomas Jefferson", "Benjamin Franklin", "John Adams"],
+    "difficulty": 2,
+    "category": "history"
+  },
+  {
+    "id": 78,
+    "question": "How many hours are in two days?",
+    "correctAnswer": "48",
+    "options": ["24", "36", "48", "72"],
+    "difficulty": 2,
+    "category": "general information"
+  },
+  {
+    "id": 79,
+    "question": "Which planet is famous for the Great Red Spot?",
+    "correctAnswer": "Jupiter",
+    "options": ["Saturn", "Jupiter", "Neptune", "Mars"],
     "difficulty": 3,
     "category": "astronomy"
   },
   {
-    "id": 39,
-    "question": "What is the process by which liquid water becomes vapor?",
-    "correctAnswer": "Evaporation",
-    "options": ["Condensation", "Evaporation", "Freezing", "Melting"],
+    "id": 80,
+    "question": "What is the basic unit of heredity?",
+    "correctAnswer": "Gene",
+    "options": ["Chromosome", "Gene", "Protein", "Cell"],
     "difficulty": 3,
-    "category": "science"
+    "category": "biology"
   },
   {
-    "id": 40,
-    "question": "Which country has the most natural lakes?",
-    "correctAnswer": "Canada",
-    "options": ["Russia", "Canada", "Brazil", "India"],
+    "id": 81,
+    "question": "What is the pH of pure water at room temperature?",
+    "correctAnswer": "7",
+    "options": ["5", "6", "7", "8"],
     "difficulty": 3,
-    "category": "geography"
+    "category": "chemistry"
   },
   {
-    "id": 41,
-    "question": "Which empire built the Colosseum?",
-    "correctAnswer": "Roman Empire",
-    "options": ["Greek Empire", "Roman Empire", "Persian Empire", "Ottoman Empire"],
+    "id": 82,
+    "question": "Which of these is a pronoun?",
+    "correctAnswer": "They",
+    "options": ["Happy", "Quickly", "They", "Table"],
+    "difficulty": 3,
+    "category": "grammar"
+  },
+  {
+    "id": 83,
+    "question": "Who was the first man to walk on the Moon?",
+    "correctAnswer": "Neil Armstrong",
+    "options": ["Buzz Aldrin", "Yuri Gagarin", "Neil Armstrong", "Alan Shepard"],
     "difficulty": 3,
     "category": "history"
   },
   {
-    "id": 42,
-    "question": "What theorem relates the sides of a right triangle?",
-    "correctAnswer": "Pythagorean theorem",
-    "options": ["Pythagorean theorem", "Binomial theorem", "Fermat's theorem", "Prime number theorem"],
+    "id": 84,
+    "question": "Which country has the largest population in the world?",
+    "correctAnswer": "India",
+    "options": ["China", "United States", "India", "Indonesia"],
     "difficulty": 3,
-    "category": "math"
+    "category": "general information"
   },
   {
-    "id": 43,
-    "question": "What is the boiling point of water at sea level?",
-    "correctAnswer": "100°C",
-    "options": ["90°C", "95°C", "100°C", "110°C"],
-    "difficulty": 3,
-    "category": "science"
-  },
-  {
-    "id": 44,
-    "question": "Which desert is the largest hot desert in the world?",
-    "correctAnswer": "Sahara Desert",
-    "options": ["Gobi Desert", "Sahara Desert", "Kalahari Desert", "Arabian Desert"],
-    "difficulty": 3,
-    "category": "geography"
-  },
-  {
-    "id": 45,
-    "question": "What is the square root of 169?",
-    "correctAnswer": "13",
-    "options": ["11", "12", "13", "14"],
-    "difficulty": 4,
-    "category": "math"
-  },
-  {
-    "id": 46,
-    "question": "Which planet has a day longer than its year?",
-    "correctAnswer": "Venus",
-    "options": ["Mercury", "Venus", "Mars", "Neptune"],
+    "id": 85,
+    "question": "What is the closest galaxy to the Milky Way that can be seen with the naked eye?",
+    "correctAnswer": "Andromeda Galaxy",
+    "options": ["Triangulum Galaxy", "Andromeda Galaxy", "Whirlpool Galaxy", "Sombrero Galaxy"],
     "difficulty": 4,
     "category": "astronomy"
   },
   {
-    "id": 47,
-    "question": "What part of the cell contains genetic material?",
-    "correctAnswer": "Nucleus",
-    "options": ["Nucleus", "Ribosome", "Cytoplasm", "Cell wall"],
+    "id": 86,
+    "question": "Which molecule carries genetic instructions in living organisms?",
+    "correctAnswer": "DNA",
+    "options": ["RNA", "Protein", "DNA", "ATP"],
     "difficulty": 4,
-    "category": "science"
+    "category": "biology"
   },
   {
-    "id": 48,
-    "question": "Which strait separates Europe and Africa?",
-    "correctAnswer": "Strait of Gibraltar",
-    "options": ["Bering Strait", "Strait of Gibraltar", "Bosporus Strait", "Dover Strait"],
+    "id": 87,
+    "question": "What is the lightest element on the periodic table?",
+    "correctAnswer": "Hydrogen",
+    "options": ["Helium", "Hydrogen", "Lithium", "Oxygen"],
     "difficulty": 4,
-    "category": "geography"
+    "category": "chemistry"
   },
   {
-    "id": 49,
-    "question": "Which treaty ended World War I?",
-    "correctAnswer": "Treaty of Versailles",
-    "options": ["Treaty of Paris", "Treaty of Versailles", "Treaty of Rome", "Treaty of Tordesillas"],
+    "id": 88,
+    "question": "Which sentence uses the correct form of 'their'?",
+    "correctAnswer": "Their house is beautiful.",
+    "options": [
+      "There house is beautiful.",
+      "Their house is beautiful.",
+      "They're house is beautiful.",
+      "Thier house is beautiful."
+    ],
+    "difficulty": 4,
+    "category": "grammar"
+  },
+  {
+    "id": 89,
+    "question": "Which civilization built Machu Picchu?",
+    "correctAnswer": "Inca",
+    "options": ["Maya", "Aztec", "Inca", "Olmec"],
     "difficulty": 4,
     "category": "history"
   },
   {
-    "id": 50,
-    "question": "What is 15% of 200?",
-    "correctAnswer": "30",
-    "options": ["20", "25", "30", "35"],
+    "id": 90,
+    "question": "Which country is home to the Eiffel Tower?",
+    "correctAnswer": "France",
+    "options": ["Italy", "Germany", "France", "Belgium"],
     "difficulty": 4,
-    "category": "math"
+    "category": "general information"
   },
   {
-    "id": 51,
-    "question": "What gas makes up most of Earth's atmosphere?",
-    "correctAnswer": "Nitrogen",
-    "options": ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"],
-    "difficulty": 4,
-    "category": "science"
-  },
-  {
-    "id": 52,
-    "question": "Which country controls Greenland?",
-    "correctAnswer": "Denmark",
-    "options": ["Norway", "Denmark", "Canada", "Iceland"],
-    "difficulty": 4,
-    "category": "geography"
-  },
-  {
-    "id": 53,
-    "question": "What is the sum of the interior angles of a pentagon?",
-    "correctAnswer": "540°",
-    "options": ["360°", "450°", "540°", "720°"],
-    "difficulty": 5,
-    "category": "math"
-  },
-  {
-    "id": 54,
-    "question": "What is the name of the boundary around a black hole beyond which light cannot escape?",
-    "correctAnswer": "Event horizon",
-    "options": ["Photon belt", "Event horizon", "Gravity shell", "Dark ring"],
+    "id": 91,
+    "question": "What is the name of the largest dwarf planet in the Solar System?",
+    "correctAnswer": "Pluto",
+    "options": ["Eris", "Haumea", "Pluto", "Makemake"],
     "difficulty": 5,
     "category": "astronomy"
   },
   {
-    "id": 55,
-    "question": "What is the powerhouse of the cell?",
-    "correctAnswer": "Mitochondria",
-    "options": ["Nucleus", "Mitochondria", "Ribosome", "Golgi apparatus"],
+    "id": 92,
+    "question": "Which organelle is responsible for protein synthesis?",
+    "correctAnswer": "Ribosome",
+    "options": ["Golgi apparatus", "Ribosome", "Lysosome", "Chloroplast"],
     "difficulty": 5,
-    "category": "science"
+    "category": "biology"
   },
   {
-    "id": 56,
-    "question": "Which country has the city of Timbuktu?",
-    "correctAnswer": "Mali",
-    "options": ["Morocco", "Mali", "Niger", "Chad"],
+    "id": 93,
+    "question": "What is Avogadro's approximate number?",
+    "correctAnswer": "6.022 × 10²³",
+    "options": [
+      "3.14 × 10²",
+      "6.022 × 10²³",
+      "9.81 × 10⁶",
+      "1.602 × 10⁻¹⁹"
+    ],
     "difficulty": 5,
-    "category": "geography"
+    "category": "chemistry"
   },
   {
-    "id": 57,
-    "question": "Who was the last ruler of the Aztec Empire?",
-    "correctAnswer": "Cuauhtémoc",
-    "options": ["Montezuma II", "Cuauhtémoc", "Atahualpa", "Pachacuti"],
+    "id": 94,
+    "question": "Which grammatical mood expresses commands?",
+    "correctAnswer": "Imperative",
+    "options": ["Indicative", "Subjunctive", "Imperative", "Interrogative"],
     "difficulty": 5,
-    "category": "history"
+    "category": "grammar"
   },
   {
-    "id": 58,
-    "question": "What is the next prime number after 97?",
-    "correctAnswer": "101",
-    "options": ["99", "100", "101", "103"],
-    "difficulty": 5,
-    "category": "math"
-  },
-  {
-    "id": 59,
-    "question": "Which ancient civilization developed cuneiform writing?",
-    "correctAnswer": "Sumerians",
-    "options": ["Egyptians", "Sumerians", "Romans", "Greeks"],
+    "id": 95,
+    "question": "In which year did the Byzantine Empire fall?",
+    "correctAnswer": "1453",
+    "options": ["1066", "1215", "1453", "1492"],
     "difficulty": 5,
     "category": "history"
   },
   {
-    "id": 60,
-    "question": "Which moon is the largest in the Solar System?",
-    "correctAnswer": "Ganymede",
-    "options": ["Titan", "Europa", "Ganymede", "Callisto"],
+    "id": 96,
+    "question": "Which country has the most official languages?",
+    "correctAnswer": "Bolivia",
+    "options": ["India", "South Africa", "Bolivia", "Switzerland"],
+    "difficulty": 5,
+    "category": "general information"
+  },
+  {
+    "id": 97,
+    "question": "Which law explains planetary motion around the Sun using elliptical orbits?",
+    "correctAnswer": "Kepler's First Law",
+    "options": [
+      "Newton's First Law",
+      "Kepler's First Law",
+      "Hubble's Law",
+      "Boyle's Law"
+    ],
     "difficulty": 5,
     "category": "astronomy"
+  },
+  {
+    "id": 98,
+    "question": "What is the process by which cells divide to produce identical daughter cells?",
+    "correctAnswer": "Mitosis",
+    "options": ["Meiosis", "Mitosis", "Fertilization", "Mutation"],
+    "difficulty": 5,
+    "category": "biology"
+  },
+  {
+    "id": 99,
+    "question": "Which subatomic particle has no electric charge?",
+    "correctAnswer": "Neutron",
+    "options": ["Electron", "Proton", "Neutron", "Positron"],
+    "difficulty": 5,
+    "category": "chemistry"
+  },
+  {
+    "id": 100,
+    "question": "Which sentence is in the passive voice?",
+    "correctAnswer": "The cake was baked by Maria.",
+    "options": [
+      "Maria baked the cake.",
+      "Maria is baking the cake.",
+      "The cake was baked by Maria.",
+      "Maria bakes cakes."
+    ],
+    "difficulty": 5,
+    "category": "grammar"
+  },
+  {
+    "id": 101,
+    "question": "Who was the first emperor of a unified China?",
+    "correctAnswer": "Qin Shi Huang",
+    "options": ["Han Wudi", "Qin Shi Huang", "Kublai Khan", "Sun Yat sen"],
+    "difficulty": 5,
+    "category": "history"
+  },
+  {
+    "id": 102,
+    "question": "Which is the smallest independent country in the world by area?",
+    "correctAnswer": "Vatican City",
+    "options": ["Monaco", "San Marino", "Vatican City", "Liechtenstein"],
+    "difficulty": 5,
+    "category": "general information"
+  },
+  {
+    "id": 103,
+    "question": "What is the approximate age of the universe?",
+    "correctAnswer": "13.8 billion years",
+    "options": [
+      "4.5 billion years",
+      "10 billion years",
+      "13.8 billion years",
+      "20 billion years"
+    ],
+    "difficulty": 5,
+    "category": "astronomy"
+  },
+  {
+    "id": 104,
+    "question": "Which kingdom includes mushrooms?",
+    "correctAnswer": "Fungi",
+    "options": ["Plantae", "Animalia", "Protista", "Fungi"],
+    "difficulty": 5,
+    "category": "biology"
+  },
+  {
+    "id": 105,
+    "question": "Which acid is found in vinegar?",
+    "correctAnswer": "Acetic acid",
+    "options": ["Citric acid", "Hydrochloric acid", "Acetic acid", "Sulfuric acid"],
+    "difficulty": 5,
+    "category": "chemistry"
+  },
+  {
+    "id": 106,
+    "question": "Which literary device gives human traits to nonhuman things?",
+    "correctAnswer": "Personification",
+    "options": ["Metaphor", "Hyperbole", "Personification", "Irony"],
+    "difficulty": 5,
+    "category": "grammar"
+  },
+  {
+    "id": 107,
+    "question": "Which war was triggered by the assassination of Archduke Franz Ferdinand?",
+    "correctAnswer": "World War I",
+    "options": ["World War I", "World War II", "Crimean War", "Napoleonic Wars"],
+    "difficulty": 5,
+    "category": "history"
+  },
+  {
+    "id": 108,
+    "question": "Which country is both in Europe and Asia?",
+    "correctAnswer": "Turkey",
+    "options": ["Spain", "Turkey", "Egypt", "Morocco"],
+    "difficulty": 5,
+    "category": "general information"
   }
 ]

@@ -57,9 +57,9 @@ class PreloaderScene extends Phaser.Scene {
     this.load.spritesheet('gate', 'assets/sprites/rpg_gate5.png', { frameWidth: 145, frameHeight: 96, endFrame: 15 });
     this.load.image('wall_texture', 'textures/cobbledsquare.jpg');
     this.load.spritesheet('tilea2', 'assets/sprites/tilea2.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.image('ground_easy', '/textures/mixgrass.jpg');
-    this.load.image('ground_medium', '/textures/mixrock.jpg');
-    this.load.image('ground_hard', '/textures/asphalt.png');
+    this.load.image('ground_easy', 'textures/mixgrass.jpg');
+    this.load.image('ground_medium', 'textures/mixrock.jpg');
+    this.load.image('ground_hard', 'textures/asphalt.png');
     this.load.spritesheet('redcrystal', 'assets/sprites/crystal-qubodup-ccby3-32-red.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
     this.load.spritesheet('bluecrystal', 'assets/sprites/crystal-qubodup-ccby3-32-blue.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
     this.load.spritesheet('greencrystal', 'assets/sprites/crystal-qubodup-ccby3-32-green.png', { frameWidth: 32, frameHeight: 32, endFrame: 7 });
