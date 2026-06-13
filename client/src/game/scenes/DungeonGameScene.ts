@@ -682,83 +682,12 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createBoss() {
     if (this.currentDungeon === this.maxDungeons) {
-      this.boss = this.physics.add.sprite(this.scale.width / 2, this.scale.height / 2, 'Boss', 0);
-      this.boss.setScale(1.5); // Proper scale for boss
       const bossHp = 5 * (50 + this.currentDungeon * 10);
-      this.boss.setData('health', bossHp);
-      this.boss.setData('maxHealth', bossHp);
+      const baseSpeed = (55 + this.currentDungeon * 5) * 1.75;
+      this.boss = new Boss(this, this.scale.width / 2, this.scale.height / 2, this.player, bossHp, baseSpeed);
+      this.boss.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
+      this.boss.setScale(1.5); // Proper scale for boss
       this.boss.setTint(0x8888ff); // Blue tint when invulnerable
-      
-      const shadow = this.add.ellipse(this.scale.width / 2, this.scale.height / 2 + 44, 60, 20, 0x000000, 0.4).setDepth(1);
-      this.boss.setData('shadow', shadow);
-      this.boss.setDepth(5);
-      
-      // Create boss animations using original specifications
-      if (!this.anims.exists('walkDownOrc')) {
-        this.anims.create({
-          key: 'walkDownOrc',
-          frames: this.anims.generateFrameNumbers('Boss', { start: 130, end: 137 }),
-          frameRate: 8,
-          repeat: -1
-        });
-        this.anims.create({
-          key: 'walkUpOrc',
-          frames: this.anims.generateFrameNumbers('Boss', { start: 104, end: 112 }),
-          frameRate: 8,
-          repeat: -1
-        });
-        this.anims.create({
-          key: 'walkLeftOrc',
-          frames: this.anims.generateFrameNumbers('Boss', { start: 117, end: 125 }),
-          frameRate: 8,
-          repeat: -1
-        });
-        this.anims.create({
-          key: 'walkRightOrc',
-          frames: this.anims.generateFrameNumbers('Boss', { start: 143, end: 151 }),
-          frameRate: 8,
-          repeat: -1
-        });
-        this.anims.create({
-          key: 'attackDownOrc',
-          frames: this.anims.generateFrameNumbers('Boss', { start: 78, end: 84 }),
-          frameRate: 8,
-          repeat: -1
-        });
-        this.anims.create({
-          key: 'OrcDie',
-          frames: this.anims.generateFrameNumbers('Boss', { start: 260, end: 265 }),
-          frameRate: 8,
-          repeat: 0
-        });
-      }
-      this.boss.anims.play('walkDownOrc');
-
-      // Add animation event listeners to trigger damage only on attack cycles
-      this.boss.on('animationstart', this.onBossAttackFrame, this);
-      this.boss.on('animationrepeat', this.onBossAttackFrame, this);
-    }
-  }
-
-  private onBossAttackFrame(anim: Phaser.Animations.Animation) {
-    if (anim.key.startsWith('attack') && this.boss && !this.boss.getData('isDead')) {
-      const now = this.time.now;
-      const lastAttack = this.boss.getData('lastAttackTime') || 0;
-      
-      // Enforce an 850ms cooldown (animation cycle is 875ms) so the boss 
-      // waits for the animation to finish before it can trigger damage again
-      if (now - lastAttack < 850) {
-        return;
-      }
-      this.boss.setData('lastAttackTime', now);
-
-      const dist = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
-      const attackRange = this.bossVulnerability < 100 ? 100 : 50;
-      
-      if (dist <= attackRange + 15) {
-        this.player.setData('isInvulnerable', false); // Bypass normal invulnerability so every cycle hits
-        this.hitPlayer(this.player, this.boss);
-      }
     }
   }
 

@@ -17,7 +17,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
   zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 15, scoreReward: 75 },
   bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 150, detectionRange: 250, experienceReward: 10, scoreReward: 50 },
   spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
-  boss: { type: 'boss', health: 400, speed: 30, damage: 30, attackRange: 60, detectionRange: 300, experienceReward: 100, scoreReward: 500 }
+  boss: { type: 'boss', health: 3500, speed: 50, damage: 30, attackRange: 80, detectionRange: 400, experienceReward: 100, scoreReward: 500 }
 };
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -36,6 +36,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected shadowOffset: number = 20;
   protected evasionTimer: number = 0;
   protected evasionDirection: { x: number; y: number } = { x: 0, y: 0 };
+  protected evasionAttempts: number = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: any, hp: number, speed: number) {
     super(scene, x, y, texture);
@@ -163,58 +164,76 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
   
   protected moveTowardsTarget(targetX: number, targetY: number, speed: number): void {
-    // If we are currently evading and the path is clear, continue evading to prevent jitter
-    if (this.evasionTimer > 0) {
-      this.evasionTimer -= this.scene.game.loop.delta;
-      if (!this.checkWallCollision(this.x + this.evasionDirection.x * 0.1, this.y + this.evasionDirection.y * 0.1)) {
-        this.setVelocity(this.evasionDirection.x, this.evasionDirection.y);
-        this.lastDirection = { ...this.evasionDirection };
-        this.updateMovementAnimation(this.evasionDirection.x, this.evasionDirection.y);
-        return;
-      } else {
-        this.evasionTimer = 0; // Hit a wall while evading, recalculate immediately
-      }
-    }
-
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
     let velocityX = Math.cos(angle) * speed;
     let velocityY = Math.sin(angle) * speed;
     
     // Simple obstacle avoidance
     if (this.walls) {
-      const futureX = this.x + velocityX * 0.1;
-      const futureY = this.y + velocityY * 0.1;
+      // Before making decision to change direction or continue, check for player proximity
+      const distanceToTarget = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
       
-      // Check if future position would collide with walls
-      const obstacle = this.checkWallCollision(futureX, futureY);
+      // Check if obstacle is present in the direct path
+      const directObstacle = this.checkWallCollision(this.x + velocityX * 0.3, this.y + velocityY * 0.3);
       
-      if (obstacle) {
+      // Always prioritize detecting player proximity or clear path
+      if (!directObstacle || distanceToTarget < 24) {
+        // Path is clear or player is right next to us! Chase directly immediately.
+        this.evasionTimer = 0;
+        this.evasionAttempts = 0;
+      } else {
+        // Obstacle is present. Decide whether to continue direction or change direction.
+        if (this.evasionTimer > 0) {
+          this.evasionTimer -= this.scene.game.loop.delta;
+          if (!this.checkWallCollision(this.x + this.evasionDirection.x * 0.2, this.y + this.evasionDirection.y * 0.2)) {
+            this.setVelocity(this.evasionDirection.x, this.evasionDirection.y);
+            this.lastDirection = { ...this.evasionDirection };
+            this.updateMovementAnimation(this.evasionDirection.x, this.evasionDirection.y);
+            return;
+          } else {
+            this.evasionTimer = 0; // Hit an obstacle while evading, forces recalculation
+          }
+        }
+
         if (this.state === 'patrol') {
-          // Immediately pick a new direction to avoid getting stuck while roaming
           this.setNewPatrolTarget();
           this.setVelocity(0, 0);
+          this.evasionAttempts = 0;
           return;
         }
 
-        // Chasing logic: Scale the X and Y bounds of the obstacle
+        // Continue the previous scaling direction up to 3 times
+        if (this.evasionAttempts > 0 && this.evasionAttempts < 3) {
+          if (!this.checkWallCollision(this.x + this.evasionDirection.x * 0.3, this.y + this.evasionDirection.y * 0.3)) {
+            velocityX = this.evasionDirection.x;
+            velocityY = this.evasionDirection.y;
+            this.evasionTimer = 400;
+            this.evasionAttempts++;
+            
+            this.setVelocity(velocityX, velocityY);
+            this.lastDirection = { x: velocityX, y: velocityY };
+            this.updateMovementAnimation(velocityX, velocityY);
+            return;
+          }
+        }
+
+        // Change direction: calculate a BRAND NEW scaling direction around the obstacle
         let evX = 0;
         let evY = 0;
 
-        if (typeof obstacle !== 'boolean') {
-          const wallBounds = obstacle.getBounds();
+        if (typeof directObstacle !== 'boolean') {
+          const wallBounds = directObstacle.getBounds();
           const dxToPlayer = targetX - this.x;
           const dyToPlayer = targetY - this.y;
 
-          // Attempt to slide along the axis leading to the player
-          const canSlideX = !this.checkWallCollision(this.x + Math.sign(dxToPlayer || 1) * speed * 0.2, this.y);
-          const canSlideY = !this.checkWallCollision(this.x, this.y + Math.sign(dyToPlayer || 1) * speed * 0.2);
+          const canSlideX = !this.checkWallCollision(this.x + Math.sign(dxToPlayer || 1) * speed * 0.3, this.y);
+          const canSlideY = !this.checkWallCollision(this.x, this.y + Math.sign(dyToPlayer || 1) * speed * 0.3);
 
           if (canSlideX && Math.abs(dxToPlayer) > 10) {
             evX = Math.sign(dxToPlayer) * speed;
           } else if (canSlideY && Math.abs(dyToPlayer) > 10) {
             evY = Math.sign(dyToPlayer) * speed;
           } else {
-            // If blocked, evaluate the obstacle's bounds to scale around the nearest edge
             const distLeft = Math.abs(this.x - wallBounds.left);
             const distRight = Math.abs(this.x - wallBounds.right);
             const distTop = Math.abs(this.y - wallBounds.top);
@@ -223,31 +242,30 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
             const minDistX = Math.min(distLeft, distRight);
             const minDistY = Math.min(distTop, distBottom);
 
-            if (minDistX < minDistY && !this.checkWallCollision(this.x + (distLeft < distRight ? -speed : speed) * 0.2, this.y)) {
+            if (minDistX < minDistY && !this.checkWallCollision(this.x + (distLeft < distRight ? -speed : speed) * 0.3, this.y)) {
               evX = distLeft < distRight ? -speed : speed;
-            } else if (!this.checkWallCollision(this.x, this.y + (distTop < distBottom ? -speed : speed) * 0.2)) {
+            } else if (!this.checkWallCollision(this.x, this.y + (distTop < distBottom ? -speed : speed) * 0.3)) {
               evY = distTop < distBottom ? -speed : speed;
             } else {
-              // Completely cornered, bounce away
               evX = -velocityX;
               evY = -velocityY;
             }
           }
         } else {
-          // Hit world bounds, reverse direction
           evX = velocityX === 0 ? 0 : -Math.sign(velocityX) * speed;
           evY = velocityY === 0 ? 0 : -Math.sign(velocityY) * speed;
         }
 
-        // Commit to this evasive maneuver for a brief period to scale the obstacle
         if (evX !== 0 || evY !== 0) {
           velocityX = evX;
           velocityY = evY;
           this.evasionDirection = { x: velocityX, y: velocityY };
           this.evasionTimer = 1400; // Commit to evasion for 1400ms
+          this.evasionAttempts = 1; // Start counting attempts
         } else {
           velocityX = 0;
           velocityY = 0;
+          this.evasionAttempts = 0;
         }
       }
     }
@@ -262,10 +280,13 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected checkWallCollision(x: number, y: number): boolean | Phaser.Physics.Arcade.Sprite {
     if (!this.walls) return false;
     
-    // Simple bounds check for now - can be improved with actual collision detection
-    const bounds = this.getBounds();
-    bounds.x = x - bounds.width / 2;
-    bounds.y = y - bounds.height / 2;
+    // Use the exact physics body dimensions instead of the wildly scaling visual texture bounds
+    const bodyW = this.body ? this.body.width : this.width;
+    const bodyH = this.body ? this.body.height : this.height;
+    
+    const bounds = new Phaser.Geom.Rectangle(
+      x - bodyW / 2, y - bodyH / 2, bodyW, bodyH
+    );
     
     // Check world bounds
     if (bounds.x < 0 || bounds.y < 0 || 
@@ -764,6 +785,22 @@ export class Boss extends Enemy {
     this.checkPhaseChange();
   }
   
+  protected handleChase(): void {
+    const scene = this.scene as any;
+    let currentSpeed = this.config.speed;
+    
+    // Replicate classic mechanic: Boss moves much slower when it is invulnerable!
+    if (scene.bossVulnerability !== undefined && scene.bossVulnerability < 100) {
+      currentSpeed = currentSpeed * 0.4;
+    }
+    
+    if (this.canSeePlayer()) {
+      this.moveTowardsTarget(this.player.x, this.player.y, currentSpeed);
+    } else {
+      this.moveTowardsTarget(this.player.x, this.player.y, currentSpeed * 0.7);
+    }
+  }
+
   private checkPhaseChange(): void {
     const newPhase = this.maxPhases - this.phaseChangeHealth.filter(threshold => this.getData('health') <= threshold).length;
     
