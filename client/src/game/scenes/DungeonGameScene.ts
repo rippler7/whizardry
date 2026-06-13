@@ -602,6 +602,11 @@ export class DungeonGameScene extends Phaser.Scene {
     const doorBounds = this.door ? this.door.getBounds() : new Phaser.Geom.Rectangle(0, 0, 0, 0);
     const bossBounds = new Phaser.Geom.Rectangle(this.scale.width / 2 - 80, this.scale.height / 2 - 80, 160, 160);
 
+    // OPTIMIZATION: Cache the obstacle bounds before the loop so we don't recalculate 
+    // them thousands of times per placement attempt!
+    const allObstacles = [...walls, ...chests, ...enemies];
+    const obstacleBounds = allObstacles.map(obs => (obs as any).getBounds());
+
     let attempts = 0;
     const maxAttempts = this.currentDungeon === this.maxDungeons ? 500 : 200;
     while (!valid && attempts < maxAttempts) {
@@ -635,9 +640,8 @@ export class DungeonGameScene extends Phaser.Scene {
             continue;
         }
 
-        const allObstacles = [...walls, ...chests, ...enemies];
-        for (const obstacle of allObstacles) {
-            if (Phaser.Geom.Intersects.RectangleToRectangle(checkRect, (obstacle as any).getBounds())) {
+        for (const obsBound of obstacleBounds) {
+            if (Phaser.Geom.Intersects.RectangleToRectangle(checkRect, obsBound)) {
                 valid = false;
                 break;
             }
@@ -828,16 +832,6 @@ export class DungeonGameScene extends Phaser.Scene {
     // Ensure we can handle multi-touch (left thumb moving, right thumb shooting)
     this.input.addPointer(2);
 
-    // If playing on a desktop machine, skip the joystick setup 
-    // and just allow mouse clicks to shoot!
-    if (this.sys.game.device.os.desktop) {
-      this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
-        if (this.isModalOpen || this.player.getData('isDead')) return;
-        if (currentlyOver.length > 0) return; // Prevent shooting when clicking UI or chests
-        this.fireBullet(pointer.worldX, pointer.worldY);
-      });
-      return;
-    }
 
     // Create virtual joystick graphics
     this.joystickBase = this.add.circle(0, 0, 50, 0x888888, 0.5).setDepth(2000).setScrollFactor(0).setVisible(false);
@@ -848,11 +842,12 @@ export class DungeonGameScene extends Phaser.Scene {
       if (currentlyOver.length > 0) return; // Prevent shooting/moving when clicking UI or chests
 
       // Touch on the left half initiates the joystick
-      if (pointer.x < this.scale.width / 2 && !this.joystickActive) {
+      if (pointer.x < this.scale.width / 2 && !this.joystickActive && !this.sys.game.device.os.desktop) {
         this.movePointer = pointer;
         this.joystickActive = true;
         this.joystickBase.setPosition(pointer.x, pointer.y).setVisible(true);
         this.joystickThumb.setPosition(pointer.x, pointer.y).setVisible(true);
+        this.moveVector.set(0, 0); // Explicitly reset vector
       } else {
         // Touch on the right half (or a 2nd finger) fires a bullet
         this.fireBullet(pointer.worldX, pointer.worldY);
@@ -862,7 +857,10 @@ export class DungeonGameScene extends Phaser.Scene {
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.isModalOpen || this.player.getData('isDead')) return;
 
-      if (this.joystickActive && pointer === this.movePointer) {
+      // Safely check pointer.id to guarantee multi-touch stability on mobile browsers
+      if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
+        if (!pointer.isDown) return; // Failsafe for loose hover events
+
         const distance = Phaser.Math.Distance.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
         const angle = Phaser.Math.Angle.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
         
@@ -878,7 +876,7 @@ export class DungeonGameScene extends Phaser.Scene {
     });
 
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (this.joystickActive && pointer === this.movePointer) {
+      if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
         // If it was a very quick tap on the left side, allow it to fire a bullet instead of moving
         const duration = pointer.upTime - pointer.downTime;
         const distance = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.upX, pointer.upY);
@@ -887,6 +885,13 @@ export class DungeonGameScene extends Phaser.Scene {
           this.fireBullet(pointer.worldX, pointer.worldY);
         }
 
+        this.resetJoystick();
+      }
+    });
+    
+    // Catch fingers sliding off the screen edge
+    this.input.on('pointerout', (pointer: Phaser.Input.Pointer) => {
+      if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
         this.resetJoystick();
       }
     });
