@@ -213,6 +213,7 @@ export class DungeonGameScene extends Phaser.Scene {
             .setDisplaySize(tileSize, tileSize)
             .setDepth(-10);
             
+          // Apply dungeon depth progression tints
           if (this.currentDungeon === 3 || this.currentDungeon === 4) {
             tile.setTint(0xe8e0cc);
           } else if (this.currentDungeon === 5) {
