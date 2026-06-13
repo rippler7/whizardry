@@ -814,7 +814,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private createBoss() {
     if (this.currentDungeon === this.maxDungeons) {
       const bossHp = 15 * (50 + this.currentDungeon * 10);
-      const baseSpeed = (55 + this.currentDungeon * 5) * 1.75;
+      const baseSpeed = (55 + this.currentDungeon * 5) * 1.4; // Reduced to 80% of 1.75
       this.boss = new Boss(this, this.scale.width / 2, this.scale.height / 2, this.player, bossHp, baseSpeed);
       this.boss.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
       this.boss.setScale(1.5); // Proper scale for boss
