@@ -120,9 +120,9 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
     type: "skeleton",
     health: 30,
     damage: 15,
-    speed: 50,
+    speed: 60,
     attackRange: 32,
-    detectionRange: 120,
+    detectionRange: 160,
     experienceReward: 10,
     scoreReward: 50
   },
@@ -132,7 +132,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
     damage: 20,
     speed: 30,
     attackRange: 32,
-    detectionRange: 100,
+    detectionRange: 170,
     experienceReward: 15,
     scoreReward: 75
   },
@@ -142,7 +142,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
     damage: 10,
     speed: 80,
     attackRange: 64,
-    detectionRange: 150,
+    detectionRange: 180,
     experienceReward: 8,
     scoreReward: 40
   },
@@ -150,7 +150,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
     type: "boss",
     health: 200,
     damage: 35,
-    speed: 40,
+    speed: 90,
     attackRange: 64,
     detectionRange: 200,
     experienceReward: 100,
@@ -161,7 +161,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
 // Game constants
 export const GAME_CONFIG = {
   PLAYER_SPEED: 120,
-  BULLET_SPEED: 400,
+  BULLET_SPEED: 500,
   BULLET_DAMAGE: 25,
   LEVEL_UP_EXP: 100,
   QUESTION_SCORE_BONUS: 100,

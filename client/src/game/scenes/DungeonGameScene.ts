@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { QUESTIONS } from '../data/Questions';
+import { Enemy, Skeleton, Zombie, Zombie2, Bat, Spider, Boss } from '../entities/Enemy';
 
 interface Question {
   id: number;
@@ -78,7 +79,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private bullets!: Phaser.Physics.Arcade.Group;
   private enemyBullets!: Phaser.Physics.Arcade.Group;
   private door!: Phaser.Physics.Arcade.Sprite;
-  private boss?: Phaser.Physics.Arcade.Sprite;
+  public boss?: Boss;
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -99,6 +100,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private bossVulnerability: number = 0; // 0-100%, boss takes 25% per correct answer
   private isModalOpen: boolean = false;
   private usedQuestionIds: number[] = [];
+  private isTouchingDoor: boolean = false;
   
   private playerShadow!: Phaser.GameObjects.Ellipse;
 
@@ -130,6 +132,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.isModalOpen = false;
     this.bossVulnerability = 0;
     this.boss = undefined;
+    this.isTouchingDoor = false;
   }
 
   preload() {
@@ -166,8 +169,18 @@ export class DungeonGameScene extends Phaser.Scene {
     this.load.audio('boss_battle', ['assets/audio/BoxCat_Games_-_05_-_Battle_Boss.mp3', 'assets/audio/BoxCat_Games_-_05_-_Battle_Boss.ogg']);
     this.load.audio('spit', ['assets/audio/spit.mp3', 'assets/audio/spit.ogg']);
     this.load.audio('star', ['assets/audio/star.mp3', 'assets/audio/star.ogg']);
+    this.load.audio('star', 'assets/audio/star.ogg');
     this.load.audio('hurt', ['assets/audio/hurt.mp3', 'assets/audio/hurt.ogg']);
     this.load.audio('enemy-death', ['assets/audio/enemy-death.mp3', 'assets/audio/enemy-death.ogg']);
+    this.load.audio('hurt_male', 'assets/audio/hurt_male.ogg');
+    this.load.audio('zombienoise', 'assets/audio/zombienoise.ogg');
+    this.load.audio('burst', 'assets/audio/burst.ogg');
+    this.load.audio('gameover_theme', 'assets/audio/Kevin MacLeod - Teller of the Tales.ogg');
+    this.load.audio('victory_theme', 'assets/audio/BoxCat_Games_-_25_-_Victory.ogg');
+    this.load.audio('close_door', 'assets/audio/close_door.ogg');
+    this.load.audio('open_door', 'assets/audio/open_door.ogg');
+    this.load.audio('door_lock', 'assets/audio/door_lock.ogg');
+    this.load.audio('arcade1', 'assets/audio/arcade1.ogg');
     
     this.load.on('filecomplete', (key: string) => {
       console.log('Asset loaded:', key);
@@ -216,6 +229,16 @@ export class DungeonGameScene extends Phaser.Scene {
     this.player.setScale(1.125); // Increased by 25% from 0.9
     this.player.setDepth(5);
     
+    // Give the player sprite standard RPG hook methods so Enemy.ts can call them natively
+    (this.player as any).takeDamage = (amount: number) => {
+      this.hitPlayer(this.player, null, amount);
+    };
+    (this.player as any).addScore = (amount: number) => {
+      this.playerScore += amount;
+      this.updateUI();
+    };
+    (this.player as any).gainExperience = (amount: number) => {};
+    
     // Create player animations
     this.createPlayerAnimations();
 
@@ -256,6 +279,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.sound.stopAll();
     if (this.currentDungeon === this.maxDungeons) {
       this.sound.play('boss_battle', { volume: 0.3, loop: true });
+    } else if (this.currentDungeon === 3 || this.currentDungeon === 4) {
+      this.sound.play('arcade1', { volume: 0.2, loop: true });
     } else {
       this.sound.play('enchanted_forest', { volume: 0.2, loop: true });
     }
@@ -469,6 +494,11 @@ export class DungeonGameScene extends Phaser.Scene {
             valid = false;
             continue;
         }
+        // Ensure non-obstacle entities (enemies/chests) don't spawn too close to the player
+        if (!isObstacle && Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 350) {
+            valid = false;
+            continue;
+        }
         if (this.door && Phaser.Geom.Intersects.RectangleToRectangle(checkRect, doorBounds)) {
             valid = false;
             continue;
@@ -509,188 +539,24 @@ export class DungeonGameScene extends Phaser.Scene {
       const { x, y } = pos;
       const enemyType = i < batCount ? 'chiroptera' : enemyTypes[Phaser.Math.Between(0, enemyTypes.length - 1)];
       
-      // Use proper enemy sprites with correct mapping
-      const spriteMap: { [key: string]: string } = {
-        'skeleton': 'skeleton',
-        'zombie': 'zombie',
-        'zombie2': 'zombie',
-        'chiroptera': 'bat',
-        'spider': 'spider'
-      };
-      
-      const spriteKey = spriteMap[enemyType] || 'skeleton';
-      const enemy = this.physics.add.sprite(x, y, spriteKey, 0);
-      enemy.setScale(1.0); // Normal scale since sprites are properly sized
-      
       let hp = 50 + this.currentDungeon * 10;
+      let baseSpeed = (25 + this.currentDungeon * 5) * 1.75;
+      
+      let enemy: Enemy;
       if (enemyType === 'zombie') {
         hp *= 3; // Zombies are 3x tougher in Hard mode
+        enemy = new Zombie(this, x, y, this.player, hp, baseSpeed);
       } else if (enemyType === 'zombie2') {
         hp *= 2; // Zombie2 is 2x tougher
-      }
-      enemy.setData('health', hp);
-      enemy.setData('maxHealth', hp);
-      enemy.setData('type', enemyType);
-      enemy.setData('wanderTimer', 0);
-      
-      let shadowYOffset = 20;
-      let shadowWidth = 32;
-      if (enemyType === 'skeleton') { shadowYOffset = 30; shadowWidth = 40; }
-      else if (enemyType === 'zombie' || enemyType === 'zombie2') { shadowYOffset = 16; shadowWidth = 24; }
-      else if (enemyType === 'spider') { shadowYOffset = 28; shadowWidth = 40; }
-      else if (enemyType === 'chiroptera') { shadowYOffset = 30; shadowWidth = 30; }
-
-      const shadowHeight = Math.round(shadowWidth / 2.5);
-      const shadow = this.add.ellipse(x, y + shadowYOffset, shadowWidth, shadowHeight, 0x000000, 0.4).setDepth(1);
-      enemy.setData('shadow', shadow);
-      enemy.setData('shadowOffset', shadowYOffset);
-      enemy.setDepth(5);
-      
-      // Create directional walking animations for enemies using original specifications
-      if (enemyType === 'skeleton') {
-        if (!this.anims.exists('walkUpSkeleton')) {
-          this.anims.create({
-            key: 'walkUpSkeleton',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 104, end: 112 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkDownSkeleton',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 130, end: 137 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkLeftSkeleton',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 117, end: 125 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkRightSkeleton',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 143, end: 151 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'skeletonDie',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 260, end: 265 }),
-            frameRate: 8,
-            repeat: 0
-          });
-        }
-        enemy.anims.play('walkDownSkeleton'); // Default
-      } else if (enemyType === 'zombie') {
-        if (!this.anims.exists('walkUpZombie')) {
-          this.anims.create({
-            key: 'walkUpZombie',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 42, end: 44 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkDownZombie',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 6, end: 8 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkLeftZombie',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 18, end: 20 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkRightZombie',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 30, end: 32 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'zombieDie',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 48, end: 53 }),
-            frameRate: 8,
-            repeat: 0
-          });
-        }
-        enemy.anims.play('walkDownZombie'); // Default
-      } else if (enemyType === 'zombie2') {
-        if (!this.anims.exists('walkUpZombie2')) {
-          this.anims.create({
-            key: 'walkUpZombie2',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 36, end: 41 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkDownZombie2',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 0, end: 5 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkLeftZombie2',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 12, end: 17 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'walkRightZombie2',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 24, end: 29 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'zombie2Die',
-            frames: this.anims.generateFrameNumbers('zombie', { start: 48, end: 53 }),
-            frameRate: 8,
-            repeat: 0
-          });
-        }
-        enemy.anims.play('walkDownZombie2'); // Default
+        enemy = new Zombie2(this, x, y, this.player, hp, baseSpeed * 1.5);
       } else if (enemyType === 'chiroptera') {
-        if (!this.anims.exists('flyLeft')) {
-          this.anims.create({
-            key: 'flyLeft',
-            frames: this.anims.generateFrameNumbers('bat', { start: 0, end: 4 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'flyRight',
-            frames: this.anims.generateFrameNumbers('bat', { start: 6, end: 8 }),
-            frameRate: 8,
-            repeat: -1
-          });
-        }
-        enemy.anims.play('flyLeft'); // Default
+        enemy = new Bat(this, x, y, this.player, hp, baseSpeed);
       } else if (enemyType === 'spider') {
-        if (!this.anims.exists('walkSpider') && this.textures.exists('spider')) {
-          this.anims.create({
-            key: 'walkSpider',
-            frames: this.anims.generateFrameNumbers('spider', { start: 0, end: 3 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'attackSpider',
-            frames: this.anims.generateFrameNumbers('spider', { start: 13, end: 16 }),
-            frameRate: 8,
-            repeat: -1
-          });
-          this.anims.create({
-            key: 'spiderDie',
-            frames: this.anims.generateFrameNumbers('spider', { start: 51, end: 54 }),
-            frameRate: 8,
-            repeat: 0
-          });
-        }
-        if (this.anims.exists('walkSpider')) {
-          enemy.anims.play('walkSpider'); // Default
-        }
+        enemy = new Spider(this, x, y, this.player, hp, baseSpeed);
+      } else {
+        enemy = new Skeleton(this, x, y, this.player, hp, baseSpeed);
       }
-      
+      enemy.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
       this.enemies.add(enemy);
     }
   }
@@ -811,6 +677,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     this.door.anims.play('closeGate');
+    this.sound.play('close_door', { volume: 0.5 });
   }
 
   private createBoss() {
@@ -1043,14 +910,23 @@ export class DungeonGameScene extends Phaser.Scene {
     this.handlePlayerMovement();
     this.handleShooting();
     this.updateBullets(delta);
-    this.updateEnemies();
     
-    if (this.boss) {
-      this.updateBoss();
+    this.enemies.getChildren().forEach((enemy: any) => {
+      if (enemy.update) enemy.update();
+    });
+    if (this.boss && this.boss.update) {
+      this.boss.update();
     }
 
     if (this.playerShadow && !this.player.getData('isDead')) {
       this.playerShadow.setPosition(this.player.x, this.player.y + 26);
+    }
+
+    // Check if player moved away from door
+    if (this.door && this.player && this.isTouchingDoor) {
+      if (!this.physics.overlap(this.player, this.door)) {
+        this.isTouchingDoor = false;
+      }
     }
   }
 
@@ -1065,8 +941,8 @@ export class DungeonGameScene extends Phaser.Scene {
       const born = bullet.getData('born') + delta;
       bullet.setData('born', born);
       
-      const speedX = bullet.getData('speedX');
-      const speedY = bullet.getData('speedY');
+      const speedX = bullet.getData('speedX') || 0;
+      const speedY = bullet.getData('speedY') || 0;
       
       // Apply velocity using delta time (corrected direction)
       bullet.body.setVelocityX(delta * speedX * 50);
@@ -1176,147 +1052,6 @@ export class DungeonGameScene extends Phaser.Scene {
     console.log('Bullet fired toward:', mouseX, mouseY, 'with speed:', bullet.getData('speedX'), bullet.getData('speedY'));
   }
 
-  private updateEnemies() {
-    this.enemies.children.entries.forEach((enemy: any) => {
-      if (enemy.getData('isDead')) return;
-
-      const distanceToPlayer = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-      let baseSpeed = (25 + this.currentDungeon * 5) * 1.75;
-      const enemyType = enemy.getData('type');
-      
-      if (enemyType === 'zombie2') {
-        baseSpeed *= 1.5; // Move 50% faster
-      }
-
-      // AI: Chase player if close, otherwise wander
-      if (distanceToPlayer < 200) {
-        if (enemyType === 'chiroptera' || enemyType === 'spider') {
-          // Bat/Spider behavior: maintain distance and shoot
-          if (distanceToPlayer > 120) {
-            this.physics.moveToObject(enemy, this.player, baseSpeed);
-          } else {
-            enemy.setVelocity(0, 0);
-          }
-          
-          const activeBullet = enemy.getData('activeBullet');
-          if (!activeBullet || !activeBullet.active) {
-            this.fireEnemyBullet(enemy, this.player);
-          }
-        } else {
-          if (distanceToPlayer > 32) {
-            this.physics.moveToObject(enemy, this.player, baseSpeed);
-          } else {
-            enemy.setVelocity(0, 0);
-          }
-        }
-      } else {
-        // Wander
-        let wanderTimer = enemy.getData('wanderTimer') || 0;
-        if (this.time.now > wanderTimer) {
-          const wanderAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-          const wanderSpeed = baseSpeed * 0.5; // Wander slower
-          enemy.setVelocity(Math.cos(wanderAngle) * wanderSpeed, Math.sin(wanderAngle) * wanderSpeed);
-          enemy.setData('wanderTimer', this.time.now + Phaser.Math.Between(2000, 4000));
-        }
-      }
-
-      // Update animation based on velocity
-      const velocity = enemy.body.velocity;
-
-      if (Math.abs(velocity.x) < 1 && Math.abs(velocity.y) < 1) {
-        if (enemyType === 'spider' && distanceToPlayer <= 120 && this.anims.exists('attackSpider')) {
-          enemy.anims.play('attackSpider', true);
-        } else {
-          enemy.anims.stop();
-        }
-      } else if (enemyType === 'skeleton' || enemyType === 'zombie' || enemyType === 'zombie2') {
-        const animSuffix = enemyType === 'skeleton' ? 'Skeleton' : (enemyType === 'zombie' ? 'Zombie' : 'Zombie2');
-        if (Math.abs(velocity.x) > Math.abs(velocity.y)) {
-          enemy.anims.play(velocity.x > 0 ? `walkRight${animSuffix}` : `walkLeft${animSuffix}`, true);
-        } else {
-          enemy.anims.play(velocity.y > 0 ? `walkDown${animSuffix}` : `walkUp${animSuffix}`, true);
-        }
-      } else if (enemyType === 'chiroptera') {
-        enemy.anims.play(velocity.x > 0 ? 'flyRight' : 'flyLeft', true);
-      } else if (enemyType === 'spider') {
-        if (this.anims.exists('walkSpider')) {
-          enemy.anims.play('walkSpider', true);
-        }
-      }
-      
-      const shadow = enemy.getData('shadow');
-      if (shadow) {
-        shadow.setPosition(enemy.x, enemy.y + enemy.getData('shadowOffset'));
-      }
-    });
-  }
-
-  private updateBoss() {
-    if (!this.boss || this.boss.getData('isDead')) return;
-    
-    // Boss behavior based on vulnerability (slower overall)
-    const distance = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
-    const deltaX = this.player.x - this.boss.x;
-    const deltaY = this.player.y - this.boss.y;
-    
-    if (this.bossVulnerability < 100) {
-      // Invulnerable: very slow movement
-      if (distance > 100) {
-        this.physics.moveToObject(this.boss, this.player, 32.8125); // Increased by 1.75x
-        
-        // Update boss animation based on movement direction
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          // Moving horizontally
-          if (deltaX > 0) {
-            this.boss.anims.play('walkRightOrc', true);
-          } else {
-            this.boss.anims.play('walkLeftOrc', true);
-          }
-        } else {
-          // Moving vertically
-          if (deltaY > 0) {
-            this.boss.anims.play('walkDownOrc', true);
-          } else {
-            this.boss.anims.play('walkUpOrc', true);
-          }
-        }
-      } else {
-        this.boss.setVelocity(0, 0); // Stop if close
-        this.boss.anims.play('attackDownOrc', true); // Attack animation when close
-      }
-    } else {
-      // Vulnerable: moderate movement
-      if (distance > 50) {
-        this.physics.moveToObject(this.boss, this.player, 87.5); // Increased by 1.75x
-        
-        // Update boss animation based on movement direction
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          // Moving horizontally
-          if (deltaX > 0) {
-            this.boss.anims.play('walkRightOrc', true);
-          } else {
-            this.boss.anims.play('walkLeftOrc', true);
-          }
-        } else {
-          // Moving vertically
-          if (deltaY > 0) {
-            this.boss.anims.play('walkDownOrc', true);
-          } else {
-            this.boss.anims.play('walkUpOrc', true);
-          }
-        }
-      } else {
-        this.boss.setVelocity(0, 0);
-        this.boss.anims.play('attackDownOrc', true); // Attack animation when close
-      }
-    }
-    
-    const shadow = this.boss.getData('shadow');
-    if (shadow) {
-      shadow.setPosition(this.boss.x, this.boss.y + 44);
-    }
-  }
-
   private openChest(chest: Phaser.Physics.Arcade.Sprite) {
     if (chest.getData('opened')) return;
     
@@ -1344,6 +1079,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.playerScore += 100;
         
         this.sound.play('star', { volume: 0.5 });
+        this.sound.play('star', { volume: 0.8 }); // Boosted volume for clearer feedback
         
         // Check if door should unlock
         if (this.levelCorrectAnswers >= 4) {
@@ -1462,6 +1198,7 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Play gate opening animation
     this.door.anims.play('openGate');
+    this.sound.play('open_door', { volume: 0.5 });
     
     // Make boss vulnerable if final dungeon
     if (this.currentDungeon === this.maxDungeons && this.boss) {
@@ -1472,7 +1209,11 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private tryExitDungeon() {
     if (!this.doorUnlocked) {
-      this.showMessage('Door is locked! Answer all questions first.');
+      if (!this.isTouchingDoor) {
+        this.sound.play('door_lock', { volume: 0.5 });
+        this.showMessage('Door is locked! Answer all questions first.');
+        this.isTouchingDoor = true;
+      }
       return;
     }
     
@@ -1484,6 +1225,7 @@ export class DungeonGameScene extends Phaser.Scene {
       
       // Game completed!
       this.sound.stopAll();
+      this.sound.play('victory_theme', { volume: 0.5 });
       this.scene.start('GameOverScene', {
         victory: true,
         playerStats: {
@@ -1510,9 +1252,15 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
-  private hitPlayer(player: any, enemy: any) {
+  private hitPlayer(player: any, enemy: any, damage?: number) {
     if (player.getData('isDead')) return;
     if (player.getData('isInvulnerable')) return;
+    
+    // Default to the provided damage, or extract it from the Enemy config, or fallback to 20
+    let actualDamage = damage;
+    if (actualDamage === undefined) {
+      actualDamage = (enemy && enemy.config && enemy.config.damage) ? enemy.config.damage : 20;
+    }
     
     player.setData('isInvulnerable', true);
     player.setTint(0xff0000);
@@ -1523,12 +1271,14 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     });
 
-    this.playerHealth -= 20;
-    this.sound.play('hurt', { volume: 0.4 });
+    this.playerHealth -= actualDamage;
+    this.sound.play('hurt_male', { volume: 0.4 });
     
-    // Push player back (less force)
-    const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
-    player.setVelocity(Math.cos(angle) * 100, Math.sin(angle) * 100); // Reduced pushback
+    // Only push player back if the physical enemy collision box exists
+    if (enemy) {
+      const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+      player.setVelocity(Math.cos(angle) * 100, Math.sin(angle) * 100); // Reduced pushback
+    }
     
     this.updateHealthBar();
     
@@ -1555,60 +1305,15 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private hitPlayerWithBullet(player: any, bullet: any) {
+    const damage = bullet.getData('damage') || 20;
     bullet.destroy();
-    this.hitPlayer(player, bullet);
+    this.hitPlayer(player, bullet, damage);
   }
 
   private hitEnemy(bullet: any, enemy: any) {
     if (enemy.getData('isDead')) return;
     bullet.destroy();
-    
-    const health = enemy.getData('health') - 25;
-    enemy.setData('health', health);
-    
-    if (health <= 0) {
-      const shadow = enemy.getData('shadow');
-      if (shadow) shadow.destroy();
-      enemy.setData('isDead', true);
-      enemy.body.enable = false;
-      
-      this.sound.play('enemy-death', { volume: 0.3 });
-      this.playerScore += 50;
-      this.updateUI();
-      
-      const enemyType = enemy.getData('type');
-      if (enemyType === 'skeleton' && this.anims.exists('skeletonDie')) {
-        enemy.anims.play('skeletonDie');
-        enemy.once('animationcomplete', () => enemy.destroy());
-      } else if (enemyType === 'zombie' && this.anims.exists('zombieDie')) {
-        enemy.anims.play('zombieDie');
-        enemy.once('animationcomplete', () => enemy.destroy());
-      } else if (enemyType === 'zombie2' && this.anims.exists('zombie2Die')) {
-        enemy.anims.play('zombie2Die');
-        enemy.once('animationcomplete', () => enemy.destroy());
-      } else if (enemyType === 'spider' && this.anims.exists('spiderDie')) {
-        enemy.anims.play('spiderDie');
-        enemy.once('animationcomplete', () => enemy.destroy());
-      } else {
-        enemy.anims.stop();
-        enemy.setTint(0xff0000);
-        this.tweens.add({
-          targets: enemy,
-          alpha: 0,
-          angle: 90,
-          scaleX: 0.5,
-          scaleY: 0.5,
-          duration: 500,
-          onComplete: () => enemy.destroy()
-        });
-      }
-    } else {
-      // Flash red when hit
-      enemy.setTint(0xff0000);
-      this.time.delayedCall(200, () => {
-        enemy.clearTint();
-      });
-    }
+    enemy.takeDamage(25);
   }
 
   private hitBoss(boss: any, bullet: any) {
@@ -1620,30 +1325,10 @@ export class DungeonGameScene extends Phaser.Scene {
       return;
     }
     
-    const damage = 50;
-    
-    const health = boss.getData('health') - damage;
-    boss.setData('health', health);
-    
-    if (health <= 0) {
-      const shadow = boss.getData('shadow');
-      if (shadow) shadow.destroy();
-      boss.setData('isDead', true);
-      boss.body.enable = false;
-      boss.clearTint();
-      
-      boss.anims.play('OrcDie');
-      boss.once('animationcomplete', () => {
-        this.boss = undefined;
-        boss.destroy();
-      this.playerScore += 500;
+    boss.takeDamage(50);
+    if (boss.isDead) {
+      this.boss = undefined;
       this.showMessage('Boss defeated! Proceed to exit!');
-      });
-    } else {
-      boss.setTint(0xff0000);
-      this.time.delayedCall(200, () => {
-        if (boss && boss.active) boss.clearTint();
-      });
     }
   }
 
@@ -1660,39 +1345,9 @@ export class DungeonGameScene extends Phaser.Scene {
     });
   }
 
-  private fireEnemyBullet(enemy: any, target: any) {
-    const bullet = this.physics.add.sprite(enemy.x, enemy.y, 'bullet');
-    bullet.setScale(0.4); 
-    if (enemy.getData('type') === 'spider') {
-      bullet.setTint(0xffffff); // White tint for spider projectile
-    } else {
-      bullet.setTint(0xff4444); // Red tint for bat magic effect
-    }
-    
-    const deltaX = target.x - enemy.x;
-    const deltaY = target.y - enemy.y;
-    
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const baseSpeed = 0.25; 
-    
-    if (distance > 0) {
-      bullet.setData('speedX', (deltaX / distance) * baseSpeed);
-      bullet.setData('speedY', (deltaY / distance) * baseSpeed);
-    } else {
-      bullet.setData('speedX', baseSpeed);
-      bullet.setData('speedY', 0);
-    }
-    
-    bullet.setData('born', 0); 
-    
-    this.enemyBullets.add(bullet);
-    enemy.setData('activeBullet', bullet);
-    
-    this.sound.play('spit', { volume: 0.3 });
-  }
-
   private gameOver() {
     this.sound.stopAll();
+    this.sound.play('gameover_theme', { volume: 0.5 });
     this.scene.start('GameOverScene', {
       victory: false,
       playerStats: {

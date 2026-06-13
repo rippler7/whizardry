@@ -1,28 +1,52 @@
 import * as Phaser from 'phaser';
-import { Player } from './Player';
-import { ENEMY_CONFIGS, EnemyConfig } from '../data/GameData';
+
+export interface EnemyConfig {
+  type: string;
+  health: number;
+  speed: number;
+  damage: number;
+  attackRange: number;
+  detectionRange: number;
+  experienceReward: number;
+  scoreReward: number;
+}
+
+export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
+  skeleton: { type: 'skeleton', health: 50, speed: 40, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
+  zombie: { type: 'zombie', health: 150, speed: 40, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
+  zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 15, scoreReward: 75 },
+  bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 150, detectionRange: 250, experienceReward: 10, scoreReward: 50 },
+  spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
+  boss: { type: 'boss', health: 400, speed: 30, damage: 30, attackRange: 60, detectionRange: 300, experienceReward: 100, scoreReward: 500 }
+};
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected config: EnemyConfig;
-  protected player: Player;
-  protected health: number;
-  protected maxHealth: number;
+  protected player: any; // Using duck-typing to communicate with DungeonGameScene's player
   protected lastAttack: number = 0;
   protected attackRate: number = 1000;
   protected isAlive: boolean = true;
+  public get isDead(): boolean { return !this.isAlive; }
   protected stateTimer: number = 0;
   protected state: 'idle' | 'patrol' | 'chase' | 'attack' | 'stunned' = 'patrol';
   protected patrolTarget: { x: number; y: number } = { x: 0, y: 0 };
   protected lastDirection: { x: number; y: number } = { x: 0, y: 0 };
   protected walls: Phaser.Physics.Arcade.StaticGroup | null = null;
+  protected shadow!: Phaser.GameObjects.Ellipse;
+  protected shadowOffset: number = 20;
+  protected evasionTimer: number = 0;
+  protected evasionDirection: { x: number; y: number } = { x: 0, y: 0 };
 
-  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: Player) {
+  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: any, hp: number, speed: number) {
     super(scene, x, y, texture);
     
-    this.config = ENEMY_CONFIGS[enemyType];
+    this.config = { ...ENEMY_CONFIGS[enemyType] };
+    if (hp) this.config.health = hp;
+    if (speed) this.config.speed = speed;
+    
     this.player = player;
-    this.health = this.config.health;
-    this.maxHealth = this.config.health;
+    this.setData('health', this.config.health);
+    this.setData('type', enemyType);
     
     // Add to scene
     scene.add.existing(this);
@@ -43,6 +67,11 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   
   public setWallsGroup(walls: Phaser.Physics.Arcade.StaticGroup): void {
     this.walls = walls;
+  }
+  
+  protected createShadow(width: number, height: number, offset: number) {
+    this.shadowOffset = offset;
+    this.shadow = this.scene.add.ellipse(this.x, this.y + offset, width, height, 0x000000, 0.4).setDepth(1);
   }
   
   public update(): void {
@@ -134,6 +163,19 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
   
   protected moveTowardsTarget(targetX: number, targetY: number, speed: number): void {
+    // If we are currently evading and the path is clear, continue evading to prevent jitter
+    if (this.evasionTimer > 0) {
+      this.evasionTimer -= this.scene.game.loop.delta;
+      if (!this.checkWallCollision(this.x + this.evasionDirection.x * 0.1, this.y + this.evasionDirection.y * 0.1)) {
+        this.setVelocity(this.evasionDirection.x, this.evasionDirection.y);
+        this.lastDirection = { ...this.evasionDirection };
+        this.updateMovementAnimation(this.evasionDirection.x, this.evasionDirection.y);
+        return;
+      } else {
+        this.evasionTimer = 0; // Hit a wall while evading, recalculate immediately
+      }
+    }
+
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
     let velocityX = Math.cos(angle) * speed;
     let velocityY = Math.sin(angle) * speed;
@@ -144,26 +186,68 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
       const futureY = this.y + velocityY * 0.1;
       
       // Check if future position would collide with walls
-      const willCollide = this.checkWallCollision(futureX, futureY);
+      const obstacle = this.checkWallCollision(futureX, futureY);
       
-      if (willCollide) {
-        // Try alternative directions
-        const alternatives = [
-          { x: velocityX, y: 0 }, // Horizontal only
-          { x: 0, y: velocityY }, // Vertical only
-          { x: -velocityY, y: velocityX }, // Perpendicular
-          { x: velocityY, y: -velocityX }, // Perpendicular opposite
-        ];
-        
-        for (const alt of alternatives) {
-          const testX = this.x + alt.x * 0.1;
-          const testY = this.y + alt.y * 0.1;
-          
-          if (!this.checkWallCollision(testX, testY)) {
-            velocityX = alt.x;
-            velocityY = alt.y;
-            break;
+      if (obstacle) {
+        if (this.state === 'patrol') {
+          // Immediately pick a new direction to avoid getting stuck while roaming
+          this.setNewPatrolTarget();
+          this.setVelocity(0, 0);
+          return;
+        }
+
+        // Chasing logic: Scale the X and Y bounds of the obstacle
+        let evX = 0;
+        let evY = 0;
+
+        if (typeof obstacle !== 'boolean') {
+          const wallBounds = obstacle.getBounds();
+          const dxToPlayer = targetX - this.x;
+          const dyToPlayer = targetY - this.y;
+
+          // Attempt to slide along the axis leading to the player
+          const canSlideX = !this.checkWallCollision(this.x + Math.sign(dxToPlayer || 1) * speed * 0.2, this.y);
+          const canSlideY = !this.checkWallCollision(this.x, this.y + Math.sign(dyToPlayer || 1) * speed * 0.2);
+
+          if (canSlideX && Math.abs(dxToPlayer) > 10) {
+            evX = Math.sign(dxToPlayer) * speed;
+          } else if (canSlideY && Math.abs(dyToPlayer) > 10) {
+            evY = Math.sign(dyToPlayer) * speed;
+          } else {
+            // If blocked, evaluate the obstacle's bounds to scale around the nearest edge
+            const distLeft = Math.abs(this.x - wallBounds.left);
+            const distRight = Math.abs(this.x - wallBounds.right);
+            const distTop = Math.abs(this.y - wallBounds.top);
+            const distBottom = Math.abs(this.y - wallBounds.bottom);
+
+            const minDistX = Math.min(distLeft, distRight);
+            const minDistY = Math.min(distTop, distBottom);
+
+            if (minDistX < minDistY && !this.checkWallCollision(this.x + (distLeft < distRight ? -speed : speed) * 0.2, this.y)) {
+              evX = distLeft < distRight ? -speed : speed;
+            } else if (!this.checkWallCollision(this.x, this.y + (distTop < distBottom ? -speed : speed) * 0.2)) {
+              evY = distTop < distBottom ? -speed : speed;
+            } else {
+              // Completely cornered, bounce away
+              evX = -velocityX;
+              evY = -velocityY;
+            }
           }
+        } else {
+          // Hit world bounds, reverse direction
+          evX = velocityX === 0 ? 0 : -Math.sign(velocityX) * speed;
+          evY = velocityY === 0 ? 0 : -Math.sign(velocityY) * speed;
+        }
+
+        // Commit to this evasive maneuver for a brief period to scale the obstacle
+        if (evX !== 0 || evY !== 0) {
+          velocityX = evX;
+          velocityY = evY;
+          this.evasionDirection = { x: velocityX, y: velocityY };
+          this.evasionTimer = 1400; // Commit to evasion for 1400ms
+        } else {
+          velocityX = 0;
+          velocityY = 0;
         }
       }
     }
@@ -175,7 +259,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.updateMovementAnimation(velocityX, velocityY);
   }
   
-  protected checkWallCollision(x: number, y: number): boolean {
+  protected checkWallCollision(x: number, y: number): boolean | Phaser.Physics.Arcade.Sprite {
     if (!this.walls) return false;
     
     // Simple bounds check for now - can be improved with actual collision detection
@@ -185,12 +269,22 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     
     // Check world bounds
     if (bounds.x < 0 || bounds.y < 0 || 
-        bounds.x + bounds.width > this.scene.sys.game.config.width as number ||
-        bounds.y + bounds.height > this.scene.sys.game.config.height as number) {
+        bounds.x + bounds.width > this.scene.scale.width ||
+        bounds.y + bounds.height > this.scene.scale.height) {
       return true;
     }
     
-    return false;
+    let collided: boolean | Phaser.Physics.Arcade.Sprite = false;
+    if (this.walls) {
+      this.walls.getChildren().forEach(wall => {
+        // Allow spiders to bypass wall collision checks
+        if (this.config.type !== 'spider' && Phaser.Geom.Intersects.RectangleToRectangle(bounds, (wall as Phaser.Physics.Arcade.Sprite).getBounds())) {
+          collided = wall as Phaser.Physics.Arcade.Sprite;
+        }
+      });
+    }
+    
+    return collided;
   }
   
   protected canSeePlayer(): boolean {
@@ -220,27 +314,27 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected abstract performAttack(): void;
   
   protected updateDepth(): void {
-    this.setDepth(this.y);
+    this.setDepth(5);
+    if (this.shadow) this.shadow.setPosition(this.x, this.y + this.shadowOffset);
   }
   
   public takeDamage(amount: number): boolean {
     if (!this.isAlive) return false;
     
-    this.health = Math.max(0, this.health - amount);
+    const newHealth = Math.max(0, this.getData('health') - amount);
+    this.setData('health', newHealth);
     
     // Flash effect
     this.setTint(0xff0000);
     this.scene.time.delayedCall(150, () => {
-      if (this.isAlive) {
-        this.clearTint();
-      }
+      if (this.isAlive && this.active) this.clearTint();
     });
     
     // Stun briefly when hit
     this.state = 'stunned';
     this.stateTimer = 300;
     
-    if (this.health <= 0) {
+    if (newHealth <= 0) {
       this.die();
       return true;
     }
@@ -250,19 +344,32 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   
   protected die(): void {
     this.isAlive = false;
-    this.setTint(0x666666);
+    this.body.enable = false;
+    if (this.shadow) this.shadow.destroy();
     
     // Give player rewards
-    this.player.gainExperience(this.config.experienceReward);
-    this.player.addScore(this.config.scoreReward);
+    if (this.player.gainExperience) this.player.gainExperience(this.config.experienceReward);
+    if (this.player.addScore) this.player.addScore(this.config.scoreReward);
     
-    // Play death sound
-    this.scene.sound.play('enemyHurt', { volume: 0.3 });
+    // Play specific death sounds
+    if (this.config.type === 'zombie' || this.config.type === 'zombie2') {
+      this.scene.sound.play('zombienoise', { volume: 0.3 });
+      this.scene.sound.play('burst', { volume: 0.3 });
+    } else {
+      this.scene.sound.play('enemy-death', { volume: 0.3 });
+    }
     
-    // Remove after delay
-    this.scene.time.delayedCall(2000, () => {
-      this.destroy();
-    });
+    const dieAnim = `${this.config.type}Die`;
+    if (this.scene.anims.exists(dieAnim)) {
+      this.anims.play(dieAnim);
+      this.once('animationcomplete', () => this.destroy());
+    } else {
+      this.setTint(0xff0000);
+      this.scene.tweens.add({
+        targets: this, alpha: 0, angle: 90, scaleX: 0.5, scaleY: 0.5,
+        duration: 500, onComplete: () => this.destroy()
+      });
+    }
     
     // Emit death event
     this.scene.events.emit('enemyDefeated', this.config.type);
@@ -271,58 +378,59 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
 
 // Skeleton Enemy
 export class Skeleton extends Enemy {
-  constructor(scene: Phaser.Scene, x: number, y: number, player: Player) {
-    super(scene, x, y, 'skeleton', 'skeleton', player);
-    this.setSize(48, 48);
-    this.setOffset(8, 16);
+  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+    super(scene, x, y, 'skeleton', 'skeleton', player, hp, speed);
+    this.setSize(32, 48);
+    this.setOffset(16, 16);
+    this.createShadow(40, 16, 30);
   }
   
   protected createAnimations(): void {
     const anims = this.scene.anims;
     
     // Walking animations for skeleton
-    if (!anims.exists('skeleton_walk_down')) {
+    if (!anims.exists('walkDownSkeleton')) {
       anims.create({
-        key: 'skeleton_walk_down',
-        frames: anims.generateFrameNumbers('skeleton', { start: 0, end: 3 }),
-        frameRate: 6,
+        key: 'walkDownSkeleton',
+        frames: anims.generateFrameNumbers('skeleton', { start: 130, end: 137 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('skeleton_walk_left')) {
       anims.create({
-        key: 'skeleton_walk_left',
-        frames: anims.generateFrameNumbers('skeleton', { start: 4, end: 7 }),
-        frameRate: 6,
+        key: 'walkLeftSkeleton',
+        frames: anims.generateFrameNumbers('skeleton', { start: 117, end: 125 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('skeleton_walk_right')) {
       anims.create({
-        key: 'skeleton_walk_right',
-        frames: anims.generateFrameNumbers('skeleton', { start: 8, end: 11 }),
-        frameRate: 6,
+        key: 'walkRightSkeleton',
+        frames: anims.generateFrameNumbers('skeleton', { start: 143, end: 151 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('skeleton_walk_up')) {
       anims.create({
-        key: 'skeleton_walk_up',
-        frames: anims.generateFrameNumbers('skeleton', { start: 12, end: 15 }),
-        frameRate: 6,
+        key: 'walkUpSkeleton',
+        frames: anims.generateFrameNumbers('skeleton', { start: 104, end: 112 }),
+        frameRate: 8,
         repeat: -1
       });
+      anims.create({
+        key: 'skeletonDie',
+        frames: anims.generateFrameNumbers('skeleton', { start: 260, end: 265 }),
+        frameRate: 8,
+        repeat: 0
+      });
     }
+    this.anims.play('walkDownSkeleton');
   }
   
   protected updateMovementAnimation(velocityX: number, velocityY: number): void {
     if (Math.abs(velocityX) > Math.abs(velocityY)) {
-      this.anims.play(velocityX > 0 ? 'skeleton_walk_right' : 'skeleton_walk_left', true);
+      this.anims.play(velocityX > 0 ? 'walkRightSkeleton' : 'walkLeftSkeleton', true);
     } else if (velocityY !== 0) {
-      this.anims.play(velocityY > 0 ? 'skeleton_walk_down' : 'skeleton_walk_up', true);
+      this.anims.play(velocityY > 0 ? 'walkDownSkeleton' : 'walkUpSkeleton', true);
+    } else {
+      this.anims.stop();
     }
   }
   
@@ -340,57 +448,97 @@ export class Skeleton extends Enemy {
 
 // Zombie Enemy
 export class Zombie extends Enemy {
-  constructor(scene: Phaser.Scene, x: number, y: number, player: Player) {
-    super(scene, x, y, 'zombie', 'zombie', player);
+  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+    super(scene, x, y, 'zombie', 'zombie', player, hp, speed);
     this.setSize(24, 24);
     this.setOffset(4, 8);
+    this.createShadow(24, 10, 16);
   }
   
   protected createAnimations(): void {
     const anims = this.scene.anims;
     
-    if (!anims.exists('zombie_walk_down')) {
+    if (!anims.exists('walkDownZombie')) {
       anims.create({
-        key: 'zombie_walk_down',
-        frames: anims.generateFrameNumbers('zombie', { start: 0, end: 3 }),
-        frameRate: 4,
+        key: 'walkDownZombie',
+        frames: anims.generateFrameNumbers('zombie', { start: 6, end: 8 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('zombie_walk_left')) {
       anims.create({
-        key: 'zombie_walk_left',
-        frames: anims.generateFrameNumbers('zombie', { start: 4, end: 7 }),
-        frameRate: 4,
+        key: 'walkLeftZombie',
+        frames: anims.generateFrameNumbers('zombie', { start: 18, end: 20 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('zombie_walk_right')) {
       anims.create({
-        key: 'zombie_walk_right',
-        frames: anims.generateFrameNumbers('zombie', { start: 8, end: 11 }),
-        frameRate: 4,
+        key: 'walkRightZombie',
+        frames: anims.generateFrameNumbers('zombie', { start: 30, end: 32 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('zombie_walk_up')) {
       anims.create({
-        key: 'zombie_walk_up',
-        frames: anims.generateFrameNumbers('zombie', { start: 12, end: 15 }),
-        frameRate: 4,
+        key: 'walkUpZombie',
+        frames: anims.generateFrameNumbers('zombie', { start: 42, end: 44 }),
+        frameRate: 8,
         repeat: -1
       });
+      anims.create({
+        key: 'zombieDie',
+        frames: anims.generateFrameNumbers('zombie', { start: 48, end: 53 }),
+        frameRate: 8,
+        repeat: 0
+      });
     }
+    this.anims.play('walkDownZombie');
   }
   
   protected updateMovementAnimation(velocityX: number, velocityY: number): void {
     if (Math.abs(velocityX) > Math.abs(velocityY)) {
-      this.anims.play(velocityX > 0 ? 'zombie_walk_right' : 'zombie_walk_left', true);
+      this.anims.play(velocityX > 0 ? 'walkRightZombie' : 'walkLeftZombie', true);
     } else if (velocityY !== 0) {
-      this.anims.play(velocityY > 0 ? 'zombie_walk_down' : 'zombie_walk_up', true);
+      this.anims.play(velocityY > 0 ? 'walkDownZombie' : 'walkUpZombie', true);
+    } else {
+      this.anims.stop();
+    }
+  }
+  
+  protected performAttack(): void {
+    const distance = Phaser.Math.Distance.Between(this.x, this.y, this.player.x, this.player.y);
+    if (distance <= this.config.attackRange) {
+      this.player.takeDamage(this.config.damage);
+    }
+  }
+}
+
+// Zombie2 Enemy
+export class Zombie2 extends Enemy {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+    super(scene, x, y, 'zombie', 'zombie2', player, hp, speed);
+    this.setSize(24, 24);
+    this.setOffset(4, 8);
+    this.createShadow(24, 10, 16);
+  }
+  
+  protected createAnimations(): void {
+    const anims = this.scene.anims;
+    if (!anims.exists('walkDownZombie2')) {
+      anims.create({ key: 'walkDownZombie2', frames: anims.generateFrameNumbers('zombie', { start: 0, end: 5 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'walkLeftZombie2', frames: anims.generateFrameNumbers('zombie', { start: 12, end: 17 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'walkRightZombie2', frames: anims.generateFrameNumbers('zombie', { start: 24, end: 29 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'walkUpZombie2', frames: anims.generateFrameNumbers('zombie', { start: 36, end: 41 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'zombie2Die', frames: anims.generateFrameNumbers('zombie', { start: 48, end: 53 }), frameRate: 8, repeat: 0 });
+    }
+    this.anims.play('walkDownZombie2');
+  }
+  
+  protected updateMovementAnimation(velocityX: number, velocityY: number): void {
+    if (Math.abs(velocityX) > Math.abs(velocityY)) {
+      this.anims.play(velocityX > 0 ? 'walkRightZombie2' : 'walkLeftZombie2', true);
+    } else if (velocityY !== 0) {
+      this.anims.play(velocityY > 0 ? 'walkDownZombie2' : 'walkUpZombie2', true);
+    } else {
+      this.anims.stop();
     }
   }
   
@@ -407,61 +555,143 @@ export class Zombie extends Enemy {
 
 // Bat Enemy
 export class Bat extends Enemy {
-  constructor(scene: Phaser.Scene, x: number, y: number, player: Player) {
-    super(scene, x, y, 'bat', 'bat', player);
+  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+    super(scene, x, y, 'bat', 'bat', player, hp, speed);
     this.setSize(48, 48);
     this.setOffset(8, 8);
     this.attackRate = 2000; // Slower attack rate for ranged enemy
+    this.createShadow(30, 12, 30);
   }
   
   protected createAnimations(): void {
     const anims = this.scene.anims;
     
-    if (!anims.exists('bat_fly')) {
+    if (!anims.exists('flyLeft')) {
       anims.create({
-        key: 'bat_fly',
-        frames: anims.generateFrameNumbers('bat', { start: 0, end: 3 }),
+        key: 'flyLeft',
+        frames: anims.generateFrameNumbers('bat', { start: 0, end: 4 }),
+        frameRate: 8,
+        repeat: -1
+      });
+      anims.create({
+        key: 'flyRight',
+        frames: anims.generateFrameNumbers('bat', { start: 6, end: 8 }),
         frameRate: 8,
         repeat: -1
       });
     }
+    this.anims.play('flyLeft');
   }
   
   protected updateMovementAnimation(velocityX: number, velocityY: number): void {
-    this.anims.play('bat_fly', true);
-    this.setFlipX(velocityX < 0);
+    this.anims.play(velocityX > 0 ? 'flyRight' : 'flyLeft', true);
   }
   
   protected performAttack(): void {
     // Ranged projectile attack
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
     
-    const fireball = this.scene.physics.add.sprite(this.x, this.y, 'fireball');
-    fireball.setScale(0.8);
-    fireball.setTint(0xff4444);
-    fireball.setDepth(50);
+    const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
+    bullet.setScale(0.4);
+    bullet.setTint(0xff4444);
+    bullet.setDepth(50);
+    bullet.setData('damage', this.config.damage);
     
-    const projectileSpeed = 200;
-    fireball.setVelocity(
-      Math.cos(angle) * projectileSpeed,
-      Math.sin(angle) * projectileSpeed
-    );
+    const scene = this.scene as any;
+    if (scene.enemyBullets) {
+      scene.enemyBullets.add(bullet);
+    } else {
+      this.scene.physics.add.overlap(bullet, this.player, () => {
+        this.player.takeDamage(this.config.damage);
+        bullet.destroy();
+      });
+    }
+    
+    const dx = this.player.x - this.x;
+    const dy = this.player.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const baseSpeed = 0.25;
+    
+    if (distance > 0) {
+      bullet.setData('speedX', (dx / distance) * baseSpeed);
+      bullet.setData('speedY', (dy / distance) * baseSpeed);
+    } else {
+      bullet.setData('speedX', baseSpeed);
+      bullet.setData('speedY', 0);
+    }
+    bullet.setData('born', 0);
     
     // Destroy fireball after time
     this.scene.time.delayedCall(3000, () => {
-      if (fireball.active) {
-        fireball.destroy();
-      }
+      if (bullet.active) bullet.destroy();
     });
     
-    // Set up collision with player
-    this.scene.physics.add.overlap(fireball, this.player, () => {
-      this.player.takeDamage(this.config.damage);
-      fireball.destroy();
-    });
+    this.scene.sound.play('spit', { volume: 0.3 });
+  }
+}
+
+// Spider Enemy
+export class Spider extends Enemy {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+    super(scene, x, y, 'spider', 'spider', player, hp, speed);
+    this.setSize(32, 32);
+    this.setOffset(16, 16);
+    this.attackRate = 2000;
+    this.createShadow(40, 16, 28);
+  }
+  
+  protected createAnimations(): void {
+    const anims = this.scene.anims;
+    if (!anims.exists('walkSpider')) {
+      anims.create({ key: 'walkSpider', frames: anims.generateFrameNumbers('spider', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'attackSpider', frames: anims.generateFrameNumbers('spider', { start: 13, end: 16 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'spiderDie', frames: anims.generateFrameNumbers('spider', { start: 51, end: 54 }), frameRate: 8, repeat: 0 });
+    }
+    this.anims.play('walkSpider');
+  }
+  
+  protected updateMovementAnimation(velocityX: number, velocityY: number): void {
+    if (Math.abs(velocityX) > 1 || Math.abs(velocityY) > 1) {
+      this.anims.play('walkSpider', true);
+    } else {
+      this.anims.stop();
+    }
+  }
+  
+  protected performAttack(): void {
+    this.anims.play('attackSpider', true);
     
-    // Play sound
-    this.scene.sound.play('spitting', { volume: 0.3 });
+    const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
+    bullet.setScale(0.4);
+    bullet.setTint(0xffffff); // White web projectile
+    bullet.setDepth(50);
+    bullet.setData('damage', this.config.damage);
+    
+    const scene = this.scene as any;
+    if (scene.enemyBullets) {
+      scene.enemyBullets.add(bullet);
+    } else {
+      this.scene.physics.add.overlap(bullet, this.player, () => {
+        this.player.takeDamage(this.config.damage);
+        bullet.destroy();
+      });
+    }
+
+    const dx = this.player.x - this.x;
+    const dy = this.player.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const baseSpeed = 0.25;
+    
+    if (distance > 0) {
+      bullet.setData('speedX', (dx / distance) * baseSpeed);
+      bullet.setData('speedY', (dy / distance) * baseSpeed);
+    } else {
+      bullet.setData('speedX', baseSpeed);
+      bullet.setData('speedY', 0);
+    }
+    bullet.setData('born', 0);
+    
+    this.scene.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
+    this.scene.sound.play('spit', { volume: 0.3 });
   }
 }
 
@@ -471,57 +701,62 @@ export class Boss extends Enemy {
   private maxPhases: number = 3;
   private phaseChangeHealth: number[];
   
-  constructor(scene: Phaser.Scene, x: number, y: number, player: Player) {
-    super(scene, x, y, 'Boss', 'boss', player);
-    this.setSize(48, 48);
-    this.setOffset(8, 16);
+  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+    super(scene, x, y, 'Boss', 'boss', player, hp, speed);
+    this.setSize(40, 56);
+    this.setOffset(12, 8);
     this.attackRate = 1500;
+    this.createShadow(60, 24, 44);
     
     // Calculate phase change thresholds
     this.phaseChangeHealth = [];
     for (let i = 1; i < this.maxPhases; i++) {
-      this.phaseChangeHealth.push(Math.floor(this.maxHealth * (this.maxPhases - i) / this.maxPhases));
+      this.phaseChangeHealth.push(Math.floor(this.config.health * (this.maxPhases - i) / this.maxPhases));
     }
   }
   
   protected createAnimations(): void {
     const anims = this.scene.anims;
     
-    if (!anims.exists('boss_walk_down')) {
+    if (!anims.exists('walkDownOrc')) {
       anims.create({
-        key: 'boss_walk_down',
-        frames: anims.generateFrameNumbers('Boss', { start: 0, end: 3 }),
-        frameRate: 6,
+        key: 'walkDownOrc',
+        frames: anims.generateFrameNumbers('Boss', { start: 130, end: 137 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('boss_walk_left')) {
       anims.create({
-        key: 'boss_walk_left',
-        frames: anims.generateFrameNumbers('Boss', { start: 4, end: 7 }),
-        frameRate: 6,
+        key: 'walkUpOrc',
+        frames: anims.generateFrameNumbers('Boss', { start: 104, end: 112 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('boss_walk_right')) {
       anims.create({
-        key: 'boss_walk_right',
-        frames: anims.generateFrameNumbers('Boss', { start: 8, end: 11 }),
-        frameRate: 6,
+        key: 'walkLeftOrc',
+        frames: anims.generateFrameNumbers('Boss', { start: 117, end: 125 }),
+        frameRate: 8,
         repeat: -1
       });
-    }
-    
-    if (!anims.exists('boss_walk_up')) {
       anims.create({
-        key: 'boss_walk_up',
-        frames: anims.generateFrameNumbers('Boss', { start: 12, end: 15 }),
-        frameRate: 6,
+        key: 'walkRightOrc',
+        frames: anims.generateFrameNumbers('Boss', { start: 143, end: 151 }),
+        frameRate: 8,
         repeat: -1
       });
+      anims.create({
+        key: 'attackDownOrc',
+        frames: anims.generateFrameNumbers('Boss', { start: 78, end: 84 }),
+        frameRate: 8,
+        repeat: -1
+      });
+      anims.create({
+        key: 'bossDie',
+        frames: anims.generateFrameNumbers('Boss', { start: 260, end: 265 }),
+        frameRate: 8,
+        repeat: 0
+      });
     }
+    this.anims.play('walkDownOrc');
   }
   
   public update(): void {
@@ -530,7 +765,7 @@ export class Boss extends Enemy {
   }
   
   private checkPhaseChange(): void {
-    const newPhase = this.maxPhases - this.phaseChangeHealth.filter(threshold => this.health <= threshold).length;
+    const newPhase = this.maxPhases - this.phaseChangeHealth.filter(threshold => this.getData('health') <= threshold).length;
     
     if (newPhase !== this.phase) {
       this.phase = newPhase;
@@ -542,7 +777,7 @@ export class Boss extends Enemy {
     // Visual effect for phase change
     this.setTint(0xff00ff);
     this.scene.time.delayedCall(1000, () => {
-      this.clearTint();
+      if (this.active) this.clearTint();
     });
     
     // Increase stats based on phase
@@ -555,13 +790,17 @@ export class Boss extends Enemy {
   
   protected updateMovementAnimation(velocityX: number, velocityY: number): void {
     if (Math.abs(velocityX) > Math.abs(velocityY)) {
-      this.anims.play(velocityX > 0 ? 'boss_walk_right' : 'boss_walk_left', true);
+      this.anims.play(velocityX > 0 ? 'walkRightOrc' : 'walkLeftOrc', true);
     } else if (velocityY !== 0) {
-      this.anims.play(velocityY > 0 ? 'boss_walk_down' : 'boss_walk_up', true);
+      this.anims.play(velocityY > 0 ? 'walkDownOrc' : 'walkUpOrc', true);
+    } else {
+      this.anims.stop();
     }
   }
   
   protected performAttack(): void {
+    this.anims.play('attackDownOrc', true);
+    
     if (this.phase >= 2) {
       // Multi-attack in later phases
       this.multiAttack();
@@ -591,35 +830,46 @@ export class Boss extends Enemy {
     if (this.phase >= 3) {
       for (let i = 0; i < 3; i++) {
         this.scene.time.delayedCall(i * 200, () => {
-          this.shootProjectile();
+          if (this.active && !this.isDead) this.shootProjectile();
         });
       }
     }
   }
   
   private shootProjectile(): void {
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
     
-    const fireball = this.scene.physics.add.sprite(this.x, this.y, 'fireball');
-    fireball.setScale(1.2);
-    fireball.setTint(0x8800ff);
-    fireball.setDepth(50);
+    const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
+    bullet.setScale(0.8);
+    bullet.setTint(0x8800ff);
+    bullet.setDepth(50);
+    bullet.setData('damage', this.config.damage * 0.7);
     
-    const projectileSpeed = 150;
-    fireball.setVelocity(
-      Math.cos(angle) * projectileSpeed,
-      Math.sin(angle) * projectileSpeed
-    );
+    const scene = this.scene as any;
+    if (scene.enemyBullets) {
+      scene.enemyBullets.add(bullet);
+    } else {
+      this.scene.physics.add.overlap(bullet, this.player, () => {
+        this.player.takeDamage(this.config.damage * 0.7);
+        bullet.destroy();
+      });
+    }
+    
+    const dx = this.player.x - this.x;
+    const dy = this.player.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const baseSpeed = 0.25;
+    
+    if (distance > 0) {
+      bullet.setData('speedX', (dx / distance) * baseSpeed);
+      bullet.setData('speedY', (dy / distance) * baseSpeed);
+    } else {
+      bullet.setData('speedX', baseSpeed);
+      bullet.setData('speedY', 0);
+    }
+    bullet.setData('born', 0);
     
     this.scene.time.delayedCall(4000, () => {
-      if (fireball.active) {
-        fireball.destroy();
-      }
-    });
-    
-    this.scene.physics.add.overlap(fireball, this.player, () => {
-      this.player.takeDamage(this.config.damage * 0.7);
-      fireball.destroy();
+      if (bullet.active) bullet.destroy();
     });
   }
   
