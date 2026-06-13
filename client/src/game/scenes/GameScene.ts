@@ -323,29 +323,33 @@ export class GameScene extends Phaser.Scene {
     // UI Text
     this.healthText = this.add.text(10, 20, '', {
       fontSize: '16px',
-      fill: '#ffffff',
-      backgroundColor: '#000000',
+      fill: '#fde68a',
+      backgroundColor: '#1c1917',
+      fontFamily: '"Georgia", "Times New Roman", serif',
       padding: { x: 5, y: 2 }
     }).setScrollFactor(0).setDepth(1001);
     
     this.scoreText = this.add.text(10, 50, '', {
       fontSize: '16px',
-      fill: '#ffdd44',
-      backgroundColor: '#000000',
+      fill: '#fbbf24',
+      backgroundColor: '#1c1917',
+      fontFamily: '"Georgia", "Times New Roman", serif',
       padding: { x: 5, y: 2 }
     }).setScrollFactor(0).setDepth(1001);
     
     this.levelText = this.add.text(10, 80, '', {
       fontSize: '16px',
-      fill: '#44ddff',
-      backgroundColor: '#000000',
+      fill: '#fcd34d',
+      backgroundColor: '#1c1917',
+      fontFamily: '"Georgia", "Times New Roman", serif',
       padding: { x: 5, y: 2 }
     }).setScrollFactor(0).setDepth(1001);
     
     this.enemyCountText = this.add.text(10, 110, '', {
       fontSize: '16px',
-      fill: '#ff4444',
-      backgroundColor: '#000000',
+      fill: '#f87171',
+      backgroundColor: '#1c1917',
+      fontFamily: '"Georgia", "Times New Roman", serif',
       padding: { x: 5, y: 2 }
     }).setScrollFactor(0).setDepth(1001);
     
@@ -419,7 +423,7 @@ export class GameScene extends Phaser.Scene {
     this.healthBar.clear();
     
     // Background
-    this.healthBar.fillStyle(0x660000);
+    this.healthBar.fillStyle(0x292524);
     this.healthBar.fillRect(2, 22, 200, 20);
     
     // Health bar
@@ -427,11 +431,11 @@ export class GameScene extends Phaser.Scene {
     const barWidth = 200 * healthPercent;
     
     if (healthPercent > 0.6) {
-      this.healthBar.fillStyle(0x00ff00);
+      this.healthBar.fillStyle(0x166534);
     } else if (healthPercent > 0.3) {
-      this.healthBar.fillStyle(0xffff00);
+      this.healthBar.fillStyle(0xb45309);
     } else {
-      this.healthBar.fillStyle(0xff0000);
+      this.healthBar.fillStyle(0x991b1b);
     }
     
     this.healthBar.fillRect(2, 22, barWidth, 20);
@@ -459,8 +463,9 @@ export class GameScene extends Phaser.Scene {
       `LEVEL UP! Level ${level}`,
       {
         fontSize: '32px',
-        fill: '#ffff00',
-        stroke: '#000000',
+        fill: '#fbbf24',
+        fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
+        stroke: '#78350f',
         strokeThickness: 4
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1500);
@@ -507,8 +512,9 @@ export class GameScene extends Phaser.Scene {
         'Dungeon Complete!\nFind the exit door to continue.',
         {
           fontSize: '24px',
-          fill: '#00ff00',
-          stroke: '#000000',
+          fill: '#fde68a',
+          fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
+          stroke: '#78350f',
           strokeThickness: 3,
           align: 'center'
         }

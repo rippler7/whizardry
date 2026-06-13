@@ -9,71 +9,71 @@ export class PauseScene extends Phaser.Scene {
     const { width, height } = this.scale;
     
     // Semi-transparent background
-    this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+    this.add.rectangle(width / 2, height / 2, width, height, 0x1c1917, 0.85)
       .setScrollFactor(0);
     
     // Pause title
     this.add.text(width / 2, height / 2 - 100, 'PAUSED', {
       fontSize: '48px',
-      fill: '#ffffff',
-      fontFamily: 'Arial Black',
-      stroke: '#000000',
+      fill: '#fbbf24',
+      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
+      stroke: '#78350f',
       strokeThickness: 4
     }).setOrigin(0.5).setScrollFactor(0);
     
     // Resume button
     const resumeButton = this.add.text(width / 2, height / 2, 'RESUME', {
       fontSize: '24px',
-      fill: '#00ff00',
-      fontFamily: 'Arial',
-      backgroundColor: '#003300',
+      fill: '#fef3c7',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#92400e',
       padding: { x: 20, y: 10 }
     }).setOrigin(0.5).setScrollFactor(0).setInteractive();
     
     // Main menu button
     const mainMenuButton = this.add.text(width / 2, height / 2 + 60, 'MAIN MENU', {
       fontSize: '24px',
-      fill: '#ffaa00',
-      fontFamily: 'Arial',
-      backgroundColor: '#332200',
+      fill: '#fef3c7',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#78350f',
       padding: { x: 20, y: 10 }
     }).setOrigin(0.5).setScrollFactor(0).setInteractive();
     
     // Quit button
     const quitButton = this.add.text(width / 2, height / 2 + 120, 'QUIT GAME', {
       fontSize: '24px',
-      fill: '#ff0000',
-      fontFamily: 'Arial',
-      backgroundColor: '#330000',
+      fill: '#fef3c7',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#78350f',
       padding: { x: 20, y: 10 }
     }).setOrigin(0.5).setScrollFactor(0).setInteractive();
     
     // Button interactions
     resumeButton.on('pointerover', () => {
-      resumeButton.setStyle({ fill: '#88ff88' });
+      resumeButton.setStyle({ fill: '#fbbf24', backgroundColor: '#b45309' });
     });
     resumeButton.on('pointerout', () => {
-      resumeButton.setStyle({ fill: '#00ff00' });
+      resumeButton.setStyle({ fill: '#fef3c7', backgroundColor: '#92400e' });
     });
     resumeButton.on('pointerdown', () => {
       this.resumeGame();
     });
     
     mainMenuButton.on('pointerover', () => {
-      mainMenuButton.setStyle({ fill: '#ffdd88' });
+      mainMenuButton.setStyle({ fill: '#fbbf24', backgroundColor: '#92400e' });
     });
     mainMenuButton.on('pointerout', () => {
-      mainMenuButton.setStyle({ fill: '#ffaa00' });
+      mainMenuButton.setStyle({ fill: '#fef3c7', backgroundColor: '#78350f' });
     });
     mainMenuButton.on('pointerdown', () => {
       this.goToMainMenu();
     });
     
     quitButton.on('pointerover', () => {
-      quitButton.setStyle({ fill: '#ff8888' });
+      quitButton.setStyle({ fill: '#f87171', backgroundColor: '#92400e' });
     });
     quitButton.on('pointerout', () => {
-      quitButton.setStyle({ fill: '#ff0000' });
+      quitButton.setStyle({ fill: '#fef3c7', backgroundColor: '#78350f' });
     });
     quitButton.on('pointerdown', () => {
       this.quitGame();

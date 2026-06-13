@@ -16,16 +16,16 @@ export class GameOverScene extends Phaser.Scene {
     const stats = gameData?.playerStats || {};
 
     // Background
-    this.add.rectangle(width / 2, height / 2, width, height, victory ? 0x0a4a0a : 0x4a0a0a);
+    this.add.rectangle(width / 2, height / 2, width, height, victory ? 0x1c1917 : 0x292524);
 
     // Title
     const title = victory ? 'VICTORY!' : 'GAME OVER';
-    const titleColor = victory ? '#00ff00' : '#ff4444';
+    const titleColor = victory ? '#fbbf24' : '#f87171';
     
     this.add.text(width / 2, height / 4, title, {
       fontSize: '48px',
       fill: titleColor,
-      fontFamily: 'Arial Black'
+      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif'
     }).setOrigin(0.5);
 
     // Audio Controls
@@ -94,9 +94,9 @@ export class GameOverScene extends Phaser.Scene {
     // Stats
     const statsY = height / 2 - 50;
     this.add.text(width / 2, statsY, 'Final Statistics:', {
-      fontSize: '24px',
-      fill: '#ffffff',
-      fontFamily: 'Arial'
+      fontSize: '28px',
+      fill: '#fde68a',
+      fontFamily: '"Georgia", "Times New Roman", serif'
     }).setOrigin(0.5);
 
     const statLines = [
@@ -109,8 +109,8 @@ export class GameOverScene extends Phaser.Scene {
     statLines.forEach((line, index) => {
       this.add.text(width / 2, statsY + 40 + (index * 25), line, {
         fontSize: '18px',
-        fill: '#cccccc',
-        fontFamily: 'Arial'
+        fill: '#d6d3d1',
+        fontFamily: '"Georgia", "Times New Roman", serif'
       }).setOrigin(0.5);
     });
 
@@ -119,10 +119,10 @@ export class GameOverScene extends Phaser.Scene {
 
     // Play Again button
     const playAgainButton = this.add.text(width / 2 - 100, buttonY, 'PLAY AGAIN', {
-      fontSize: '20px',
-      fill: '#00ff00',
-      fontFamily: 'Arial',
-      backgroundColor: '#003300',
+      fontSize: '22px',
+      fill: '#fef3c7',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#92400e',
       padding: { x: 15, y: 8 }
     }).setOrigin(0.5).setInteractive();
 
@@ -145,10 +145,10 @@ export class GameOverScene extends Phaser.Scene {
 
     // Main Menu button
     const menuButton = this.add.text(width / 2 + 100, buttonY, 'MAIN MENU', {
-      fontSize: '20px',
-      fill: '#ffff00',
-      fontFamily: 'Arial',
-      backgroundColor: '#333300',
+      fontSize: '22px',
+      fill: '#fef3c7',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#78350f',
       padding: { x: 15, y: 8 }
     }).setOrigin(0.5).setInteractive();
 
@@ -167,15 +167,17 @@ export class GameOverScene extends Phaser.Scene {
     // Victory message
     if (victory) {
       this.add.text(width / 2, height / 3, 'You have completed all dungeons and defeated the boss!', {
-        fontSize: '16px',
-        fill: '#88ff88',
-        fontFamily: 'Arial'
+        fontSize: '18px',
+        fill: '#fde68a',
+        fontFamily: '"Georgia", "Times New Roman", serif',
+        fontStyle: 'italic'
       }).setOrigin(0.5);
     } else {
       this.add.text(width / 2, height / 3, 'Better luck next time! Keep learning and try again.', {
-        fontSize: '16px',
-        fill: '#ff8888',
-        fontFamily: 'Arial'
+        fontSize: '18px',
+        fill: '#d6d3d1',
+        fontFamily: '"Georgia", "Times New Roman", serif',
+        fontStyle: 'italic'
       }).setOrigin(0.5);
     }
   }

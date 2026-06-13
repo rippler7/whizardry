@@ -17,27 +17,27 @@ class PreloaderScene extends Phaser.Scene {
     const { width, height } = this.scale;
     
     // Background
-    this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x1c1917);
 
-    // Create a bright, highly visible loading bar
+    // Create a medieval themed loading bar
     const progressBar = this.add.graphics();
     const progressBox = this.add.graphics();
-    progressBox.fillStyle(0x000000, 0.8);
-    progressBox.lineStyle(4, 0xffffff, 1);
+    progressBox.fillStyle(0x292524, 0.85); // stone-800
+    progressBox.lineStyle(4, 0xb45309, 1); // amber-700
     progressBox.strokeRect(width / 2 - 160, height / 2 - 25, 320, 50);
     progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
 
     const loadingText = this.add.text(width / 2, height / 2 - 60, 'Downloading Game Assets...', {
-      fontSize: '24px', fill: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold'
+      fontSize: '24px', fill: '#fde68a', fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif', fontStyle: 'bold'
     }).setOrigin(0.5);
 
     const percentText = this.add.text(width / 2, height / 2, '0%', {
-      fontSize: '18px', fill: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold'
+      fontSize: '18px', fill: '#fbbf24', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.load.on('progress', (value: number) => {
       progressBar.clear();
-      progressBar.fillStyle(0x00ff00, 1); // Bright green
+      progressBar.fillStyle(0xf59e0b, 1); // Amber-500
       progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300 * value, 30);
       percentText.setText(`${Math.floor(value * 100)}%`);
     });
@@ -102,7 +102,7 @@ class MainMenuScene extends Phaser.Scene {
     const { width, height } = this.scale;
     
     // Background
-    this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x1c1917);
     
     // Logo
     this.add.image(width / 2, height / 3, 'logo').setOrigin(0.5);
@@ -116,7 +116,7 @@ class MainMenuScene extends Phaser.Scene {
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY);
     const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37);
-    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px', fontFamily: 'Arial' }).setOrigin(0.5);
+    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
     muteBtn.setSize(40, 40);
     muteBtn.setInteractive({ useHandCursor: true });
@@ -174,8 +174,8 @@ class MainMenuScene extends Phaser.Scene {
     const createButton = (yOffset: number, text: string, color: string, diff: string) => {
       const btn = this.add.text(width / 2, height / 2 + yOffset, text, {
         fontSize: '24px',
-        fill: '#ffffff',
-        fontFamily: 'Arial',
+        fill: '#fef3c7',
+        fontFamily: '"Georgia", "Times New Roman", serif',
         backgroundColor: color,
         padding: { x: 20, y: 10 }
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -188,15 +188,15 @@ class MainMenuScene extends Phaser.Scene {
       btn.on('pointerout', () => btn.setScale(1.0));
     };
 
-    createButton(-20, 'EASY', '#2d4a22', 'easy');
-    createButton(40, 'MEDIUM', '#8b7355', 'medium');
-    createButton(100, 'HARD', '#4a148c', 'hard');
+    createButton(-20, 'EASY', '#92400e', 'easy'); // amber-800
+    createButton(40, 'MEDIUM', '#78350f', 'medium'); // amber-900
+    createButton(100, 'HARD', '#451a03', 'hard'); // orange-950
     
     // Instructions
     this.add.text(width / 2, height * 0.75, 'Instructions:', {
-      fontSize: '18px',
-      fill: '#ffffff',
-      fontFamily: 'Arial'
+      fontSize: '20px',
+      fill: '#fde68a',
+      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif'
     }).setOrigin(0.5);
     
     const isDesktop = this.sys.game.device.os.desktop;
@@ -210,9 +210,10 @@ class MainMenuScene extends Phaser.Scene {
     
     instructions.forEach((instruction, index) => {
       this.add.text(width / 2, height * 0.75 + 30 + (index * 20), instruction, {
-        fontSize: '14px',
-        fill: '#cccccc',
-        fontFamily: 'Arial'
+        fontSize: '16px',
+        fill: '#d6d3d1',
+        fontFamily: '"Georgia", "Times New Roman", serif',
+        fontStyle: 'italic'
       }).setOrigin(0.5);
     });
   }
@@ -230,7 +231,7 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
       width: 1600,
       height: 1000,
       parent: containerRef.current,
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '#1c1917',
       pixelArt: false,
       roundPixels: true,
       resolution: window.devicePixelRatio || 1,

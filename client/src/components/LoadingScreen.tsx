@@ -59,36 +59,31 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadComplete }) 
   }, [onLoadComplete]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950 font-serif flex items-center justify-center p-4">
       <div className="w-full max-w-md mx-auto text-center">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-700 bg-clip-text text-transparent mb-2 drop-shadow-sm">
             Dungeon Quest
           </h1>
-          <p className="text-white/80">Educational RPG Adventure</p>
+          <p className="text-amber-200/80 italic">Educational RPG Adventure</p>
         </div>
 
         <div className="mb-6">
           <div className="w-32 h-32 mx-auto mb-4 relative">
             {/* Spinning loader */}
-            <div className="w-full h-full border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="w-full h-full border-4 border-stone-700 border-t-amber-500 rounded-full animate-spin shadow-[0_0_15px_rgba(245,158,11,0.2)]"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">{Math.round(progress)}%</span>
+              <span className="text-amber-400 font-bold text-lg">{Math.round(progress)}%</span>
             </div>
           </div>
         </div>
 
         <div className="mb-4">
-          <Progress value={progress} className="w-full h-3" />
+          <Progress value={progress} className="w-full h-3 bg-stone-800 border border-stone-700" />
         </div>
 
-        <p className="text-white/90 text-sm font-medium mb-2">{loadingText}</p>
+        <p className="text-amber-100/90 text-sm font-medium mb-2">{loadingText}</p>
         
-        <div className="text-xs text-white/60 space-y-1">
-          <p>✓ Modernized from PHP/SQL to React/JSON</p>
-          <p>✓ Enhanced AI and dungeon progression</p>
-          <p>✓ 20+ educational questions across subjects</p>
-        </div>
       </div>
     </div>
   );

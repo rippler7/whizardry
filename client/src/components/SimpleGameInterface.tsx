@@ -40,56 +40,32 @@ export const SimpleGameInterface: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950 font-serif flex items-center justify-center p-4">
+      <Card className="w-full max-w-md mx-auto bg-stone-800/95 border-2 border-amber-700/60 shadow-[0_0_30px_rgba(180,83,9,0.3)]">
         <CardHeader className="text-center">
           <CardTitle className="flex justify-center mb-2">
-            <img src="assets/sprites/logo.png" alt="Dungeon Quest" className="h-32 object-contain" />
+            <img src="assets/sprites/logo.png" alt="Dungeon Quest" className="h-32 object-contain drop-shadow-[0_0_10px_rgba(251,191,36,0.2)]" />
           </CardTitle>
-          <div className="text-sm text-green-400 mt-2">
-            ✓ Successfully Modernized from PHP/SQL to React/JSON
-          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label htmlFor="playerName" className="block text-sm font-medium mb-2">
+            <label htmlFor="playerName" className="block text-sm font-medium mb-2 text-amber-200/90 tracking-wide">
               Player Name
             </label>
             <Input
               id="playerName"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
+              className="bg-stone-950 border-amber-700/50 text-amber-100 focus-visible:ring-amber-600 placeholder:text-stone-600"
               placeholder="Enter your name"
               maxLength={20}
             />
           </div>
 
           <div className="space-y-2">
-            <Button onClick={handleStartGame} className="w-full" size="lg">
+            <Button onClick={handleStartGame} className="w-full bg-gradient-to-b from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 text-amber-50 border border-amber-500/50 shadow-md uppercase tracking-widest font-bold" size="lg">
               Start Game
             </Button>
-          </div>
-
-          <div className="pt-4 border-t">
-            <h3 className="text-sm font-semibold mb-2">Improvements Made</h3>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Modernized from PHP/SQL to React/JSON architecture</li>
-              <li>• Cleaned up and organized Phaser 3 game code</li>
-              <li>• Improved enemy AI with proper pathfinding</li>
-              <li>• Separate dungeon scenes with exit mechanics</li>
-              <li>• Enhanced educational question system</li>
-              <li>• High score and save game functionality</li>
-            </ul>
-          </div>
-
-          <div className="pt-4 border-t">
-            <h3 className="text-sm font-semibold mb-2">Original Game Assets</h3>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• All sprites and audio files copied from original game</li>
-              <li>• Tilemap data (CSV format) preserved</li>
-              <li>• Entity classes (Skeleton, Zombie, Bat, Boss) enhanced</li>
-              <li>• Question system converted to JSON format</li>
-            </ul>
           </div>
         </CardContent>
       </Card>

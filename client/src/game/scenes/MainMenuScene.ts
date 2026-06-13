@@ -21,22 +21,23 @@ export class MainMenuScene extends Phaser.Scene {
     const { width, height } = this.scale;
     
     // Add background color
-    this.cameras.main.setBackgroundColor('#1a1a2e');
+    this.cameras.main.setBackgroundColor('#1c1917');
     
     // Title
     this.titleText = this.add.text(width / 2, height / 4, 'DUNGEON QUEST', {
-      fontSize: '48px',
-      fill: '#ffdd44',
-      fontFamily: 'Arial Black',
-      stroke: '#000000',
+      fontSize: '56px',
+      fill: '#fbbf24',
+      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
+      stroke: '#78350f',
       strokeThickness: 4
     }).setOrigin(0.5);
     
     // Subtitle
     this.add.text(width / 2, height / 4 + 80, 'Educational RPG Adventure', {
-      fontSize: '20px',
-      fill: '#ffffff',
-      fontFamily: 'Arial'
+      fontSize: '22px',
+      fill: '#fde68a',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      fontStyle: 'italic'
     }).setOrigin(0.5);
     
     // Instructions
@@ -49,8 +50,8 @@ export class MainMenuScene extends Phaser.Scene {
       '• Numbers 1-4 - Answer questions',
       {
         fontSize: '18px',
-        fill: '#cccccc',
-        fontFamily: 'Arial',
+        fill: '#d6d3d1',
+        fontFamily: '"Georgia", "Times New Roman", serif',
         align: 'center',
         lineSpacing: 10
       }
@@ -58,28 +59,28 @@ export class MainMenuScene extends Phaser.Scene {
     
     // Start button
     this.startButton = this.add.text(width / 2, height * 0.8, 'START GAME', {
-      fontSize: '32px',
-      fill: '#00ff00',
-      fontFamily: 'Arial Black',
-      backgroundColor: '#003300',
-      padding: { x: 20, y: 10 }
+      fontSize: '28px',
+      fill: '#fef3c7',
+      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
+      backgroundColor: '#92400e',
+      padding: { x: 24, y: 12 }
     }).setOrigin(0.5).setInteractive();
     
     // Difficulty buttons
     const easyButton = this.add.text(width / 2 - 150, height * 0.9, 'EASY', {
       fontSize: '20px',
-      fill: '#88ff88',
-      fontFamily: 'Arial',
-      backgroundColor: '#002200',
-      padding: { x: 15, y: 8 }
+      fill: '#fef3c7',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#78350f',
+      padding: { x: 16, y: 8 }
     }).setOrigin(0.5).setInteractive();
     
     const hardButton = this.add.text(width / 2 + 150, height * 0.9, 'HARD', {
       fontSize: '20px',
-      fill: '#ff8888',
-      fontFamily: 'Arial',
-      backgroundColor: '#220000',
-      padding: { x: 15, y: 8 }
+      fill: '#fef3c7',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#78350f',
+      padding: { x: 16, y: 8 }
     }).setOrigin(0.5).setInteractive();
     
     // Button interactions
@@ -125,12 +126,12 @@ export class MainMenuScene extends Phaser.Scene {
       if (!button) return;
       
       button.on('pointerover', () => {
-        button.setStyle({ fill: '#ffff00' });
+        button.setStyle({ fill: '#fbbf24', backgroundColor: '#b45309' });
         button.setScale(1.1);
       });
       
       button.on('pointerout', () => {
-        button.setStyle({ fill: '#00ff00' });
+        button.setStyle({ fill: '#fef3c7', backgroundColor: '#92400e' });
         button.setScale(1.0);
       });
     });

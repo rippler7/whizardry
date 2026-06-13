@@ -217,7 +217,7 @@ export class DungeonGameScene extends Phaser.Scene {
           if (this.currentDungeon === 3 || this.currentDungeon === 4) {
             tile.setTint(0xe8e0cc);
           } else if (this.currentDungeon === 5) {
-            tile.setTint(0xd8c8e8);
+            tile.setTint(0xe8c8b8); // Warm rose/copper tint instead of purple
           }
         }
       }
@@ -227,12 +227,12 @@ export class DungeonGameScene extends Phaser.Scene {
       if (this.currentDungeon === 3 || this.currentDungeon === 4) {
         ground.setTint(0xe8e0cc); // Very slight khaki tint
       } else if (this.currentDungeon === 5) {
-        ground.setTint(0xd8c8e8); // Very slight purple tint
+        ground.setTint(0xe8c8b8); // Warm rose/copper tint instead of purple
       }
     } else {
       // Safe fallback if image is missing
-      const fallbackColors: { [key: string]: number } = { 'easy': 0x2d4a22, 'medium': 0xc3b091, 'hard': 0x4a148c };
-      const color = fallbackColors[this.gameDifficulty] || 0x2d4a22;
+      const fallbackColors: { [key: string]: number } = { 'easy': 0x292524, 'medium': 0x44403c, 'hard': 0x1c1917 };
+      const color = fallbackColors[this.gameDifficulty] || 0x292524;
       this.add.rectangle(0, 0, width, height, color).setOrigin(0, 0).setDepth(-10);
     }
 
@@ -765,7 +765,7 @@ export class DungeonGameScene extends Phaser.Scene {
       this.boss = new Boss(this, this.scale.width / 2, this.scale.height / 2, this.player, bossHp, baseSpeed);
       this.boss.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
       this.boss.setScale(1.5); // Proper scale for boss
-      this.boss.setTint(0x00ff00); // 100% pure green tint when invulnerable
+      this.boss.setTint(0xf59e0b); // Golden amber tint when invulnerable instead of pure green
     }
   }
 
@@ -892,39 +892,48 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createUI() {
     // Determine background color based on difficulty for the stats panel
-    let statsBgColor = 0x2d4a22; // easy
-    if (this.gameDifficulty === 'medium') statsBgColor = 0x8b7355;
-    else if (this.gameDifficulty === 'hard') statsBgColor = 0x4a148c;
+    let statsBgColor = 0x1c1917; // stone-900
+    if (this.gameDifficulty === 'medium') statsBgColor = 0x292524; // stone-800
+    else if (this.gameDifficulty === 'hard') statsBgColor = 0x44403c; // stone-700
 
     // Add semi-transparent background behind stats for readability
-    this.add.rectangle(10, 10, 220, 115, statsBgColor, 0.75).setOrigin(0, 0).setScrollFactor(0);
+    this.add.rectangle(10, 10, 220, 115, statsBgColor, 0.85)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, 0xb45309)
+      .setScrollFactor(0)
+      .setDepth(1000);
 
     // Health bar
-    this.healthBar = this.add.graphics();
+    this.healthBar = this.add.graphics().setScrollFactor(0).setDepth(1001);
     this.updateHealthBar();
 
     // Score and progress
     this.scoreText = this.add.text(20, 20, `Score: ${this.playerScore}`, {
       fontSize: '18px',
-      fill: '#ffffff'
-    });
+      fill: '#fde68a',
+      fontFamily: '"Georgia", "Times New Roman", serif'
+    }).setScrollFactor(0).setDepth(1001);
 
     this.questionsText = this.add.text(20, 45, `Questions: ${this.levelCorrectAnswers}/4`, {
       fontSize: '16px',
-      fill: '#ffff00'
-    });
+      fill: '#fbbf24',
+      fontFamily: '"Georgia", "Times New Roman", serif'
+    }).setScrollFactor(0).setDepth(1001);
 
     this.dungeonText = this.add.text(20, 70, `Dungeon: ${this.currentDungeon}/${this.maxDungeons}`, {
       fontSize: '16px',
-      fill: '#00ffff'
-    });
+      fill: '#fcd34d',
+      fontFamily: '"Georgia", "Times New Roman", serif'
+    }).setScrollFactor(0).setDepth(1001);
 
     // Instructions
     this.add.text(this.scale.width / 2, 20, 'Answer all 4 questions to unlock the door!', {
-      fontSize: '16px',
-      fill: '#ffffff',
-      fontFamily: 'Arial'
-    }).setOrigin(0.5);
+      fontSize: '18px',
+      fill: '#fde68a',
+      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     const controlsText = this.sys.game.device.os.desktop 
       ? 'WASD to move • SPACE/Click to shoot • Click chests for questions'
@@ -932,16 +941,21 @@ export class DungeonGameScene extends Phaser.Scene {
 
     this.add.text(this.scale.width / 2, 40, controlsText, {
       fontSize: '14px',
-      fill: '#ffff88',
-      fontFamily: 'Arial'
-    }).setOrigin(0.5);
+      fill: '#d6d3d1',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      fontStyle: 'italic',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     if (this.currentDungeon === this.maxDungeons) {
       this.add.text(this.scale.width / 2, 60, 'Boss is invulnerable until all questions answered!', {
         fontSize: '14px',
-        fill: '#ff4444',
-        fontFamily: 'Arial'
-      }).setOrigin(0.5);
+        fill: '#f87171',
+        fontFamily: '"Georgia", "Times New Roman", serif',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     }
 
     // Exit to Menu Button (Top Right)
@@ -959,7 +973,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const exitBtnText = this.add.text(exitBtnX, exitBtnY, 'Exit to Menu', {
       fontSize: '18px',
       fill: '#f4d03f', // Gold-ish text
-      fontFamily: 'Arial',
+      fontFamily: '"Georgia", "Times New Roman", serif',
       fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
@@ -987,7 +1001,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY).setScrollFactor(0).setDepth(1001);
     const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37);
-    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px', fontFamily: 'Arial' }).setOrigin(0.5);
+    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
     muteBtn.setSize(40, 40);
     muteBtn.setInteractive({ useHandCursor: true });
@@ -1046,17 +1060,17 @@ export class DungeonGameScene extends Phaser.Scene {
     this.healthBar.clear();
     
     // Background
-    this.healthBar.fillStyle(0x444444);
+    this.healthBar.fillStyle(0x292524); // stone-800
     this.healthBar.fillRect(20, 95, 200, 20);
     
     // Health fill
     const healthPercent = this.playerHealth / this.playerMaxHealth;
-    const color = healthPercent > 0.6 ? 0x00ff00 : healthPercent > 0.3 ? 0xffff00 : 0xff0000;
+    const color = healthPercent > 0.6 ? 0x166534 : healthPercent > 0.3 ? 0xb45309 : 0x991b1b;
     this.healthBar.fillStyle(color);
     this.healthBar.fillRect(20, 95, 200 * healthPercent, 20);
     
     // Border
-    this.healthBar.lineStyle(2, 0xffffff);
+    this.healthBar.lineStyle(2, 0xb45309);
     this.healthBar.strokeRect(20, 95, 200, 20);
   }
 
@@ -1184,7 +1198,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private fireBullet(targetX?: number, targetY?: number) {
     const bullet = this.physics.add.sprite(this.player.x, this.player.y, 'bullet');
     bullet.setScale(0.4); // Reduced to 1/3 of original (1.2 / 3)
-    bullet.setTint(0x88ccff); // Blue tint for magic effect
+    bullet.setTint(0xfcd34d); // Golden/Amber tint for magic effect
     
     // Use the exact touch coordinate if provided, otherwise fallback to the active pointer
     const pointer = this.input.activePointer;
@@ -1197,7 +1211,7 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Normalize direction and set speed properties like original
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const baseSpeed = 0.375; // Increased by 25% (0.3 * 1.25)
+    const baseSpeed = 0.75; // Doubled from 0.375
     
     if (distance > 0) {
       bullet.setData('speedX', (deltaX / distance) * baseSpeed);
@@ -1290,19 +1304,19 @@ export class DungeonGameScene extends Phaser.Scene {
       this.scale.height / 2,
       Math.min(640, this.scale.width * 0.9),
       420,
-      0x000000,
-      0.85
-    ).setScrollFactor(0).setDepth(1000);
+      0x1c1917,
+      0.95
+    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(1000);
 
     const title = this.add.text(
       this.scale.width / 2,
       this.scale.height / 2 - 170,
       'Answer this question to open the chest',
       {
-        fontSize: '18px',
-        fill: '#ffd54a',
+        fontSize: '22px',
+        fill: '#fbbf24',
         align: 'center',
-        fontFamily: 'Arial'
+        fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif'
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
@@ -1311,9 +1325,10 @@ export class DungeonGameScene extends Phaser.Scene {
       this.scale.height / 2 - 120,
       question.question,
       {
-        fontSize: '22px',
-        fill: '#ffffff',
+        fontSize: '24px',
+        fill: '#fde68a',
         align: 'center',
+        fontFamily: '"Georgia", "Times New Roman", serif',
         wordWrap: { width: Math.min(560, this.scale.width * 0.8) }
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
@@ -1327,14 +1342,15 @@ export class DungeonGameScene extends Phaser.Scene {
         `${index + 1}. ${option}`,
         {
           fontSize: '18px',
-          fill: '#7cff7c',
-          backgroundColor: '#1f3d1f',
+          fill: '#fef3c7',
+          fontFamily: '"Georgia", "Times New Roman", serif',
+          backgroundColor: '#78350f',
           padding: { x: 14, y: 8 }
         }
       ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive();
 
-      button.on('pointerover', () => button.setStyle({ fill: '#ffff66' }));
-      button.on('pointerout', () => button.setStyle({ fill: '#7cff7c' }));
+      button.on('pointerover', () => button.setStyle({ fill: '#fbbf24', backgroundColor: '#92400e' }));
+      button.on('pointerout', () => button.setStyle({ fill: '#fef3c7', backgroundColor: '#78350f' }));
       button.on('pointerdown', () => {
         this.cleanupQuestionModal([modalBg, title, questionText, ...buttons]);
         callback(isCorrectAnswer(option, question.correctAnswer));
@@ -1349,8 +1365,10 @@ export class DungeonGameScene extends Phaser.Scene {
       'Choose an answer to continue',
       {
         fontSize: '14px',
-        fill: '#bbbbbb',
-        align: 'center'
+        fill: '#d6d3d1',
+        align: 'center',
+        fontFamily: '"Georgia", "Times New Roman", serif',
+        fontStyle: 'italic'
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
@@ -1518,9 +1536,10 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private showMessage(message: string) {
     const messageText = this.add.text(this.scale.width / 2, this.scale.height / 2, message, {
-      fontSize: '20px',
-      fill: '#ffffff',
-      backgroundColor: '#000000',
+      fontSize: '22px',
+      fill: '#fde68a',
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      backgroundColor: '#1c1917',
       padding: { x: 20, y: 10 }
     }).setOrigin(0.5);
     
@@ -1608,7 +1627,7 @@ export class DungeonGameScene extends Phaser.Scene {
       this.sound.play('star', { volume: 0.5 });
       
       const invulnText = this.add.text(this.player.x, this.player.y - 30, 'INVINCIBLE!', {
-        fontSize: '16px', fill: '#ffff33', fontFamily: 'Arial', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+        fontSize: '16px', fill: '#fbbf24', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
       }).setOrigin(0.5).setDepth(100);
       
       this.tweens.add({
@@ -1658,7 +1677,7 @@ export class DungeonGameScene extends Phaser.Scene {
       this.sound.play('star', { volume: 0.5 });
       
       const freezeText = this.add.text(this.player.x, this.player.y - 30, 'TIME FREEZE!', {
-        fontSize: '16px', fill: '#00ffff', fontFamily: 'Arial', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+        fontSize: '16px', fill: '#fcd34d', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
       }).setOrigin(0.5).setDepth(100);
       
       this.tweens.add({
@@ -1682,7 +1701,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const healText = this.add.text(this.player.x, this.player.y - 30, textStr, {
       fontSize: '16px',
       fill: textColor,
-      fontFamily: 'Arial',
+      fontFamily: '"Georgia", "Times New Roman", serif',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3
