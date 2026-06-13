@@ -71,7 +71,6 @@ class PreloaderScene extends Phaser.Scene {
     
     // Load other sprites
     this.load.image('bullet', 'assets/sprites/bullet.png');
-    this.load.image('door', 'assets/sprites/gameDoor1.png');
     
     // Load audio files
     this.load.audio('enchanted_forest', ['assets/audio/enchanted_forest.mp3', 'assets/audio/enchanted_forest_loop.ogg']);
