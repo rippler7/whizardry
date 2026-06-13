@@ -997,13 +997,19 @@ export class DungeonGameScene extends Phaser.Scene {
     const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 10, 0xffffff).setInteractive({ draggable: true, useHandCursor: true }).setScrollFactor(0).setDepth(1003);
 
     const syncAudioUI = () => {
-      const isMuted = this.sound.mute || this.sound.volume === 0;
-      muteIcon.setText(isMuted ? '🔇' : '🔊');
       fill.width = this.sound.volume * sliderWidth;
       handle.x = sliderX + (this.sound.volume * sliderWidth);
     };
     
     syncAudioUI(); // Instantly sync on load in case the game is already muted
+
+    // Continuously listen to the actual audio state to sync the icon perfectly
+    this.events.on('update', () => {
+      if (muteIcon && muteIcon.active) {
+        const isMuted = this.sound.mute || this.sound.volume === 0;
+        muteIcon.setText(isMuted ? '🔇' : '🔊');
+      }
+    });
 
     muteBtn.on('pointerdown', () => {
       if (this.sound.volume === 0) {
