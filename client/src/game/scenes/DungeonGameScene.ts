@@ -1181,6 +1181,8 @@ export class DungeonGameScene extends Phaser.Scene {
     // Border
     this.healthBar.lineStyle(2, 0xb45309);
     this.healthBar.strokeRoundedRect(20, 95, 200, 20, 8);
+    
+    this.emitProgress();
   }
 
   update(time: number, delta: number) {
@@ -1899,6 +1901,23 @@ export class DungeonGameScene extends Phaser.Scene {
   private updateUI() {
     this.scoreText.setText(`Score: ${this.playerScore}`);
     this.questionsText.setText(`Questions: ${this.levelCorrectAnswers}/4`);
+    
+    this.emitProgress();
+  }
+
+  private emitProgress() {
+    if (!this.game || !this.game.events) return;
+    this.game.events.emit('playerStatsUpdate', {
+      level: this.currentDungeon,
+      health: this.playerHealth,
+      maxHealth: this.playerMaxHealth,
+      score: this.playerScore,
+      questionsAnswered: this.questionsAnswered,
+      correctAnswers: this.correctAnswers,
+      enemiesKilled: this.enemiesKilled,
+      difficulty: this.gameDifficulty,
+      usedQuestionIds: this.usedQuestionIds
+    });
   }
 
   private addOrResetEffect(type: string, duration: number, color: string) {

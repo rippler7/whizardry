@@ -42,7 +42,7 @@ export const GameInterface: React.FC = () => {
         gameManager.completeDungeon(data.dungeonId);
         break;
       case 'gameComplete':
-        gameManager.addHighScore({
+        const scoreRecord = {
           id: Date.now().toString(),
           playerName: playerName,
           score: data.score,
@@ -53,7 +53,15 @@ export const GameInterface: React.FC = () => {
           accuracy: data.questionsAnswered > 0 ? Math.round((data.correctAnswers / data.questionsAnswered) * 100) : 0,
           completionTime: Date.now(),
           date: new Date().toISOString()
-        });
+        };
+        gameManager.addHighScore(scoreRecord); // Save locally
+        
+        // Post to Global Leaderboard API
+        fetch('/api/leaderboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(scoreRecord)
+        }).catch(err => console.error("Failed to post score to global leaderboard:", err));
         break;
       case 'highScoreAdded':
         gameManager.addHighScore(data);
@@ -125,6 +133,27 @@ export const GameInterface: React.FC = () => {
   const HighScoresMenu = () => {
     const highScores = gameManager.getHighScores(10);
     const stats = gameManager.getGameStatistics();
+    const [viewMode, setViewMode] = useState<'local' | 'global'>('global');
+    const [globalScores, setGlobalScores] = useState<any[]>([]);
+    const [isLoadingGlobal, setIsLoadingGlobal] = useState(true);
+
+    // Fetch Global Leaderboard Data
+    useEffect(() => {
+      if (viewMode === 'global') {
+        setIsLoadingGlobal(true);
+        fetch('/api/leaderboard')
+          .then(res => res.json())
+          .then(data => setGlobalScores(data))
+          .catch(err => {
+            console.warn("Backend not connected yet. Showing mock global data.");
+            setGlobalScores([
+              { id: '1', playerName: 'Merlin', score: 15200, level: 5, accuracy: 100, date: new Date().toISOString() },
+              { id: '2', playerName: 'Gandalf', score: 9800, level: 4, accuracy: 85, date: new Date().toISOString() }
+            ]);
+          })
+          .finally(() => setIsLoadingGlobal(false));
+      }
+    }, [viewMode]);
     
     return (
       <Card className="w-full max-w-2xl mx-auto bg-stone-800/95 border-2 border-amber-700/60 text-stone-200 shadow-[0_0_30px_rgba(180,83,9,0.3)] font-serif rounded-xl">
@@ -158,12 +187,21 @@ export const GameInterface: React.FC = () => {
 
             {/* High Scores */}
             <div>
-              <h3 className="text-lg font-semibold mb-3 text-amber-400">Top Scores</h3>
-              {highScores.length === 0 ? (
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-amber-400">Top Scores</h3>
+                <div className="flex gap-2">
+                  <Button size="sm" variant={viewMode === 'global' ? 'default' : 'outline'} onClick={() => setViewMode('global')} className={viewMode === 'global' ? 'bg-amber-700 hover:bg-amber-600 text-white border-transparent' : 'bg-stone-900 text-amber-500 border-amber-700/50 hover:bg-stone-800'}>Global</Button>
+                  <Button size="sm" variant={viewMode === 'local' ? 'default' : 'outline'} onClick={() => setViewMode('local')} className={viewMode === 'local' ? 'bg-amber-700 hover:bg-amber-600 text-white border-transparent' : 'bg-stone-900 text-amber-500 border-amber-700/50 hover:bg-stone-800'}>Local History</Button>
+                </div>
+              </div>
+              
+              {viewMode === 'global' && isLoadingGlobal ? (
+                <p className="text-center text-amber-200/60 py-4">Summoning global rankings...</p>
+              ) : (viewMode === 'local' ? highScores : globalScores).length === 0 ? (
                 <p className="text-center text-amber-200/60">No high scores yet</p>
               ) : (
                 <div className="space-y-2">
-                  {highScores.map((score, index) => (
+                  {(viewMode === 'local' ? highScores : globalScores).map((score, index) => (
                     <div key={score.id} className="flex items-center justify-between p-3 border border-amber-900/50 bg-stone-900/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <Badge className={index < 3 ? 'bg-amber-600 hover:bg-amber-500 text-stone-900' : 'bg-stone-700 text-amber-200'}>

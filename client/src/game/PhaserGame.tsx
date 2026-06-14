@@ -285,21 +285,24 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
     }
   }, [playerName]);
 
+  // Explicitly calculate and set height based on width to maintain aspect ratio
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const currentWidth = containerRef.current.clientWidth;
+        containerRef.current.style.height = `${currentWidth / 1.6}px`; // 1600 / 1000 = 1.6
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Fire once on mount
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="w-full h-full bg-black overflow-hidden flex items-center justify-center">
-      <div 
-        style={{ 
-          width: '100%',
-          aspectRatio: '16/10',
-          maxWidth: '100%',
-          maxHeight: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}
-      >
-        <div ref={containerRef} className="w-full h-full" />
-      </div>
+      <div ref={containerRef} className="w-full" />
     </div>
   );
 };
