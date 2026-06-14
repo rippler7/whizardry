@@ -907,7 +907,8 @@ export class DungeonGameScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setStrokeStyle(2, 0xb45309)
       .setScrollFactor(0)
-      .setDepth(1000);
+      .setDepth(1000)
+      .setRounded(12);
 
     // Health bar
     this.healthBar = this.add.graphics().setScrollFactor(0).setDepth(1001);
@@ -942,21 +943,21 @@ export class DungeonGameScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     const controlsText = this.sys.game.device.os.desktop 
-      ? 'WASD to move • SPACE/Click to shoot • Click chests for questions'
-      : 'Left Side to move • Right Side to shoot • Tap chests for questions';
+      ? 'WASD to move • SPACE/Click to shoot • Click chests when near to open'
+      : 'Left Side to move • Right Side to shoot • Tap chests when near to open';
 
-    this.add.text(this.scale.width / 2, 40, controlsText, {
-      fontSize: '14px',
-      fill: '#d6d3d1',
+    this.add.text(this.scale.width / 2, 45, controlsText, {
+      fontSize: '16px',
+      fill: '#fef3c7',
       fontFamily: '"Georgia", "Times New Roman", serif',
-      fontStyle: 'italic',
+      fontStyle: 'normal',
       stroke: '#000000',
-      strokeThickness: 2
+      strokeThickness: 3
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     if (this.currentDungeon === this.maxDungeons) {
-      this.add.text(this.scale.width / 2, 60, 'Boss is invulnerable until all questions answered!', {
-        fontSize: '14px',
+      this.add.text(this.scale.width / 2, 68, 'Boss is invulnerable until all questions answered!', {
+        fontSize: '16px',
         fill: '#f87171',
         fontFamily: '"Georgia", "Times New Roman", serif',
         stroke: '#000000',
@@ -974,7 +975,8 @@ export class DungeonGameScene extends Phaser.Scene {
       .setStrokeStyle(3, 0xd4af37) // Gold border for RPG theme
       .setInteractive({ useHandCursor: true })
       .setScrollFactor(0)
-      .setDepth(1000);
+      .setDepth(1000)
+      .setRounded(8);
 
     const exitBtnText = this.add.text(exitBtnX, exitBtnY, 'Exit to Menu', {
       fontSize: '18px',
@@ -1006,7 +1008,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY).setScrollFactor(0).setDepth(1001);
-    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37);
+    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
     const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
     muteBtn.setSize(40, 40);
@@ -1017,8 +1019,8 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // --- Volume Slider ---
     const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 30, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(1001);
-    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setScrollFactor(0).setDepth(1001);
-    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1002);
+    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setScrollFactor(0).setDepth(1001).setRounded(3);
+    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1002).setRounded(3);
     const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 10, 0xffffff).setInteractive({ draggable: true, useHandCursor: true }).setScrollFactor(0).setDepth(1003);
 
     const syncAudioUI = () => {
@@ -1067,17 +1069,17 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Background
     this.healthBar.fillStyle(0x292524); // stone-800
-    this.healthBar.fillRect(20, 95, 200, 20);
+    this.healthBar.fillRoundedRect(20, 95, 200, 20, 8);
     
     // Health fill
     const healthPercent = this.playerHealth / this.playerMaxHealth;
     const color = healthPercent > 0.6 ? 0x166534 : healthPercent > 0.3 ? 0xb45309 : 0x991b1b;
     this.healthBar.fillStyle(color);
-    this.healthBar.fillRect(20, 95, 200 * healthPercent, 20);
+    if (healthPercent > 0) this.healthBar.fillRoundedRect(20, 95, 200 * healthPercent, 20, 8);
     
     // Border
     this.healthBar.lineStyle(2, 0xb45309);
-    this.healthBar.strokeRect(20, 95, 200, 20);
+    this.healthBar.strokeRoundedRect(20, 95, 200, 20, 8);
   }
 
   update(time: number, delta: number) {
@@ -1344,7 +1346,7 @@ export class DungeonGameScene extends Phaser.Scene {
       420,
       0x1c1917,
       0.95
-    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(1000);
+    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(1000).setRounded(16);
 
     const title = this.add.text(
       this.scale.width / 2,
@@ -1371,32 +1373,6 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    const buttons: Phaser.GameObjects.Text[] = [];
-
-    question.options.forEach((option, index) => {
-      const button = this.add.text(
-        this.scale.width / 2,
-        this.scale.height / 2 - 40 + index * 60,
-        `${index + 1}. ${option}`,
-        {
-          fontSize: '18px',
-          fill: '#fef3c7',
-          fontFamily: '"Georgia", "Times New Roman", serif',
-          backgroundColor: '#78350f',
-          padding: { x: 14, y: 8 }
-        }
-      ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive();
-
-      button.on('pointerover', () => button.setStyle({ fill: '#fbbf24', backgroundColor: '#92400e' }));
-      button.on('pointerout', () => button.setStyle({ fill: '#fef3c7', backgroundColor: '#78350f' }));
-      button.on('pointerdown', () => {
-        this.cleanupQuestionModal([modalBg, title, questionText, ...buttons]);
-        callback(isCorrectAnswer(option, question.correctAnswer));
-      });
-
-      buttons.push(button);
-    });
-
     const closeHint = this.add.text(
       this.scale.width / 2,
       this.scale.height - 50,
@@ -1410,7 +1386,34 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    const modalElements = [modalBg, title, questionText, closeHint, ...buttons];
+    const modalElements: Phaser.GameObjects.GameObject[] = [modalBg, title, questionText, closeHint];
+
+    question.options.forEach((option, index) => {
+      const btnBg = this.add.rectangle(
+        this.scale.width / 2,
+        this.scale.height / 2 - 40 + index * 60,
+        400, 45, 0x78350f
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true }).setRounded(8);
+
+      const btnText = this.add.text(
+        this.scale.width / 2,
+        this.scale.height / 2 - 40 + index * 60,
+        `${index + 1}. ${option}`,
+        {
+          fontSize: '18px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif'
+        }
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(1002);
+
+      btnBg.on('pointerover', () => { btnBg.setFillStyle(0x92400e); btnText.setFill('#fbbf24'); });
+      btnBg.on('pointerout', () => { btnBg.setFillStyle(0x78350f); btnText.setFill('#fef3c7'); });
+      
+      btnBg.on('pointerdown', () => {
+        this.cleanupQuestionModal(modalElements);
+        callback(isCorrectAnswer(option, question.correctAnswer));
+      });
+
+      modalElements.push(btnBg, btnText);
+    });
 
     this.input.keyboard!.once('keydown-ONE', () => this.answerFromKey(0, question, callback, modalElements));
     this.input.keyboard!.once('keydown-TWO', () => this.answerFromKey(1, question, callback, modalElements));
@@ -1581,15 +1584,19 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private showMessage(message: string) {
+    const bg = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 0, 50, 0x1c1917)
+      .setStrokeStyle(2, 0xb45309).setRounded(8).setDepth(2000).setScrollFactor(0);
+
     const messageText = this.add.text(this.scale.width / 2, this.scale.height / 2, message, {
       fontSize: '22px',
       fill: '#fde68a',
-      fontFamily: '"Georgia", "Times New Roman", serif',
-      backgroundColor: '#1c1917',
-      padding: { x: 20, y: 10 }
-    }).setOrigin(0.5);
+      fontFamily: '"Georgia", "Times New Roman", serif'
+    }).setOrigin(0.5).setDepth(2001).setScrollFactor(0);
+    
+    bg.width = messageText.width + 40;
     
     this.time.delayedCall(2000, () => {
+      bg.destroy();
       messageText.destroy();
     });
   }

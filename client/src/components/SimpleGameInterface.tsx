@@ -41,7 +41,7 @@ export const SimpleGameInterface: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950 font-serif flex items-center justify-center p-4">
-      <Card className="w-full max-w-md mx-auto bg-stone-800/95 border-2 border-amber-700/60 shadow-[0_0_30px_rgba(180,83,9,0.3)]">
+      <Card className="w-full max-w-md mx-auto bg-stone-800/95 border-2 border-amber-700/60 shadow-[0_0_30px_rgba(180,83,9,0.3)] rounded-xl">
         <CardHeader className="text-center">
           <CardTitle className="flex justify-center mb-2">
             <img src="assets/sprites/logo.png" alt="Dungeon Quest" className="h-32 object-contain drop-shadow-[0_0_10px_rgba(251,191,36,0.2)]" />

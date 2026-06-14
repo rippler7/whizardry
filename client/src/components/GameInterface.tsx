@@ -78,7 +78,7 @@ export const GameInterface: React.FC = () => {
     const saves = gameManager.getAllSaves();
     
     return (
-      <Card className="w-full max-w-2xl mx-auto bg-stone-800/95 border-2 border-amber-700/60 text-stone-200 shadow-[0_0_30px_rgba(180,83,9,0.3)] font-serif">
+      <Card className="w-full max-w-2xl mx-auto bg-stone-800/95 border-2 border-amber-700/60 text-stone-200 shadow-[0_0_30px_rgba(180,83,9,0.3)] font-serif rounded-xl">
         <CardHeader>
           <CardTitle className="text-amber-500 text-2xl">Load Game</CardTitle>
         </CardHeader>
@@ -127,7 +127,7 @@ export const GameInterface: React.FC = () => {
     const stats = gameManager.getGameStatistics();
     
     return (
-      <Card className="w-full max-w-2xl mx-auto bg-stone-800/95 border-2 border-amber-700/60 text-stone-200 shadow-[0_0_30px_rgba(180,83,9,0.3)] font-serif">
+      <Card className="w-full max-w-2xl mx-auto bg-stone-800/95 border-2 border-amber-700/60 text-stone-200 shadow-[0_0_30px_rgba(180,83,9,0.3)] font-serif rounded-xl">
         <CardHeader>
           <CardTitle className="text-amber-500 text-2xl">High Scores & Statistics</CardTitle>
         </CardHeader>
@@ -204,7 +204,7 @@ export const GameInterface: React.FC = () => {
         
         {/* Game Stats Overlay */}
         {gameStats && (
-          <div className="absolute top-4 right-4 bg-stone-900/95 border-2 border-amber-700/50 text-amber-100 p-4 rounded-lg font-serif shadow-[0_0_15px_rgba(180,83,9,0.3)]">
+          <div className="absolute top-4 right-4 bg-stone-900/95 border-2 border-amber-700/50 text-amber-100 p-4 rounded-xl font-serif shadow-[0_0_15px_rgba(180,83,9,0.3)]">
             <div className="text-sm space-y-1">
               <div>Level: {gameStats.level}</div>
               <div>Score: {gameStats.score.toLocaleString()}</div>
@@ -221,7 +221,7 @@ export const GameInterface: React.FC = () => {
         {/* Exit Game Button */}
         <Button 
           onClick={() => setGameStarted(false)}
-          className="absolute top-4 left-4 bg-stone-900/90 hover:bg-stone-800 text-amber-200 border-2 border-amber-700/50 font-serif shadow-md"
+          className="absolute top-4 left-4 bg-stone-900/90 hover:bg-stone-800 text-amber-200 border-2 border-amber-700/50 font-serif shadow-md rounded-xl"
           size="sm"
         >
           Exit Game
@@ -249,7 +249,7 @@ export const GameInterface: React.FC = () => {
   // Main Menu
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950 font-serif flex items-center justify-center p-4">
-      <Card className="w-full max-w-md mx-auto bg-stone-800/95 border-2 border-amber-700/60 shadow-[0_0_30px_rgba(180,83,9,0.3)]">
+      <Card className="w-full max-w-md mx-auto bg-stone-800/95 border-2 border-amber-700/60 shadow-[0_0_30px_rgba(180,83,9,0.3)] rounded-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-4xl font-bold bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-700 bg-clip-text text-transparent drop-shadow-sm mb-2">
             Dungeon Quest
@@ -292,13 +292,12 @@ export const GameInterface: React.FC = () => {
           </div>
 
           <div className="pt-5 mt-5 border-t border-amber-900/50">
-            <h3 className="text-sm font-semibold mb-3 text-amber-400">How to Play</h3>
-            <ul className="text-xs text-amber-200/70 space-y-2">
-              <li>• Use WASD or arrow keys to move</li>
-              <li>• SPACE to shoot, mouse to aim</li>
-              <li>• Answer questions to unlock chests</li>
-              <li>• Defeat enemies to gain experience</li>
-              <li>• Reach the exit to advance to next dungeon</li>
+            <h3 className="text-sm md:text-base font-semibold mb-3 text-amber-400 tracking-wide">How to Play</h3>
+            <ul className="text-sm text-amber-100/90 space-y-3 leading-relaxed bg-stone-900/50 p-4 rounded-lg border border-amber-900/30 shadow-inner">
+              <li>• <strong className="text-amber-400">Desktop:</strong> Use WASD/Arrows to move, SPACE/Mouse to shoot.</li>
+              <li>• <strong className="text-amber-400">Mobile:</strong> Touch the left side to move, tap the right side to shoot.</li>
+              <li>• <strong className="text-amber-400">Interaction:</strong> Click or tap chests when near them to open.</li>
+              <li>• Defeat enemies and answer questions to progress to the next dungeon!</li>
             </ul>
           </div>
         </CardContent>

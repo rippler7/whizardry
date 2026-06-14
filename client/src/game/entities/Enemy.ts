@@ -384,6 +384,8 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
 // Skeleton Enemy
 export class Skeleton extends Enemy {
   private revivesLeft: number = 2; // 2 revives means it must be killed 3 times total
+  private reviveTime: number = 0;
+  private isReviving: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
     super(scene, x, y, 'skeleton', 'skeleton', player, hp, speed);
@@ -452,6 +454,20 @@ export class Skeleton extends Enemy {
     }
   }
 
+  public update(): void {
+    if (!this.isAlive) {
+      if (this.isReviving) {
+        this.reviveTime -= this.scene.game.loop.delta;
+        if (this.reviveTime <= 0) {
+          this.isReviving = false;
+          this.revive();
+        }
+      }
+      return;
+    }
+    super.update();
+  }
+
   protected die(): void {
     if (this.revivesLeft > 0) {
       this.revivesLeft--;
@@ -465,15 +481,13 @@ export class Skeleton extends Enemy {
       if (this.scene.anims.exists(dieAnim)) {
         this.anims.play(dieAnim);
         this.once('animationcomplete', () => {
-          this.scene.time.delayedCall(3000, () => {
-            if (this.scene && this.active) this.revive();
-          });
+          this.isReviving = true;
+          this.reviveTime = 3000;
         });
       } else {
         this.setTint(0xff0000);
-        this.scene.time.delayedCall(3000, () => {
-          if (this.scene && this.active) this.revive();
-        });
+        this.isReviving = true;
+        this.reviveTime = 3000;
       }
     } else {
       super.die();

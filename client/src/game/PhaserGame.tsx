@@ -25,8 +25,8 @@ class PreloaderScene extends Phaser.Scene {
     const progressBox = this.add.graphics();
     progressBox.fillStyle(0x292524, 0.85); // stone-800
     progressBox.lineStyle(4, 0xb45309, 1); // amber-700
-    progressBox.strokeRect(width / 2 - 160, height / 2 - 25, 320, 50);
-    progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
+    progressBox.fillRoundedRect(width / 2 - 160, height / 2 - 25, 320, 50, 12);
+    progressBox.strokeRoundedRect(width / 2 - 160, height / 2 - 25, 320, 50, 12);
 
     const loadingText = this.add.text(width / 2, height / 2 - 60, 'Downloading Game Assets...', {
       fontSize: '24px', fill: '#fde68a', fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif', fontStyle: 'bold'
@@ -39,7 +39,7 @@ class PreloaderScene extends Phaser.Scene {
     this.load.on('progress', (value: number) => {
       progressBar.clear();
       progressBar.fillStyle(0xf59e0b, 1); // Amber-500
-      progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300 * value, 30);
+      progressBar.fillRoundedRect(width / 2 - 150, height / 2 - 15, 300 * value, 30, 8);
       percentText.setText(`${Math.floor(value * 100)}%`);
     });
 
@@ -114,7 +114,7 @@ class MainMenuScene extends Phaser.Scene {
 
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY);
-    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37);
+    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
     const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
     muteBtn.setSize(40, 40);
@@ -125,8 +125,8 @@ class MainMenuScene extends Phaser.Scene {
 
     // --- Volume Slider ---
     const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 30, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
-    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888);
-    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5);
+    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setRounded(3);
+    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5).setRounded(3);
     const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 10, 0xffffff).setInteractive({ draggable: true, useHandCursor: true });
 
     const syncAudioUI = () => {
@@ -170,49 +170,53 @@ class MainMenuScene extends Phaser.Scene {
     handle.on('drag', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
 
     // Difficulty selection buttons
-    const createButton = (yOffset: number, text: string, color: string, diff: string) => {
-      const btn = this.add.text(width / 2, height / 2 + yOffset, text, {
+    const createButton = (yOffset: number, text: string, color: number, hoverColor: number, diff: string) => {
+      const btnBg = this.add.rectangle(width / 2, height / 2 + yOffset, 180, 50, color)
+        .setRounded(12)
+        .setInteractive({ useHandCursor: true });
+        
+      const btnText = this.add.text(width / 2, height / 2 + yOffset, text, {
         fontSize: '24px',
         fill: '#fef3c7',
-        fontFamily: '"Georgia", "Times New Roman", serif',
-        backgroundColor: color,
-        padding: { x: 20, y: 10 }
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        fontFamily: '"Georgia", "Times New Roman", serif'
+      }).setOrigin(0.5);
       
-      btn.on('pointerdown', () => {
+      btnBg.on('pointerdown', () => {
         this.scene.start('DungeonGameScene', { dungeon: 1, health: 100, score: 0, difficulty: diff });
       });
       
-      btn.on('pointerover', () => btn.setScale(1.1));
-      btn.on('pointerout', () => btn.setScale(1.0));
+      btnBg.on('pointerover', () => { btnBg.setScale(1.05); btnBg.setFillStyle(hoverColor); btnText.setScale(1.05); });
+      btnBg.on('pointerout', () => { btnBg.setScale(1.0); btnBg.setFillStyle(color); btnText.setScale(1.0); });
     };
 
-    createButton(-20, 'EASY', '#92400e', 'easy'); // amber-800
-    createButton(40, 'MEDIUM', '#78350f', 'medium'); // amber-900
-    createButton(100, 'HARD', '#451a03', 'hard'); // orange-950
+    createButton(-20, 'EASY', 0x92400e, 0xb45309, 'easy'); // amber-800
+    createButton(40, 'MEDIUM', 0x78350f, 0x92400e, 'medium'); // amber-900
+    createButton(100, 'HARD', 0x451a03, 0x78350f, 'hard'); // orange-950
     
     // Instructions
-    this.add.text(width / 2, height * 0.75, 'Instructions:', {
-      fontSize: '20px',
+    this.add.text(width / 2, height * 0.72, 'Instructions:', {
+      fontSize: '24px',
       fill: '#fde68a',
       fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif'
     }).setOrigin(0.5);
     
     const isDesktop = this.sys.game.device.os.desktop;
     const instructions = [
-      isDesktop ? 'Use WASD or Arrow Keys to move' : 'Use the Left Side of screen to move',
-      isDesktop ? 'SPACE/Click to shoot (aim with mouse)' : 'Tap the Right Side of screen to shoot',
-      isDesktop ? 'Click chests to answer questions' : 'Tap chests to answer questions',
-      'Answer all 4 questions to unlock the door',
-      'Reach dungeon 5 and defeat the boss!'
+      isDesktop ? '• Use WASD or Arrow Keys to move' : '• Use the Left Side of screen to move',
+      isDesktop ? '• SPACE or Click to shoot (aim with mouse)' : '• Tap the Right Side of screen to shoot',
+      isDesktop ? '• Click chests when near them to open' : '• Tap chests when near them to open',
+      '• Answer all 4 questions to unlock the door',
+      '• Reach dungeon 5 and defeat the boss!'
     ];
     
     instructions.forEach((instruction, index) => {
-      this.add.text(width / 2, height * 0.75 + 30 + (index * 20), instruction, {
-        fontSize: '16px',
-        fill: '#d6d3d1',
+      this.add.text(width / 2, height * 0.72 + 40 + (index * 28), instruction, {
+        fontSize: '18px',
+        fill: '#fef3c7',
         fontFamily: '"Georgia", "Times New Roman", serif',
-        fontStyle: 'italic'
+        fontStyle: 'normal',
+        stroke: '#000000',
+        strokeThickness: 3
       }).setOrigin(0.5);
     });
   }

@@ -49,7 +49,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY);
-    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37);
+    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
     const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px', fontFamily: 'Arial' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
     muteBtn.setSize(40, 40);
@@ -60,8 +60,8 @@ export class GameOverScene extends Phaser.Scene {
 
     // --- Volume Slider ---
     const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 30, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
-    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888);
-    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5);
+    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setRounded(3);
+    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5).setRounded(3);
     const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 10, 0xffffff).setInteractive({ draggable: true, useHandCursor: true });
 
     const syncAudioUI = () => {
@@ -193,15 +193,16 @@ export class GameOverScene extends Phaser.Scene {
     const buttonY = height * 0.8;
 
     // Play Again button
+    const playAgainBtnBg = this.add.rectangle(width / 2 - 100, buttonY, 180, 50, 0x92400e)
+      .setRounded(12).setInteractive({ useHandCursor: true });
+      
     const playAgainButton = this.add.text(width / 2 - 100, buttonY, 'PLAY AGAIN', {
       fontSize: '22px',
       fill: '#fef3c7',
       fontFamily: '"Georgia", "Times New Roman", serif',
-      backgroundColor: '#92400e',
-      padding: { x: 15, y: 8 }
-    }).setOrigin(0.5).setInteractive();
+    }).setOrigin(0.5);
 
-    playAgainButton.on('pointerdown', () => {
+    playAgainBtnBg.on('pointerdown', () => {
       this.scene.start('DungeonGameScene', { 
         dungeon: 1, 
         health: 100, 
@@ -210,34 +211,25 @@ export class GameOverScene extends Phaser.Scene {
       });
     });
 
-    playAgainButton.on('pointerover', () => {
-      playAgainButton.setScale(1.1);
-    });
-
-    playAgainButton.on('pointerout', () => {
-      playAgainButton.setScale(1.0);
-    });
+    playAgainBtnBg.on('pointerover', () => { playAgainBtnBg.setScale(1.05); playAgainButton.setScale(1.05); });
+    playAgainBtnBg.on('pointerout', () => { playAgainBtnBg.setScale(1.0); playAgainButton.setScale(1.0); });
 
     // Main Menu button
+    const menuBtnBg = this.add.rectangle(width / 2 + 100, buttonY, 180, 50, 0x78350f)
+      .setRounded(12).setInteractive({ useHandCursor: true });
+      
     const menuButton = this.add.text(width / 2 + 100, buttonY, 'MAIN MENU', {
       fontSize: '22px',
       fill: '#fef3c7',
       fontFamily: '"Georgia", "Times New Roman", serif',
-      backgroundColor: '#78350f',
-      padding: { x: 15, y: 8 }
-    }).setOrigin(0.5).setInteractive();
+    }).setOrigin(0.5);
 
-    menuButton.on('pointerdown', () => {
+    menuBtnBg.on('pointerdown', () => {
       this.scene.start('MainMenuScene');
     });
 
-    menuButton.on('pointerover', () => {
-      menuButton.setScale(1.1);
-    });
-
-    menuButton.on('pointerout', () => {
-      menuButton.setScale(1.0);
-    });
+    menuBtnBg.on('pointerover', () => { menuBtnBg.setScale(1.05); menuButton.setScale(1.05); });
+    menuBtnBg.on('pointerout', () => { menuBtnBg.setScale(1.0); menuButton.setScale(1.0); });
 
     // Victory message
     if (victory) {
