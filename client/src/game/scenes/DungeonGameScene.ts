@@ -165,23 +165,39 @@ export class DungeonGameScene extends Phaser.Scene {
     let groundTexture = 'ground_easy';
     let useCellularAutomata = false;
 
-    if (this.currentDungeon === 1 || this.currentDungeon === 2) {
+    if (this.currentDungeon === 1) {
+      groundTexture = 'ground_easy';
+    } else if (this.currentDungeon === 2) {
       groundTexture = 'ground_easy';
       useCellularAutomata = true;
-    } else if (this.currentDungeon === 3 || this.currentDungeon === 4) {
+    } else if (this.currentDungeon === 3) {
       groundTexture = 'ground_medium';
+    } else if (this.currentDungeon === 4) {
+      groundTexture = 'ground_medium';
+      useCellularAutomata = true;
     } else if (this.currentDungeon === 5) {
       groundTexture = 'ground_hard';
     }
 
     // Background - Anchor to top left and explicitly send to the absolute back
-    if (useCellularAutomata && this.textures.exists('tilea2')) {
-      // Cellular Automata to generate organically clumped grass (25% - 80% coverage)
-      const tileSize = 64;
+    if (useCellularAutomata) {
+      const isMixedTerrain = this.currentDungeon === 2 || this.currentDungeon === 4;
+
+      // Draw a base layer for mixed terrain
+      if (isMixedTerrain) {
+        if (this.currentDungeon === 2 && this.textures.exists('ground_medium')) {
+          this.add.tileSprite(0, 0, width, height, 'ground_medium').setOrigin(0, 0).setDepth(-11);
+        } else if (this.currentDungeon === 4 && this.textures.exists('ground_hard')) {
+          this.add.tileSprite(0, 0, width, height, 'ground_hard').setOrigin(0, 0).setDepth(-11).setTint(0xd8c8e8);
+        }
+      }
+
+      // Cellular Automata to generate organically clumped textures
+      const tileSize = isMixedTerrain ? 32 : 64; // Finer clumps for mixed terrain
       const cols = Math.ceil(width / tileSize);
       const rows = Math.ceil(height / tileSize);
       const grid: number[][] = [];
-      const fillPercent = Phaser.Math.FloatBetween(0.25, 0.80);
+      const fillPercent = isMixedTerrain ? 0.42 : Phaser.Math.FloatBetween(0.25, 0.80); // Fixed 42% initial noise for ~30% final clumps
 
       // 1. Initialize the grid with random noise
       for (let y = 0; y < rows; y++) {
@@ -192,7 +208,8 @@ export class DungeonGameScene extends Phaser.Scene {
       }
 
       // 2. Smooth the noise out to create clumps
-      for (let i = 0; i < 3; i++) {
+      const iterations = isMixedTerrain ? 4 : 3;
+      for (let i = 0; i < iterations; i++) {
         const newGrid = grid.map(arr => [...arr]);
         for (let y = 0; y < rows; y++) {
           for (let x = 0; x < cols; x++) {
@@ -204,7 +221,7 @@ export class DungeonGameScene extends Phaser.Scene {
                 if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
                   neighbors += grid[ny][nx];
                 } else {
-                  neighbors++; // Encourage clumping near the walls
+                  neighbors += (isMixedTerrain ? 0 : 1); // Don't force clumps at walls for mixed terrain
                 }
               }
             }
@@ -223,27 +240,40 @@ export class DungeonGameScene extends Phaser.Scene {
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           const isDense = grid[y][x] === 1;
-          const frame = isDense ? 0 : 1; // Assuming frame 0 is dense, frame 1 is patchy
           
-          const tile = this.add.image(x * tileSize, y * tileSize, 'tilea2', frame)
-            .setOrigin(0, 0)
-            .setDisplaySize(tileSize, tileSize)
-            .setDepth(-10);
-            
-          // Apply dungeon depth progression tints
           if (this.currentDungeon === 2) {
-            tile.setTint(0xe8e0cc); // Khaki tint
+            if (isDense && this.textures.exists('ground_easy')) {
+              // Draw grass clumps on top of the sand
+              const tile = this.add.tileSprite(x * tileSize, y * tileSize, tileSize, tileSize, 'ground_easy')
+                .setOrigin(0, 0)
+                .setDepth(-10);
+              tile.tilePositionX = x * tileSize;
+              tile.tilePositionY = y * tileSize;
+            }
+          } else if (this.currentDungeon === 4) {
+            if (isDense && this.textures.exists('ground_medium')) {
+              // Draw sand clumps on top of the asphalt
+              const tile = this.add.tileSprite(x * tileSize, y * tileSize, tileSize, tileSize, 'ground_medium')
+                .setOrigin(0, 0)
+                .setDepth(-10)
+                .setTint(0xd8c8e8); // Maintain purple tint
+              tile.tilePositionX = x * tileSize;
+              tile.tilePositionY = y * tileSize;
+            }
+          } else if (this.textures.exists('tilea2')) {
+            const frame = isDense ? 0 : 1; // Assuming frame 0 is dense, frame 1 is patchy
+            this.add.image(x * tileSize, y * tileSize, 'tilea2', frame)
+              .setOrigin(0, 0)
+              .setDisplaySize(tileSize, tileSize)
+              .setDepth(-10);
+          } else {
+            this.add.rectangle(x * tileSize, y * tileSize, tileSize, tileSize, isDense ? 0x2d4a22 : 0x1f3d1f)
+              .setOrigin(0, 0).setDepth(-10);
           }
         }
       }
     } else if (this.textures.exists(groundTexture)) {
-      const ground = this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
-      
-      if (this.currentDungeon === 2) {
-        ground.setTint(0xe8e0cc); // Khaki tint
-      } else if (this.currentDungeon === 4) {
-        ground.setTint(0xd8c8e8); // Purple tint
-      }
+      this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
     } else {
       // Safe fallback if image is missing
       const fallbackColors: { [key: number]: number } = { 1: 0x292524, 2: 0x3d3730, 3: 0x44403c, 4: 0x3d334d, 5: 0x1c1917 };
