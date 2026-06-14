@@ -1722,13 +1722,14 @@ export class DungeonGameScene extends Phaser.Scene {
     const isEasyBlue = this.gameDifficulty === 'easy' && enemyType === 'skeleton' && this.currentDungeon === 5;
 
     const isHardRed = this.gameDifficulty === 'hard' && (
-      (enemyType === 'zombie' && (this.currentDungeon === 4 || this.currentDungeon === 5)) || 
       (enemyType === 'zombie2' && this.currentDungeon === 4)
     );
-    const isMediumRed = this.gameDifficulty === 'medium' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'spider' || enemyType === 'zombie');
-    const isEasyRed = this.gameDifficulty === 'easy' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'skeleton' || enemyType === 'spider' || enemyType === 'zombie');
+    const isMediumRed = this.gameDifficulty === 'medium' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && enemyType === 'spider';
+    const isEasyRed = this.gameDifficulty === 'easy' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'skeleton' || enemyType === 'spider');
 
-    const isOrangeDrop = enemyType === 'zombie' && this.currentDungeon >= 1 && this.currentDungeon <= 3;
+    const isZombie2Red = enemyType === 'zombie2' && (this.currentDungeon === 2 || this.currentDungeon === 3);
+
+    const isOrangeDrop = enemyType === 'zombie' && this.currentDungeon >= 1 && this.currentDungeon <= 5;
 
     if (enemyType === 'bat') {
       // Green blood burst effect
@@ -1783,7 +1784,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.droppedItems.add(crystal);
       }
     }
-    else if (isHardRed || isMediumRed || isEasyRed) {
+    else if (isHardRed || isMediumRed || isEasyRed || isZombie2Red) {
       if (Math.random() < 0.20) {
         const crystal = this.physics.add.sprite(x, y, 'redcrystal');
         crystal.anims.play('spin-redcrystal');
