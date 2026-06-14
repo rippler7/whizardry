@@ -288,9 +288,21 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
   // Explicitly calculate and set height based on width to maintain aspect ratio
   useEffect(() => {
     const handleResize = () => {
-      if (containerRef.current) {
-        const currentWidth = containerRef.current.clientWidth;
-        containerRef.current.style.height = `${currentWidth / 1.6}px`; // 1600 / 1000 = 1.6
+      if (containerRef.current && containerRef.current.parentElement) {
+        const parentWidth = containerRef.current.parentElement.clientWidth;
+        const parentHeight = containerRef.current.parentElement.clientHeight;
+        
+        let targetWidth = parentWidth;
+        let targetHeight = parentWidth / 1.6; // 1600 / 1000 = 1.6
+
+        // If the calculated height exceeds the available height, scale down based on height instead
+        if (targetHeight > parentHeight) {
+          targetHeight = parentHeight;
+          targetWidth = parentHeight * 1.6;
+        }
+
+        containerRef.current.style.width = `${targetWidth}px`;
+        containerRef.current.style.height = `${targetHeight}px`;
       }
     };
 
@@ -302,7 +314,7 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
 
   return (
     <div className="w-full h-full bg-black overflow-hidden flex items-center justify-center">
-      <div ref={containerRef} className="w-full" />
+      <div ref={containerRef} />
     </div>
   );
 };
