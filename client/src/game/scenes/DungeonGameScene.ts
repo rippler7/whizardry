@@ -161,16 +161,21 @@ export class DungeonGameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    // Determine ground texture based on difficulty
+    // Determine ground texture based on dungeon level
     let groundTexture = 'ground_easy';
-    if (this.gameDifficulty === 'medium') {
+    let useCellularAutomata = false;
+
+    if (this.currentDungeon === 1 || this.currentDungeon === 2) {
+      groundTexture = 'ground_easy';
+      useCellularAutomata = true;
+    } else if (this.currentDungeon === 3 || this.currentDungeon === 4) {
       groundTexture = 'ground_medium';
-    } else if (this.gameDifficulty === 'hard') {
+    } else if (this.currentDungeon === 5) {
       groundTexture = 'ground_hard';
     }
 
     // Background - Anchor to top left and explicitly send to the absolute back
-    if (this.gameDifficulty === 'easy' && this.textures.exists('tilea2')) {
+    if (useCellularAutomata && this.textures.exists('tilea2')) {
       // Cellular Automata to generate organically clumped grass (25% - 80% coverage)
       const tileSize = 64;
       const cols = Math.ceil(width / tileSize);
@@ -226,25 +231,23 @@ export class DungeonGameScene extends Phaser.Scene {
             .setDepth(-10);
             
           // Apply dungeon depth progression tints
-          if (this.currentDungeon === 3 || this.currentDungeon === 4) {
-            tile.setTint(0xe8e0cc);
-          } else if (this.currentDungeon === 5) {
-            tile.setTint(0xe8c8b8); // Warm rose/copper tint instead of purple
+          if (this.currentDungeon === 2) {
+            tile.setTint(0xe8e0cc); // Khaki tint
           }
         }
       }
     } else if (this.textures.exists(groundTexture)) {
       const ground = this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
       
-      if (this.currentDungeon === 3 || this.currentDungeon === 4) {
-        ground.setTint(0xe8e0cc); // Very slight khaki tint
-      } else if (this.currentDungeon === 5) {
-        ground.setTint(0xe8c8b8); // Warm rose/copper tint instead of purple
+      if (this.currentDungeon === 2) {
+        ground.setTint(0xe8e0cc); // Khaki tint
+      } else if (this.currentDungeon === 4) {
+        ground.setTint(0xd8c8e8); // Purple tint
       }
     } else {
       // Safe fallback if image is missing
-      const fallbackColors: { [key: string]: number } = { 'easy': 0x292524, 'medium': 0x44403c, 'hard': 0x1c1917 };
-      const color = fallbackColors[this.gameDifficulty] || 0x292524;
+      const fallbackColors: { [key: number]: number } = { 1: 0x292524, 2: 0x3d3730, 3: 0x44403c, 4: 0x3d334d, 5: 0x1c1917 };
+      const color = fallbackColors[this.currentDungeon] || 0x292524;
       this.add.rectangle(0, 0, width, height, color).setOrigin(0, 0).setDepth(-10);
     }
 
