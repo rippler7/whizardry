@@ -9,6 +9,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public score: number = 0;
   public questionsAnswered: number = 0;
   public correctAnswers: number = 0;
+  public enemiesKilled: number = 0;
   
   private keys: any;
   private lastFired: number = 0;

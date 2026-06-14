@@ -28,7 +28,7 @@ export const SimpleGameInterface: React.FC = () => {
   if (gameState === 'playing') {
     return (
       <div className="w-full h-screen bg-black relative">
-        <PhaserGame onGameEvent={(event, data) => {
+        <PhaserGame playerName={playerName} onGameEvent={(event, data) => {
           console.log('Game event:', event, data);
           if (event === 'exitToMenu') {
             handleExitGame();

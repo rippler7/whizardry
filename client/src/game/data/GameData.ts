@@ -22,6 +22,8 @@ export interface HighScore {
   level: number;
   questionsAnswered: number;
   accuracy: number;
+  enemiesKilled?: number;
+  difficulty?: string;
   completionTime: number;
   date: string;
 }
@@ -152,7 +154,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
     damage: 35,
     speed: 90,
     attackRange: 64,
-    detectionRange: 100,
+    detectionRange: 150,
     experienceReward: 100,
     scoreReward: 1000
   }

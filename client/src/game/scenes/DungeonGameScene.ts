@@ -100,6 +100,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private playerScore: number = 0;
   private questionsAnswered: number = 0;
   private correctAnswers: number = 0;
+  private enemiesKilled: number = 0;
   private levelCorrectAnswers: number = 0;
   private currentDungeon: number = 1;
   private maxDungeons: number = 5;
@@ -112,6 +113,8 @@ export class DungeonGameScene extends Phaser.Scene {
   private enemiesFrozenUntil: number = 0;
   
   private playerShadow!: Phaser.GameObjects.Ellipse;
+  private effectCountdownText: Phaser.GameObjects.Text | null = null;
+  private effectEndTime: number = 0;
 
   // UI elements
   private healthBar!: Phaser.GameObjects.Graphics;
@@ -132,6 +135,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.playerScore = data.score || 0;
     this.questionsAnswered = data.questionsAnswered || 0;
     this.correctAnswers = data.correctAnswers || 0;
+    this.enemiesKilled = data.enemiesKilled || 0;
     this.gameDifficulty = data.difficulty || 'easy';
     this.usedQuestionIds = data.usedQuestionIds || [];
     
@@ -143,6 +147,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.boss = undefined;
     this.isTouchingDoor = false;
     this.enemiesFrozenUntil = 0;
+    this.effectCountdownText = null;
+    this.effectEndTime = 0;
     this.resetJoystick();
   }
 
@@ -1102,6 +1108,17 @@ export class DungeonGameScene extends Phaser.Scene {
       this.playerShadow.setPosition(this.player.x, this.player.y + 26);
     }
 
+    if (this.effectCountdownText) {
+      if (time < this.effectEndTime && !this.player.getData('isDead')) {
+        this.effectCountdownText.setPosition(this.player.x, this.player.y - 45);
+        const secondsLeft = Math.ceil((this.effectEndTime - time) / 1000);
+        this.effectCountdownText.setText(secondsLeft.toString());
+      } else {
+        this.effectCountdownText.destroy();
+        this.effectCountdownText = null;
+      }
+    }
+
     // Check if player moved away from door
     if (this.door && this.player && this.isTouchingDoor) {
       if (!this.physics.overlap(this.player, this.door)) {
@@ -1317,6 +1334,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.isModalOpen = true;
     this.physics.pause();
     this.resetJoystick();
+    
+    const playerName = this.registry.get('playerName') || 'Hero';
 
     const modalBg = this.add.rectangle(
       this.scale.width / 2,
@@ -1330,7 +1349,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const title = this.add.text(
       this.scale.width / 2,
       this.scale.height / 2 - 170,
-      'Answer this question to open the chest',
+      `${playerName}, answer this question to open the chest`,
       {
         fontSize: '22px',
         fill: '#fbbf24',
@@ -1448,8 +1467,10 @@ export class DungeonGameScene extends Phaser.Scene {
         playerStats: {
           score: this.playerScore,
           health: this.playerHealth,
+          level: this.currentDungeon,
           questionsAnswered: this.questionsAnswered,
           correctAnswers: this.correctAnswers,
+          enemiesKilled: this.enemiesKilled,
           difficulty: this.gameDifficulty,
           usedQuestionIds: this.usedQuestionIds
         }
@@ -1463,6 +1484,7 @@ export class DungeonGameScene extends Phaser.Scene {
         score: this.playerScore,
         questionsAnswered: this.questionsAnswered,
         correctAnswers: this.correctAnswers,
+        enemiesKilled: this.enemiesKilled,
         difficulty: this.gameDifficulty,
         usedQuestionIds: this.usedQuestionIds
       });
@@ -1473,6 +1495,7 @@ export class DungeonGameScene extends Phaser.Scene {
     if (player.getData('isDead')) return;
     if (player.getData('isInvincible')) return; // Check for yellow crystal invincibility
     if (player.getData('isInvulnerable')) return;
+    if (enemy && enemy.isDead) return; // Prevent damage from a dead enemy that hasn't fully decayed/revived yet
     
     // Default to the provided damage, or extract it from the Enemy config, or fallback to 20
     let actualDamage = damage;
@@ -1504,6 +1527,10 @@ export class DungeonGameScene extends Phaser.Scene {
     
     if (this.playerHealth <= 0) {
       if (this.playerShadow) this.playerShadow.destroy();
+      if (this.effectCountdownText) {
+        this.effectCountdownText.destroy();
+        this.effectCountdownText = null;
+      }
       this.playerHealth = 0;
       this.updateHealthBar();
       
@@ -1575,8 +1602,10 @@ export class DungeonGameScene extends Phaser.Scene {
       playerStats: {
         score: this.playerScore,
         health: 0,
+        level: this.currentDungeon,
         questionsAnswered: this.questionsAnswered,
         correctAnswers: this.correctAnswers,
+        enemiesKilled: this.enemiesKilled,
         difficulty: this.gameDifficulty,
         usedQuestionIds: this.usedQuestionIds
       }
@@ -1588,7 +1617,30 @@ export class DungeonGameScene extends Phaser.Scene {
     this.questionsText.setText(`Questions: ${this.levelCorrectAnswers}/4`);
   }
 
+  private startEffectCountdown(duration: number, color: string) {
+    if (this.effectCountdownText) {
+      this.effectCountdownText.destroy();
+    }
+    this.effectEndTime = this.time.now + duration;
+    this.effectCountdownText = this.add.text(this.player.x, this.player.y - 45, Math.ceil(duration / 1000).toString(), {
+      fontSize: '24px', fill: color, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+    }).setOrigin(0.5).setDepth(100);
+  }
+
   private handleEnemyDefeated(enemyType: string, x: number, y: number) {
+    this.enemiesKilled++;
+
+    const isHardBlue = this.gameDifficulty === 'hard' && enemyType === 'zombie2' && this.currentDungeon === 5;
+    const isMediumBlue = this.gameDifficulty === 'medium' && enemyType === 'spider' && this.currentDungeon === 5;
+    const isEasyBlue = this.gameDifficulty === 'easy' && enemyType === 'skeleton' && this.currentDungeon === 5;
+
+    const isHardRed = this.gameDifficulty === 'hard' && (
+      (enemyType === 'zombie' && (this.currentDungeon === 4 || this.currentDungeon === 5)) || 
+      (enemyType === 'zombie2' && this.currentDungeon === 4)
+    );
+    const isMediumRed = this.gameDifficulty === 'medium' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'spider' || enemyType === 'zombie');
+    const isEasyRed = this.gameDifficulty === 'easy' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'skeleton' || enemyType === 'spider' || enemyType === 'zombie');
+
     if (enemyType === 'bat') {
       let dropChance = 0;
       if (this.gameDifficulty === 'easy') dropChance = 0.6;
@@ -1603,7 +1655,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.droppedItems.add(crystal);
       }
     }
-    else if (enemyType === 'zombie2' && this.currentDungeon === 5) {
+    else if (isHardBlue || isMediumBlue || isEasyBlue) {
       if (Math.random() < 0.50) {
         const crystal = this.physics.add.sprite(x, y, 'bluecrystal');
         crystal.anims.play('spin-bluecrystal');
@@ -1612,8 +1664,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.droppedItems.add(crystal);
       }
     }
-    else if ((enemyType === 'zombie' && (this.currentDungeon === 4 || this.currentDungeon === 5)) || 
-             (enemyType === 'zombie2' && this.currentDungeon === 4)) {
+    else if (isHardRed || isMediumRed || isEasyRed) {
       if (Math.random() < 0.20) {
         const crystal = this.physics.add.sprite(x, y, 'redcrystal');
         crystal.anims.play('spin-redcrystal');
@@ -1644,6 +1695,7 @@ export class DungeonGameScene extends Phaser.Scene {
       this.player.setTint(0xffff33); // 80% yellow tint
       
       this.sound.play('star', { volume: 0.5 });
+      this.startEffectCountdown(5000, '#fbbf24');
       
       const invulnText = this.add.text(this.player.x, this.player.y - 30, 'INVINCIBLE!', {
         fontSize: '16px', fill: '#fbbf24', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
@@ -1662,11 +1714,16 @@ export class DungeonGameScene extends Phaser.Scene {
           callback: () => {
             if (this.player.getData('isDead')) return;
             blinkCount++;
-            if (blinkCount % 2 === 0) {
+                  if (blinkCount % 2 === 0 && this.player.getData('isInvincible')) {
               this.player.setTint(0xffff33);
             } else {
               this.player.clearTint();
             }
+                  
+                  // Failsafe: Ensure it clears exactly at the end
+                  if (blinkCount >= 10) {
+                    this.player.clearTint();
+                  }
           }
         });
       });
@@ -1694,6 +1751,7 @@ export class DungeonGameScene extends Phaser.Scene {
       }
       
       this.sound.play('star', { volume: 0.5 });
+      this.startEffectCountdown(3000, '#60a5fa'); // blue-400
       
       const freezeText = this.add.text(this.player.x, this.player.y - 30, 'TIME FREEZE!', {
         fontSize: '16px', fill: '#fcd34d', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3

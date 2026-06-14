@@ -17,7 +17,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
   zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 15, scoreReward: 75 },
   bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 150, detectionRange: 250, experienceReward: 10, scoreReward: 50 },
   spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
-  boss: { type: 'boss', health: 10500, speed: 40, damage: 30, attackRange: 80, detectionRange: 200, experienceReward: 100, scoreReward: 500 }
+  boss: { type: 'boss', health: 10500, speed: 40, damage: 30, attackRange: 80, detectionRange: 300, experienceReward: 100, scoreReward: 500 }
 };
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -35,6 +35,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected shadow!: Phaser.GameObjects.Ellipse;
   protected shadowOffset: number = 20;
   protected evasionDirection: { x: number; y: number } = { x: 0, y: 0 };
+  protected isPatrollingToChest: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: any, hp: number, speed: number) {
     super(scene, x, y, texture);
@@ -185,7 +186,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
           canContinueEvasion = !this.checkWallCollision(this.x + this.evasionDirection.x * 0.3, this.y + this.evasionDirection.y * 0.3);
         }
 
-        if (this.state === 'patrol') {
+        if (this.state === 'patrol' && !this.isPatrollingToChest) {
           this.setNewPatrolTarget();
           this.setVelocity(0, 0);
           this.evasionDirection = { x: 0, y: 0 };
@@ -382,6 +383,8 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
 
 // Skeleton Enemy
 export class Skeleton extends Enemy {
+  private revivesLeft: number = 2; // 2 revives means it must be killed 3 times total
+
   constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
     super(scene, x, y, 'skeleton', 'skeleton', player, hp, speed);
     this.setSize(32, 48);
@@ -447,6 +450,45 @@ export class Skeleton extends Enemy {
     if (distance <= this.config.attackRange) {
       this.player.takeDamage(this.config.damage);
     }
+  }
+
+  protected die(): void {
+    if (this.revivesLeft > 0) {
+      this.revivesLeft--;
+      this.isAlive = false;
+      this.body.enable = false; // Disables collisions, making it invulnerable
+      if (this.shadow) this.shadow.setVisible(false);
+      
+      this.scene.sound.play('enemy-death', { volume: 0.3 });
+      
+      const dieAnim = `${this.config.type}Die`;
+      if (this.scene.anims.exists(dieAnim)) {
+        this.anims.play(dieAnim);
+        this.once('animationcomplete', () => {
+          this.scene.time.delayedCall(3000, () => {
+            if (this.scene && this.active) this.revive();
+          });
+        });
+      } else {
+        this.setTint(0xff0000);
+        this.scene.time.delayedCall(3000, () => {
+          if (this.scene && this.active) this.revive();
+        });
+      }
+    } else {
+      super.die();
+    }
+  }
+
+  private revive(): void {
+    this.isAlive = true;
+    this.setData('health', this.config.health);
+    this.body.enable = true;
+    if (this.shadow) this.shadow.setVisible(true);
+    this.clearTint();
+    this.state = 'patrol';
+    this.setNewPatrolTarget();
+    this.anims.play('walkDownSkeleton');
   }
 }
 
@@ -702,7 +744,8 @@ export class Boss extends Enemy {
   private phase: number = 1;
   private maxPhases: number = 3;
   private phaseChangeHealth: number[];
-  private isPatrollingToChest: boolean = false;
+  private targetChest: Phaser.Physics.Arcade.Sprite | null = null;
+  private isReturningToChest: boolean = false;
   
   constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
     super(scene, x, y, 'Boss', 'boss', player, hp, speed);
@@ -766,10 +809,77 @@ export class Boss extends Enemy {
     super.update();
     this.checkPhaseChange();
   }
+
+  protected updateAI(): void {
+    if (!this.isAlive) return;
+    
+    const distanceToPlayer = Phaser.Math.Distance.Between(
+      this.x, this.y, this.player.x, this.player.y
+    );
+    
+    if (this.targetChest) {
+      if (this.targetChest.getData('opened')) {
+        this.setNewPatrolTarget();
+      } else {
+        const distToChest = Phaser.Math.Distance.Between(this.x, this.y, this.targetChest.x, this.targetChest.y);
+        
+        if (this.state === 'chase' && distToChest > 300) {
+          this.isReturningToChest = true;
+          this.state = 'patrol';
+          this.patrolTarget = { x: this.targetChest.x, y: this.targetChest.y };
+        }
+        
+        if (this.isReturningToChest && distToChest <= 150) {
+          this.isReturningToChest = false;
+          this.state = 'patrol';
+          this.setNewPatrolTarget();
+        }
+      }
+    }
+
+    if (this.isReturningToChest) {
+      this.handlePatrol();
+      return;
+    }
+
+    // State transitions
+    if (distanceToPlayer <= this.config.attackRange && this.canSeePlayer()) {
+      this.state = 'attack';
+    } else if (distanceToPlayer <= this.config.detectionRange && this.canSeePlayer()) {
+      this.state = 'chase';
+    } else if (this.state === 'chase' && distanceToPlayer > this.config.detectionRange * 1.5) {
+      this.state = 'patrol';
+      this.setNewPatrolTarget();
+    } else if (this.state === 'idle') {
+      this.stateTimer -= this.scene.game.loop.delta;
+      if (this.stateTimer <= 0) {
+        this.state = 'patrol';
+        this.setNewPatrolTarget();
+      }
+    }
+    
+    // Execute state behavior
+    switch (this.state) {
+      case 'patrol':
+        this.handlePatrol();
+        break;
+      case 'chase':
+        this.handleChase();
+        break;
+      case 'attack':
+        this.handleAttack();
+        break;
+      case 'stunned':
+        this.handleStunned();
+        break;
+    }
+  }
   
   protected setNewPatrolTarget(): void {
     const scene = this.scene as any;
     this.isPatrollingToChest = false;
+    this.isReturningToChest = false;
+    this.targetChest = null;
     
     if (scene.chests && scene.chests.getChildren().length > 0) {
       let nearestChest: any = null;
@@ -787,6 +897,7 @@ export class Boss extends Enemy {
       });
       
       if (nearestChest) {
+        this.targetChest = nearestChest;
         const range = 80;
         this.patrolTarget = {
           x: nearestChest.x + Phaser.Math.Between(-range, range),
@@ -805,6 +916,34 @@ export class Boss extends Enemy {
   }
 
   protected handlePatrol(): void {
+    if (this.isPatrollingToChest) {
+      if (this.targetChest && this.targetChest.getData('opened')) {
+        this.setNewPatrolTarget();
+        return;
+      }
+      
+      const scene = this.scene as any;
+      if (scene.chests && scene.chests.getChildren().length > 0) {
+        let nearestChest: any = null;
+        let minDistance = Infinity;
+        
+        scene.chests.getChildren().forEach((chest: any) => {
+          if (!chest.getData('opened')) {
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, chest.x, chest.y);
+            if (dist < minDistance) {
+              minDistance = dist;
+              nearestChest = chest;
+            }
+          }
+        });
+        
+        if (nearestChest && nearestChest !== this.targetChest) {
+          this.setNewPatrolTarget();
+          return;
+        }
+      }
+    }
+
     const distanceToTarget = Phaser.Math.Distance.Between(
       this.x, this.y, this.patrolTarget.x, this.patrolTarget.y
     );
@@ -819,7 +958,7 @@ export class Boss extends Enemy {
     const scene = this.scene as any;
     let currentSpeed = this.config.speed * 0.5; // Normal wandering is 0.5x speed
     
-    if (this.isPatrollingToChest) {
+    if (this.isPatrollingToChest || this.isReturningToChest) {
       currentSpeed = 96; // 80% of player walking speed when going straight to a chest
     }
     

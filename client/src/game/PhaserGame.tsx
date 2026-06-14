@@ -5,6 +5,7 @@ import { GameOverScene } from './scenes/GameOverScene';
 
 interface PhaserGameProps {
   onGameEvent: (event: string, data: any) => void;
+  playerName?: string;
 }
 
 // Preloader Scene
@@ -77,6 +78,9 @@ class PreloaderScene extends Phaser.Scene {
     this.load.audio('boss_battle', ['assets/audio/BoxCat_Games_-_05_-_Battle_Boss.mp3', 'assets/audio/BoxCat_Games_-_05_-_Battle_Boss.ogg']);
     this.load.audio('spit', ['assets/audio/spit.mp3', 'assets/audio/spit.ogg']);
     this.load.audio('star', 'assets/audio/star.ogg');
+    this.load.audio('enemy-death', ['assets/audio/enemy-death.mp3', 'assets/audio/enemy-death.ogg']);
+    this.load.audio('zombienoise', 'assets/audio/zombienoise.ogg');
+    this.load.audio('burst', 'assets/audio/burst.ogg');
     this.load.audio('hurt_male', 'assets/audio/hurt_male.ogg');
     this.load.audio('gameover_theme', 'assets/audio/Kevin MacLeod - Teller of the Tales.ogg');
     this.load.audio('victory_theme', 'assets/audio/BoxCat_Games_-_25_-_Victory.ogg');
@@ -214,7 +218,7 @@ class MainMenuScene extends Phaser.Scene {
   }
 }
 
-const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
+const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -249,6 +253,18 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
 
     gameRef.current = new Phaser.Game(config);
 
+    if (playerName) {
+      gameRef.current.registry.set('playerName', playerName);
+    }
+
+    // Listen for global game events to pass up to React
+    gameRef.current.events.on('gameComplete', (data: any) => {
+      onGameEvent('gameComplete', data);
+    });
+    gameRef.current.events.on('dungeonComplete', (data: any) => {
+      onGameEvent('dungeonComplete', data);
+    });
+
     // Cleanup function
     return () => {
       if (gameRef.current) {
@@ -257,6 +273,12 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent }) => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (gameRef.current && playerName) {
+      gameRef.current.registry.set('playerName', playerName);
+    }
+  }, [playerName]);
 
   return (
     <div 

@@ -14,6 +14,19 @@ export class GameOverScene extends Phaser.Scene {
     const gameData = this.registry.get('gameData');
     const victory = gameData?.victory || false;
     const stats = gameData?.playerStats || {};
+    const playerName = this.registry.get('playerName') || 'Hero';
+
+    // Emit event to React to save the high score
+    if (stats.score > 0 || stats.questionsAnswered > 0) {
+      this.game.events.emit('gameComplete', {
+        score: stats.score || 0,
+        level: stats.level || 1,
+        questionsAnswered: stats.questionsAnswered || 0,
+        correctAnswers: stats.correctAnswers || 0,
+        enemiesKilled: stats.enemiesKilled || 0,
+        difficulty: stats.difficulty || 'easy'
+      });
+    }
 
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, victory ? 0x1c1917 : 0x292524);
@@ -92,7 +105,7 @@ export class GameOverScene extends Phaser.Scene {
     handle.on('drag', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
 
     // Stats
-    const statsY = height / 2 - 50;
+    const statsY = height / 2 - 120; // Shifted up to make room for 5 records
     this.add.text(width / 2, statsY, 'Final Statistics:', {
       fontSize: '28px',
       fill: '#fde68a',
@@ -100,16 +113,78 @@ export class GameOverScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const statLines = [
+      `Mode: ${(stats.difficulty || 'easy').toUpperCase()}`,
       `Score: ${stats.score || 0}`,
+      `Enemies Killed: ${stats.enemiesKilled || 0}`,
       `Health: ${stats.health || 0}`,
       `Questions Answered: ${stats.questionsAnswered || 0}`,
       `Correct Answers: ${stats.correctAnswers || 0}`
     ];
 
+    // Read and save personal history to localStorage
+    try {
+      const historyKey = `whizardy_history_${playerName}`;
+      let playerHistory: any[] = [];
+      
+      const historyStr = localStorage.getItem(historyKey);
+      if (historyStr) {
+        playerHistory = JSON.parse(historyStr);
+      }
+      
+      const currentScoreObj = {
+        id: Date.now().toString(),
+        playerName: playerName,
+        score: stats.score || 0,
+        level: stats.level || 1,
+        questionsAnswered: stats.questionsAnswered || 0,
+        correctAnswers: stats.correctAnswers || 0,
+        enemiesKilled: stats.enemiesKilled || 0,
+        difficulty: stats.difficulty || 'easy',
+        accuracy: stats.questionsAnswered > 0 ? Math.round(((stats.correctAnswers || 0) / stats.questionsAnswered) * 100) : 0,
+        completionTime: Date.now(),
+        date: new Date().toISOString()
+      };
+      
+      // Only add to history if score/questions were achieved
+      if (currentScoreObj.score > 0 || currentScoreObj.questionsAnswered > 0) {
+        // Prevent duplicate saves from rapid scene transitions
+        const alreadySaved = playerHistory.some((s: any) => 
+          s.score === currentScoreObj.score && 
+          s.enemiesKilled === currentScoreObj.enemiesKilled && 
+          Math.abs(new Date(s.date).getTime() - new Date(currentScoreObj.date).getTime()) < 5000
+        );
+        
+        if (!alreadySaved) {
+          playerHistory.push(currentScoreObj);
+          playerHistory = playerHistory
+            .sort((a: any, b: any) => b.score - a.score)
+            .slice(0, 5);
+            
+          localStorage.setItem(historyKey, JSON.stringify(playerHistory));
+        }
+      }
+
+      if (playerHistory.length > 0) {
+        statLines.push(''); // blank line
+        statLines.push(`--- ${playerName}'s Top 5 Score Records ---`);
+        playerHistory.forEach((top: any, i: number) => {
+          const dateStr = new Date(top.completionTime || top.date).toLocaleString([], {
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+          });
+          const correctQs = top.questionsAnswered > 0 ? Math.round((top.accuracy / 100) * top.questionsAnswered) : 0;
+          const diffStr = top.difficulty ? ` | Mode: ${top.difficulty.toUpperCase()}` : '';
+          statLines.push(`${i + 1}. Score: ${top.score.toLocaleString()}${diffStr} | Kills: ${top.enemiesKilled || 0} | Correct: ${correctQs}/${top.questionsAnswered || 0} | ${dateStr}`);
+        });
+      }
+    } catch (e) {
+      console.warn("Could not handle player history", e);
+    }
+
     statLines.forEach((line, index) => {
       this.add.text(width / 2, statsY + 40 + (index * 25), line, {
-        fontSize: '18px',
-        fill: '#d6d3d1',
+        fontSize: line.includes('Record') ? '20px' : '16px',
+        fill: line.includes('Record') ? '#fbbf24' : '#d6d3d1',
+        fontStyle: line.includes('Record') ? 'bold' : 'normal',
         fontFamily: '"Georgia", "Times New Roman", serif'
       }).setOrigin(0.5);
     });

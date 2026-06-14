@@ -47,8 +47,10 @@ export const GameInterface: React.FC = () => {
           playerName: playerName,
           score: data.score,
           level: data.level,
+          enemiesKilled: data.enemiesKilled || 0,
+          difficulty: data.difficulty || 'easy',
           questionsAnswered: data.questionsAnswered,
-          accuracy: Math.round((data.correctAnswers / data.questionsAnswered) * 100),
+          accuracy: data.questionsAnswered > 0 ? Math.round((data.correctAnswers / data.questionsAnswered) * 100) : 0,
           completionTime: Date.now(),
           date: new Date().toISOString()
         });
@@ -198,7 +200,7 @@ export const GameInterface: React.FC = () => {
   if (gameStarted) {
     return (
       <div className="w-full h-screen bg-black">
-        <PhaserGame onGameEvent={handleGameEvent} />
+        <PhaserGame playerName={playerName} onGameEvent={handleGameEvent} />
         
         {/* Game Stats Overlay */}
         {gameStats && (
