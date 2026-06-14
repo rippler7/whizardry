@@ -957,7 +957,9 @@ export class DungeonGameScene extends Phaser.Scene {
       fill: '#fde68a',
       fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: 3,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: { x: 8, y: 4 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     const controlsText = this.sys.game.device.os.desktop 
@@ -970,7 +972,9 @@ export class DungeonGameScene extends Phaser.Scene {
       fontFamily: '"Georgia", "Times New Roman", serif',
       fontStyle: 'normal',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: 3,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: { x: 8, y: 4 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     if (this.currentDungeon === this.maxDungeons) {
@@ -979,7 +983,9 @@ export class DungeonGameScene extends Phaser.Scene {
         fill: '#f87171',
         fontFamily: '"Georgia", "Times New Roman", serif',
         stroke: '#000000',
-        strokeThickness: 2
+        strokeThickness: 2,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: { x: 8, y: 4 }
       }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     }
 
@@ -1430,7 +1436,7 @@ export class DungeonGameScene extends Phaser.Scene {
       420,
       0x1c1917,
       0.95
-    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(1000).setRounded(16);
+    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(3000).setRounded(16);
 
     const title = this.add.text(
       this.scale.width / 2,
@@ -1442,7 +1448,7 @@ export class DungeonGameScene extends Phaser.Scene {
         align: 'center',
         fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif'
       }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
 
     const questionText = this.add.text(
       this.scale.width / 2,
@@ -1455,7 +1461,7 @@ export class DungeonGameScene extends Phaser.Scene {
         fontFamily: '"Georgia", "Times New Roman", serif',
         wordWrap: { width: Math.min(560, this.scale.width * 0.8) }
       }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
 
     const closeHint = this.add.text(
       this.scale.width / 2,
@@ -1466,9 +1472,11 @@ export class DungeonGameScene extends Phaser.Scene {
         fill: '#d6d3d1',
         align: 'center',
         fontFamily: '"Georgia", "Times New Roman", serif',
-        fontStyle: 'italic'
+        fontStyle: 'italic',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: { x: 8, y: 4 }
       }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
 
     const modalElements: Phaser.GameObjects.GameObject[] = [modalBg, title, questionText, closeHint];
 
@@ -1477,7 +1485,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.scale.width / 2,
         this.scale.height / 2 - 40 + index * 60,
         400, 45, 0x78350f
-      ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true }).setRounded(8);
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(3001).setInteractive({ useHandCursor: true }).setRounded(8);
 
       const btnText = this.add.text(
         this.scale.width / 2,
@@ -1486,7 +1494,7 @@ export class DungeonGameScene extends Phaser.Scene {
         {
           fontSize: '18px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif'
         }
-      ).setOrigin(0.5).setScrollFactor(0).setDepth(1002);
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(3002);
 
       btnBg.on('pointerover', () => { btnBg.setFillStyle(0x92400e); btnText.setFill('#fbbf24'); });
       btnBg.on('pointerout', () => { btnBg.setFillStyle(0x78350f); btnText.setFill('#fef3c7'); });
@@ -1512,6 +1520,12 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private cleanupQuestionModal(elements: Phaser.GameObjects.GameObject[]) {
     elements.forEach((element) => element.destroy());
+    
+    // Remove lingering keyboard listeners so they don't fire out of context
+    this.input.keyboard!.off('keydown-ONE');
+    this.input.keyboard!.off('keydown-TWO');
+    this.input.keyboard!.off('keydown-THREE');
+    this.input.keyboard!.off('keydown-FOUR');
     
     const timePaused = this.time.now - this.modalOpenTimestamp;
     this.orangeEffectEndTime += timePaused;
