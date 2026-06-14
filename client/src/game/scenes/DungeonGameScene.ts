@@ -1685,16 +1685,22 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private showMessage(message: string) {
-    const bg = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 0, 50, 0x1c1917)
-      .setStrokeStyle(2, 0xb45309).setRounded(8).setDepth(2000).setScrollFactor(0);
-
     const messageText = this.add.text(this.scale.width / 2, this.scale.height / 2, message, {
       fontSize: '22px',
       fill: '#fde68a',
-      fontFamily: '"Georgia", "Times New Roman", serif'
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      align: 'center',
+      wordWrap: { width: Math.min(560, this.scale.width * 0.8) }
     }).setOrigin(0.5).setDepth(2001).setScrollFactor(0);
     
-    bg.width = messageText.width + 40;
+    const bg = this.add.rectangle(
+      this.scale.width / 2, 
+      this.scale.height / 2, 
+      messageText.width + 50, 
+      messageText.height + 30, 
+      0x1c1917,
+      0.95
+    ).setStrokeStyle(2, 0xb45309).setRounded(12).setDepth(2000).setScrollFactor(0);
     
     this.time.delayedCall(2000, () => {
       bg.destroy();
