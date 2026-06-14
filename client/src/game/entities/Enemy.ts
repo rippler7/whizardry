@@ -378,6 +378,8 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.config.type === 'zombie' || this.config.type === 'zombie2') {
       this.scene.sound.play('zombienoise', { volume: 0.3 });
       this.scene.sound.play('burst', { volume: 0.3 });
+    } else if (this.config.type === 'bat') {
+      this.scene.sound.play('bat_burst', { volume: 0.4 });
     } else {
       this.scene.sound.play('enemy-death', { volume: 0.3 });
     }

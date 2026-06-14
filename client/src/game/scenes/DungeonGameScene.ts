@@ -288,17 +288,6 @@ export class DungeonGameScene extends Phaser.Scene {
               tile.tilePositionX = x * tileSize;
               tile.tilePositionY = y * tileSize;
             }
-          } else if (this.textures.exists('tilea2')) {
-            const frame = isDense ? 0 : 1; // Assuming frame 0 is dense, frame 1 is patchy
-            const tile = this.add.image(x * tileSize, y * tileSize, 'tilea2', frame)
-              .setOrigin(0, 0)
-              .setDisplaySize(tileSize, tileSize)
-              .setDepth(-10);
-            applyTint(tile, getTileTint());
-          } else {
-            const color = isDense ? 0x2d4a22 : 0x1f3d1f;
-            this.add.rectangle(x * tileSize, y * tileSize, tileSize, tileSize, getTileTint(color))
-              .setOrigin(0, 0).setDepth(-10);
           }
         }
       }
@@ -422,11 +411,11 @@ export class DungeonGameScene extends Phaser.Scene {
     // Start background music
     this.sound.stopAll();
     if (this.currentDungeon === this.maxDungeons) {
-      this.sound.play('boss_battle', { volume: 0.3, loop: true });
+      this.sound.play('the_tournament', { volume: 0.3, loop: true });
     } else if (this.currentDungeon === 3 || this.currentDungeon === 4) {
-      this.sound.play('arcade1', { volume: 0.2, loop: true });
+      this.sound.play('war_of_the_crown', { volume: 0.2, loop: true });
     } else {
-      this.sound.play('enchanted_forest', { volume: 0.2, loop: true });
+      this.sound.play('air_fight', { volume: 0.2, loop: true });
     }
 
     this.showLevelIntro();
@@ -1555,7 +1544,11 @@ export class DungeonGameScene extends Phaser.Scene {
     this.bullets.add(bullet);
     
     // Play shooting sound
-    this.sound.play('spit', { volume: 0.3 });
+    if (isSpecial) {
+      this.sound.play('fireball_shoot', { volume: 0.5 });
+    } else {
+      this.sound.play('spit', { volume: 0.3 });
+    }
     
     console.log('Bullet fired toward:', mouseX, mouseY, 'with speed:', bullet.getData('speedX'), bullet.getData('speedY'));
   }
@@ -1616,8 +1609,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.correctAnswers++;
         this.playerScore += 100;
         
-        this.sound.play('star', { volume: 0.5 });
-        this.sound.play('star', { volume: 0.8 }); // Boosted volume for clearer feedback
+        this.sound.play('chest_sparkle', { volume: 0.6 });
         
         // Check if door should unlock
         if (this.levelCorrectAnswers >= 4) {

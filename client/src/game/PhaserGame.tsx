@@ -57,7 +57,6 @@ class PreloaderScene extends Phaser.Scene {
     this.load.spritesheet('Boss', 'assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('gate', 'assets/sprites/rpg_gate5.png', { frameWidth: 145, frameHeight: 96, endFrame: 15 });
     this.load.image('wall_texture', 'textures/cobbledsquare.jpg');
-    this.load.spritesheet('tilea2', 'assets/sprites/tilea2.png', { frameWidth: 32, frameHeight: 32 });
     this.load.image('ground_easy', 'textures/mixgrass.jpg');
     this.load.image('ground_medium', 'textures/mixrock.jpg');
     this.load.image('ground_hard', 'textures/asphalt.png');
@@ -75,8 +74,8 @@ class PreloaderScene extends Phaser.Scene {
     this.load.image('bullet', 'assets/sprites/bullet.png');
     
     // Load audio files
-    this.load.audio('enchanted_forest', ['assets/audio/enchanted_forest.mp3', 'assets/audio/enchanted_forest_loop.ogg']);
-    this.load.audio('boss_battle', ['assets/audio/BoxCat_Games_-_05_-_Battle_Boss.mp3', 'assets/audio/BoxCat_Games_-_05_-_Battle_Boss.ogg']);
+    this.load.audio('air_fight', 'assets/audio/moodmode-8-bit-air-fight-158813.mp3');
+    this.load.audio('the_tournament', 'assets/audio/emmraan-the-tournament-280277.mp3');
     this.load.audio('spit', ['assets/audio/spit.mp3', 'assets/audio/spit.ogg']);
     this.load.audio('star', 'assets/audio/star.ogg');
     this.load.audio('enemy-death', ['assets/audio/enemy-death.mp3', 'assets/audio/enemy-death.ogg']);
@@ -88,7 +87,10 @@ class PreloaderScene extends Phaser.Scene {
     this.load.audio('close_door', 'assets/audio/close_door.ogg');
     this.load.audio('open_door', 'assets/audio/open_door.ogg');
     this.load.audio('door_lock', 'assets/audio/door_lock.ogg');
-    this.load.audio('arcade1', 'assets/audio/arcade1.ogg');
+    this.load.audio('war_of_the_crown', 'assets/audio/war-of-the-crown.mp3');
+    this.load.audio('fireball_shoot', 'assets/audio/dragon-studio-flame-spell-impact-393919.mp3');
+    this.load.audio('chest_sparkle', 'assets/audio/koiroylers-sparkle-355937.mp3');
+    this.load.audio('bat_burst', 'assets/audio/humordome-magic-burst-452852.mp3');
   }
 }
 

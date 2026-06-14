@@ -54,7 +54,7 @@ export class GameScene extends Phaser.Scene {
 
   private loadAssets(): void {
     // Audio
-    this.load.audio('jungle', ['assets/audio/enchanted_forest.mp3', 'assets/audio/enchanted_forest_loop.ogg']);
+    this.load.audio('air_fight', 'assets/audio/moodmode-8-bit-air-fight-158813.mp3');
     this.load.audio('fire', ['assets/audio/carrot.mp3', 'assets/audio/carrot.ogg']);
     this.load.audio('enemyHurt', ['assets/audio/enemy-death.mp3', 'assets/audio/enemy-death.ogg']);
     this.load.audio('playerHurt', ['assets/audio/hurt.mp3', 'assets/audio/hurt.ogg']);
@@ -62,6 +62,9 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('doorLock', ['assets/audio/door_lock.mp3', 'assets/audio/door_lock.ogg']);
     this.load.audio('star', ['assets/audio/star.mp3', 'assets/audio/star.ogg']);
     this.load.audio('spitting', ['assets/audio/spit.mp3', 'assets/audio/spit.ogg']);
+    this.load.audio('fireball_shoot', 'assets/audio/dragon-studio-flame-spell-impact-393919.mp3');
+    this.load.audio('chest_sparkle', 'assets/audio/koiroylers-sparkle-355937.mp3');
+    this.load.audio('bat_burst', 'assets/audio/humordome-magic-burst-452852.mp3');
     
     // Sprites
     this.load.image('bullet', 'assets/sprites/bullet_32x32.png');
@@ -380,8 +383,8 @@ export class GameScene extends Phaser.Scene {
 
   private setupAudio(): void {
     // Play background music
-    if (!this.sound.get('jungle')) {
-      const music = this.sound.add('jungle', {
+    if (!this.sound.get('air_fight')) {
+      const music = this.sound.add('air_fight', {
         loop: true,
         volume: 0.2
       });
