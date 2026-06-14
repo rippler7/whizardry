@@ -113,6 +113,11 @@ export class DungeonGameScene extends Phaser.Scene {
   private enemiesFrozenUntil: number = 0;
   
   private modalOpenTimestamp: number = 0;
+  private statsBg!: Phaser.GameObjects.Graphics;
+  private statsBgWidth: number = 460;
+  private statsBgColor: number = 0x1c1917;
+  private statsArrow!: Phaser.GameObjects.Text;
+  private isStatsExpanded: boolean = false;
   private isOrangeCrystalActive: boolean = false;
   private orangeEffectEndTime: number = 0;
   private yellowEffectEndTime: number = 0;
@@ -151,6 +156,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.isTouchingDoor = false;
     this.enemiesFrozenUntil = 0;
     this.modalOpenTimestamp = 0;
+    this.isStatsExpanded = false;
+    this.statsBgWidth = 460;
     this.activeEffects = [];
     this.yellowEffectEndTime = 0;
     this.isOrangeCrystalActive = false;
@@ -993,69 +1000,89 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private createUI() {
     // Determine background color based on difficulty for the stats panel
-    let statsBgColor = 0x1c1917; // stone-900
-    if (this.gameDifficulty === 'medium') statsBgColor = 0x292524; // stone-800
-    else if (this.gameDifficulty === 'hard') statsBgColor = 0x44403c; // stone-700
+    this.statsBgColor = 0x1c1917; // stone-900
+    if (this.gameDifficulty === 'medium') this.statsBgColor = 0x292524; // stone-800
+    else if (this.gameDifficulty === 'hard') this.statsBgColor = 0x44403c; // stone-700
 
-    // Add semi-transparent background behind stats for readability
-    this.add.rectangle(10, 10, 220, 115, statsBgColor, 0.85)
-      .setOrigin(0, 0)
-      .setStrokeStyle(2, 0xb45309)
-      .setScrollFactor(0)
-      .setDepth(1000)
-      .setRounded(12);
+    // Dynamic expanding background
+    this.statsBg = this.add.graphics().setScrollFactor(0).setDepth(1000);
+    this.drawStatsBg();
 
     // Health bar
     this.healthBar = this.add.graphics().setScrollFactor(0).setDepth(1001);
     this.updateHealthBar();
 
     // Score and progress
-    this.scoreText = this.add.text(20, 20, `Score: ${this.playerScore}`, {
-      fontSize: '18px',
+    this.scoreText = this.add.text(335, 44, `${this.playerScore}`, {
+      fontSize: '27px',
       fill: '#fde68a',
       fontFamily: '"Georgia", "Times New Roman", serif'
-    }).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001);
 
-    this.questionsText = this.add.text(20, 45, `Questions: ${this.levelCorrectAnswers}/4`, {
-      fontSize: '16px',
+    // Arrow Indicator
+    this.statsArrow = this.add.text(435, 44, '►', {
+      fontSize: '36px',
+      fill: '#fbbf24'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
+
+    this.statsArrow.on('pointerover', () => this.statsArrow.setTint(0xffffff));
+    this.statsArrow.on('pointerout', () => this.statsArrow.clearTint());
+
+    this.statsArrow.on('pointerdown', () => {
+      this.isStatsExpanded = !this.isStatsExpanded;
+      this.statsArrow.setText(this.isStatsExpanded ? '◄' : '►');
+
+      if (this.isStatsExpanded) {
+        this.questionsText.setVisible(true);
+        this.dungeonText.setVisible(true);
+        this.tweens.add({
+          targets: this,
+          statsBgWidth: 860,
+          duration: 250,
+          ease: 'Power2',
+          onUpdate: () => this.drawStatsBg()
+        });
+        this.tweens.add({
+          targets: [this.questionsText, this.dungeonText],
+          alpha: 1,
+          duration: 250,
+          ease: 'Power2'
+        });
+      } else {
+        this.tweens.add({
+          targets: this,
+          statsBgWidth: 460,
+          duration: 250,
+          ease: 'Power2',
+          onUpdate: () => this.drawStatsBg()
+        });
+        this.tweens.add({
+          targets: [this.questionsText, this.dungeonText],
+          alpha: 0,
+          duration: 250,
+          ease: 'Power2',
+          onComplete: () => {
+            this.questionsText.setVisible(false);
+            this.dungeonText.setVisible(false);
+          }
+        });
+      }
+    });
+
+    this.questionsText = this.add.text(480, 44, `Questions: ${this.levelCorrectAnswers}/4`, {
+      fontSize: '24px',
       fill: '#fbbf24',
       fontFamily: '"Georgia", "Times New Roman", serif'
-    }).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001).setAlpha(0).setVisible(false);
 
-    this.dungeonText = this.add.text(20, 70, `Dungeon: ${this.currentDungeon}/${this.maxDungeons}`, {
-      fontSize: '16px',
+    this.dungeonText = this.add.text(680, 44, `Dungeon: ${this.currentDungeon}/${this.maxDungeons}`, {
+      fontSize: '24px',
       fill: '#fcd34d',
       fontFamily: '"Georgia", "Times New Roman", serif'
-    }).setScrollFactor(0).setDepth(1001);
-
-    // Instructions
-    this.add.text(this.scale.width / 2, 20, 'Answer all 4 questions to unlock the door!', {
-      fontSize: '18px',
-      fill: '#fde68a',
-      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
-      stroke: '#000000',
-      strokeThickness: 3,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      padding: { x: 8, y: 4 }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-
-    const controlsText = this.sys.game.device.os.desktop 
-      ? 'WASD to move • SPACE/Click to shoot • Click chests when near to open'
-      : 'Left Side to move • Right Side to shoot • Tap chests when near to open';
-
-    this.add.text(this.scale.width / 2, 45, controlsText, {
-      fontSize: '16px',
-      fill: '#fef3c7',
-      fontFamily: '"Georgia", "Times New Roman", serif',
-      fontStyle: 'normal',
-      stroke: '#000000',
-      strokeThickness: 3,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      padding: { x: 8, y: 4 }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001).setAlpha(0).setVisible(false);
 
     if (this.currentDungeon === this.maxDungeons) {
-      this.add.text(this.scale.width / 2, 68, 'Boss is invulnerable until all questions answered!', {
+      this.add.text(this.scale.width / 2, 115, 'Boss is invulnerable until all questions answered!', {
         fontSize: '16px',
         fill: '#f87171',
         fontFamily: '"Georgia", "Times New Roman", serif',
@@ -1067,20 +1094,20 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     // Exit to Menu Button (Top Right)
-    const exitBtnWidth = 160;
-    const exitBtnHeight = 45;
+    const exitBtnWidth = 240;
+    const exitBtnHeight = 60;
     const exitBtnX = this.scale.width - exitBtnWidth / 2 - 20;
-    const exitBtnY = 40;
+    const exitBtnY = 44;
 
     const exitBtnBg = this.add.rectangle(exitBtnX, exitBtnY, exitBtnWidth, exitBtnHeight, 0x4a2511)
       .setStrokeStyle(3, 0xd4af37) // Gold border for RPG theme
       .setInteractive({ useHandCursor: true })
       .setScrollFactor(0)
       .setDepth(1000)
-      .setRounded(8);
+      .setRounded(12);
 
     const exitBtnText = this.add.text(exitBtnX, exitBtnY, 'Exit to Menu', {
-      fontSize: '18px',
+      fontSize: '27px',
       fill: '#f4d03f', // Gold-ish text
       fontFamily: '"Georgia", "Times New Roman", serif',
       fontStyle: 'bold'
@@ -1102,18 +1129,38 @@ export class DungeonGameScene extends Phaser.Scene {
     });
 
     // Audio Controls (Top Right, next to Exit)
-    const audioY = 40;
-    const sliderWidth = 100;
-    const sliderX = exitBtnX - exitBtnWidth / 2 - sliderWidth - 20;
-    const iconX = sliderX - 35;
-    const fsX = iconX - 50;
+    const audioY = 44;
+    const sliderWidth = 150;
+    const sliderX = exitBtnX - exitBtnWidth / 2 - sliderWidth - 30;
+    const iconX = sliderX - 52;
+    const fsX = iconX - 75;
+    const helpX = fsX - 75;
+
+    let helpModal: Phaser.GameObjects.Container;
+
+    // --- Help Button ---
+    const helpBtn = this.add.container(helpX, audioY).setScrollFactor(0).setDepth(1001);
+    const helpBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
+    const helpIcon = this.add.text(0, 0, '?', { fontSize: '36px', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', fill: '#fde68a' }).setOrigin(0.5);
+    helpBtn.add([helpBg, helpIcon]);
+    helpBtn.setSize(60, 60);
+    helpBtn.setInteractive({ useHandCursor: true });
+
+    helpBtn.on('pointerover', () => helpBg.setFillStyle(0x6b3619));
+    helpBtn.on('pointerout', () => helpBg.setFillStyle(0x4a2511));
+    helpBtn.on('pointerup', () => {
+      if (helpModal && !this.isModalOpen) {
+        this.physics.pause();
+        helpModal.setVisible(true);
+      }
+    });
 
     // --- Fullscreen Button ---
     const fsBtn = this.add.container(fsX, audioY).setScrollFactor(0).setDepth(1001);
-    const fsBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
-    const fsIcon = this.add.text(0, 0, this.scale.isFullscreen ? '⤡' : '⤢', { fontSize: '24px', fontFamily: 'Arial' }).setOrigin(0.5);
+    const fsBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
+    const fsIcon = this.add.text(0, 0, this.scale.isFullscreen ? '⤡' : '⤢', { fontSize: '36px', fontFamily: 'Arial' }).setOrigin(0.5);
     fsBtn.add([fsBg, fsIcon]);
-    fsBtn.setSize(40, 40);
+    fsBtn.setSize(60, 60);
     fsBtn.setInteractive({ useHandCursor: true });
 
     fsBtn.on('pointerover', () => fsBg.setFillStyle(0x6b3619));
@@ -1137,20 +1184,20 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY).setScrollFactor(0).setDepth(1001);
-    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
-    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px' }).setOrigin(0.5);
+    const muteBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
+    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '30px' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
-    muteBtn.setSize(40, 40);
+    muteBtn.setSize(60, 60);
     muteBtn.setInteractive({ useHandCursor: true });
 
     muteBtn.on('pointerover', () => muteBg.setFillStyle(0x6b3619));
     muteBtn.on('pointerout', () => muteBg.setFillStyle(0x4a2511));
 
     // --- Volume Slider ---
-    const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 30, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(1001);
-    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setScrollFactor(0).setDepth(1001).setRounded(3);
-    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1002).setRounded(3);
-    const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 10, 0xffffff).setInteractive({ draggable: true, useHandCursor: true }).setScrollFactor(0).setDepth(1003);
+    const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 45, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(1001);
+    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 9, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setScrollFactor(0).setDepth(1001).setRounded(4);
+    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 9, 0xd4af37).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1002).setRounded(4);
+    const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 15, 0xffffff).setInteractive({ draggable: true, useHandCursor: true }).setScrollFactor(0).setDepth(1003);
 
     const syncAudioUI = () => {
       fill.width = this.sound.volume * sliderWidth;
@@ -1191,6 +1238,49 @@ export class DungeonGameScene extends Phaser.Scene {
     
     this.input.setDraggable(handle);
     handle.on('drag', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
+
+    // --- Help Modal ---
+    helpModal = this.add.container(0, 0).setScrollFactor(0).setDepth(3000).setVisible(false);
+    
+    const overlay = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.8)
+      .setInteractive(); // Blocks underlying clicks
+
+    const modalBox = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, Math.min(this.scale.width * 0.9, 640), 550, 0x1c1917, 0.95)
+      .setStrokeStyle(2, 0xb45309).setRounded(16);
+
+    const helpTitle = this.add.text(this.scale.width / 2, this.scale.height / 2 - 210, 'How to Play', {
+      fontSize: '32px', fill: '#fbbf24', fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    const isDesktop = this.sys.game.device.os.desktop;
+    const helpTextContent = [
+      isDesktop ? '• Use WASD or Arrow Keys to move' : '• Use the Left Side of screen to move',
+      isDesktop ? '• SPACE or Click to shoot (aim with mouse)' : '• Tap the Right Side of screen to shoot',
+      isDesktop ? '• Click chests when near them to open' : '• Tap chests when near them to open',
+      '• Answer all 4 questions to unlock the door',
+      '• Reach dungeon 5 and defeat the boss!'
+    ].join('\n\n');
+
+    const helpTextDesc = this.add.text(this.scale.width / 2, this.scale.height / 2 - 140, helpTextContent, {
+      fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif', lineSpacing: 10, wordWrap: { width: Math.min(this.scale.width * 0.8, 560) }
+    }).setOrigin(0.5, 0);
+
+    const closeBtnBg = this.add.rectangle(this.scale.width / 2, this.scale.height / 2 + 200, 180, 50, 0x78350f).setRounded(12).setInteractive({ useHandCursor: true });
+    const closeBtnText = this.add.text(this.scale.width / 2, this.scale.height / 2 + 200, 'RESUME', { fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
+
+    closeBtnBg.on('pointerover', () => { closeBtnBg.setScale(1.05); closeBtnText.setScale(1.05); closeBtnBg.setFillStyle(0x92400e); });
+    closeBtnBg.on('pointerout', () => { closeBtnBg.setScale(1.0); closeBtnText.setScale(1.0); closeBtnBg.setFillStyle(0x78350f); });
+    closeBtnBg.on('pointerdown', () => { helpModal.setVisible(false); if (!this.isModalOpen) this.physics.resume(); });
+
+    helpModal.add([overlay, modalBox, helpTitle, helpTextDesc, closeBtnBg, closeBtnText]);
+  }
+
+  private drawStatsBg() {
+    this.statsBg.clear();
+    this.statsBg.fillStyle(this.statsBgColor, 0.85);
+    this.statsBg.fillRoundedRect(10, 14, this.statsBgWidth, 60, 12);
+    this.statsBg.lineStyle(2, 0xb45309, 1);
+    this.statsBg.strokeRoundedRect(10, 14, this.statsBgWidth, 60, 12);
   }
 
   private updateHealthBar() {
@@ -1198,17 +1288,17 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Background
     this.healthBar.fillStyle(0x292524); // stone-800
-    this.healthBar.fillRoundedRect(20, 95, 200, 20, 8);
+    this.healthBar.fillRoundedRect(20, 29, 300, 30, 12);
     
     // Health fill
     const healthPercent = this.playerHealth / this.playerMaxHealth;
     const color = healthPercent > 0.6 ? 0x166534 : healthPercent > 0.3 ? 0xb45309 : 0x991b1b;
     this.healthBar.fillStyle(color);
-    if (healthPercent > 0) this.healthBar.fillRoundedRect(20, 95, 200 * healthPercent, 20, 8);
+    if (healthPercent > 0) this.healthBar.fillRoundedRect(20, 29, 300 * healthPercent, 30, 12);
     
     // Border
     this.healthBar.lineStyle(2, 0xb45309);
-    this.healthBar.strokeRoundedRect(20, 95, 200, 20, 8);
+    this.healthBar.strokeRoundedRect(20, 29, 300, 30, 12);
     
     this.emitProgress();
   }
@@ -1927,7 +2017,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private updateUI() {
-    this.scoreText.setText(`Score: ${this.playerScore}`);
+    this.scoreText.setText(`${this.playerScore}`);
     this.questionsText.setText(`Questions: ${this.levelCorrectAnswers}/4`);
     
     this.emitProgress();

@@ -108,18 +108,35 @@ class MainMenuScene extends Phaser.Scene {
     this.add.image(width / 2, height / 3, 'logo').setOrigin(0.5);
     
     // Audio Controls
-    const audioY = 40;
-    const sliderWidth = 100;
-    const sliderX = width - 140;
-    const iconX = sliderX - 35;
-    const fsX = iconX - 50;
+    const audioY = 50;
+    const sliderWidth = 150;
+    const sliderX = width - 180;
+    const iconX = sliderX - 52;
+    const fsX = iconX - 75;
+    const helpX = fsX - 75;
+
+    let helpModal: Phaser.GameObjects.Container;
+
+    // --- Help Button ---
+    const helpBtn = this.add.container(helpX, audioY);
+    const helpBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
+    const helpIcon = this.add.text(0, 0, '?', { fontSize: '36px', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', fill: '#fde68a' }).setOrigin(0.5);
+    helpBtn.add([helpBg, helpIcon]);
+    helpBtn.setSize(60, 60);
+    helpBtn.setInteractive({ useHandCursor: true });
+
+    helpBtn.on('pointerover', () => helpBg.setFillStyle(0x6b3619));
+    helpBtn.on('pointerout', () => helpBg.setFillStyle(0x4a2511));
+    helpBtn.on('pointerup', () => {
+      if (helpModal) helpModal.setVisible(true);
+    });
 
     // --- Fullscreen Button ---
     const fsBtn = this.add.container(fsX, audioY);
-    const fsBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
-    const fsIcon = this.add.text(0, 0, this.scale.isFullscreen ? '⤡' : '⤢', { fontSize: '24px', fontFamily: 'Arial' }).setOrigin(0.5);
+    const fsBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
+    const fsIcon = this.add.text(0, 0, this.scale.isFullscreen ? '⤡' : '⤢', { fontSize: '36px', fontFamily: 'Arial' }).setOrigin(0.5);
     fsBtn.add([fsBg, fsIcon]);
-    fsBtn.setSize(40, 40);
+    fsBtn.setSize(60, 60);
     fsBtn.setInteractive({ useHandCursor: true });
 
     fsBtn.on('pointerover', () => fsBg.setFillStyle(0x6b3619));
@@ -143,20 +160,20 @@ class MainMenuScene extends Phaser.Scene {
 
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY);
-    const muteBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
-    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '20px', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
+    const muteBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
+    const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '30px', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
-    muteBtn.setSize(40, 40);
+    muteBtn.setSize(60, 60);
     muteBtn.setInteractive({ useHandCursor: true });
 
     muteBtn.on('pointerover', () => muteBg.setFillStyle(0x6b3619));
     muteBtn.on('pointerout', () => muteBg.setFillStyle(0x4a2511));
 
     // --- Volume Slider ---
-    const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 30, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
-    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 6, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setRounded(3);
-    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 6, 0xd4af37).setOrigin(0, 0.5).setRounded(3);
-    const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 10, 0xffffff).setInteractive({ draggable: true, useHandCursor: true });
+    const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 45, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 9, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setRounded(4);
+    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 9, 0xd4af37).setOrigin(0, 0.5).setRounded(4);
+    const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 15, 0xffffff).setInteractive({ draggable: true, useHandCursor: true });
 
     const syncAudioUI = () => {
       fill.width = this.sound.volume * sliderWidth;
@@ -222,32 +239,40 @@ class MainMenuScene extends Phaser.Scene {
     createButton(40, 'MEDIUM', 0x78350f, 0x92400e, 'medium'); // amber-900
     createButton(100, 'HARD', 0x451a03, 0x78350f, 'hard'); // orange-950
     
-    // Instructions
-    this.add.text(width / 2, height * 0.72, 'Instructions:', {
-      fontSize: '24px',
-      fill: '#fde68a',
-      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif'
-    }).setOrigin(0.5);
+    // --- Help Modal ---
+    helpModal = this.add.container(0, 0).setDepth(2000).setVisible(false);
     
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
+      .setInteractive(); // Blocks underlying clicks
+
+    const modalBox = this.add.rectangle(width / 2, height / 2, Math.min(width * 0.9, 640), 550, 0x1c1917, 0.95)
+      .setStrokeStyle(2, 0xb45309).setRounded(16);
+
+    const helpTitle = this.add.text(width / 2, height / 2 - 210, 'How to Play', {
+      fontSize: '32px', fill: '#fbbf24', fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
     const isDesktop = this.sys.game.device.os.desktop;
-    const instructions = [
+    const helpTextContent = [
       isDesktop ? '• Use WASD or Arrow Keys to move' : '• Use the Left Side of screen to move',
       isDesktop ? '• SPACE or Click to shoot (aim with mouse)' : '• Tap the Right Side of screen to shoot',
       isDesktop ? '• Click chests when near them to open' : '• Tap chests when near them to open',
       '• Answer all 4 questions to unlock the door',
       '• Reach dungeon 5 and defeat the boss!'
-    ];
-    
-    instructions.forEach((instruction, index) => {
-      this.add.text(width / 2, height * 0.72 + 40 + (index * 28), instruction, {
-        fontSize: '18px',
-        fill: '#fef3c7',
-        fontFamily: '"Georgia", "Times New Roman", serif',
-        fontStyle: 'normal',
-        stroke: '#000000',
-        strokeThickness: 3
-      }).setOrigin(0.5);
-    });
+    ].join('\n\n');
+
+    const helpText = this.add.text(width / 2, height / 2 - 140, helpTextContent, {
+      fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif', lineSpacing: 10, wordWrap: { width: Math.min(width * 0.8, 560) }
+    }).setOrigin(0.5, 0);
+
+    const closeBtnBg = this.add.rectangle(width / 2, height / 2 + 200, 180, 50, 0x78350f).setRounded(12).setInteractive({ useHandCursor: true });
+    const closeBtnText = this.add.text(width / 2, height / 2 + 200, 'CLOSE', { fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
+
+    closeBtnBg.on('pointerover', () => { closeBtnBg.setScale(1.05); closeBtnText.setScale(1.05); closeBtnBg.setFillStyle(0x92400e); });
+    closeBtnBg.on('pointerout', () => { closeBtnBg.setScale(1.0); closeBtnText.setScale(1.0); closeBtnBg.setFillStyle(0x78350f); });
+    closeBtnBg.on('pointerdown', () => { helpModal.setVisible(false); });
+
+    helpModal.add([overlay, modalBox, helpTitle, helpText, closeBtnBg, closeBtnText]);
   }
 }
 
