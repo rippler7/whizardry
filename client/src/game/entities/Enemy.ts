@@ -669,18 +669,39 @@ export class Bat extends Enemy {
   
   protected performAttack(): void {
     // Ranged projectile attack
+    const currentScene = this.scene;
     
-    const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
+    const bullet = currentScene.physics.add.sprite(this.x, this.y, 'bullet');
     bullet.setScale(0.4);
-    bullet.setTint(0xff4444);
+    bullet.setTint(0x39ff14); // Slime green
+    bullet.setAlpha(0.9);
     bullet.setDepth(50);
     bullet.setData('damage', this.config.damage);
     
-    const scene = this.scene as any;
+    // Sticky fluid particle trail
+    const emitter = currentScene.add.particles(0, 0, 'bullet', {
+      scale: { start: 0.35, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      tint: 0x39ff14, // Slime green
+      speed: { min: -15, max: 15 },
+      lifespan: 1000,
+      frequency: 20
+    });
+    emitter.setDepth(49);
+    emitter.startFollow(bullet);
+    
+    bullet.on('destroy', () => {
+      emitter.stop();
+      if (currentScene && currentScene.time) {
+        currentScene.time.delayedCall(1000, () => { if (emitter && emitter.active) emitter.destroy(); });
+      }
+    });
+    
+    const scene = currentScene as any;
     if (scene.enemyBullets) {
       scene.enemyBullets.add(bullet);
     } else {
-      this.scene.physics.add.overlap(bullet, this.player, () => {
+      currentScene.physics.add.overlap(bullet, this.player, () => {
         this.player.takeDamage(this.config.damage);
         bullet.destroy();
       });
@@ -701,16 +722,19 @@ export class Bat extends Enemy {
     bullet.setData('born', 0);
     
     // Destroy fireball after time
-    this.scene.time.delayedCall(3000, () => {
+    currentScene.time.delayedCall(3000, () => {
       if (bullet.active) bullet.destroy();
     });
     
-    this.scene.sound.play('spit', { volume: 0.3 });
+    currentScene.sound.play('spit', { volume: 0.3 });
   }
 }
 
 // Spider Enemy
 export class Spider extends Enemy {
+  private jumpCooldown: number = 0;
+  private isJumping: boolean = false;
+
   constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
     super(scene, x, y, 'spider', 'spider', player, hp, speed);
     this.setSize(32, 32);
@@ -732,8 +756,64 @@ export class Spider extends Enemy {
   protected updateMovementAnimation(velocityX: number, velocityY: number): void {
     if (Math.abs(velocityX) > 1 || Math.abs(velocityY) > 1) {
       this.anims.play('walkSpider', true);
+      // Reverse scaling (flip) when changing sideways direction
+      if (velocityX < -0.1) {
+        this.setFlipX(false);
+      } else if (velocityX > 0.1) {
+        this.setFlipX(true);
+      }
     } else {
-      this.anims.stop();
+      if (!this.isJumping) {
+        this.anims.stop();
+      }
+    }
+  }
+
+  protected handlePatrol(): void {
+    if (this.isJumping) return;
+
+    if (this.jumpCooldown > 0) {
+      this.jumpCooldown -= this.scene.game.loop.delta;
+      this.setVelocity(0, 0);
+      return;
+    }
+
+    const distanceToTarget = Phaser.Math.Distance.Between(
+      this.x, this.y, this.patrolTarget.x, this.patrolTarget.y
+    );
+
+    if (distanceToTarget < 32) {
+      this.state = 'idle';
+      this.stateTimer = Phaser.Math.Between(1000, 3000);
+      this.setVelocity(0, 0);
+      return;
+    }
+
+    this.initiateJump(this.patrolTarget.x, this.patrolTarget.y, 0.6);
+  }
+
+  protected handleChase(): void {
+    if (this.isJumping) return;
+
+    if (this.jumpCooldown > 0) {
+      this.jumpCooldown -= this.scene.game.loop.delta;
+      this.setVelocity(0, 0);
+      return;
+    }
+
+    const targetX = this.canSeePlayer() ? this.player.x : this.patrolTarget.x;
+    const targetY = this.canSeePlayer() ? this.player.y : this.patrolTarget.y;
+
+    this.initiateJump(targetX, targetY, 1.2);
+  }
+
+  protected handleAttack(): void {
+    // Stop jumping behavior and concentrate on attacking while following smoothly
+    this.moveTowardsTarget(this.player.x, this.player.y, this.config.speed * 0.8);
+
+    if (this.scene.time.now > this.lastAttack + this.attackRate) {
+      this.performAttack();
+      this.lastAttack = this.scene.time.now;
     }
   }
   
@@ -744,19 +824,44 @@ export class Spider extends Enemy {
     const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
     const spreadAngles = [baseAngle - 0.25, baseAngle, baseAngle + 0.25]; // Shoot left, center, and right
     
+    const currentScene = this.scene;
+    
     spreadAngles.forEach(angle => {
-      const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
-      bullet.setScale(0.4);
-      bullet.setTint(0xffffff); // White web projectile
+      const bullet = currentScene.physics.add.sprite(this.x, this.y, 'bullet');
+      bullet.setScale(0.2); // Half of 0.4
+      bullet.setTintFill(0xffffff); // Pure white web projectile
+      bullet.setAlpha(0.9); // 90% opacity
       bullet.setDepth(50);
       bullet.setData('damage', this.config.damage);
       bullet.setData('isSpiderWeb', true);
       
-      const scene = this.scene as any;
+      // Sticky fluid particle trail
+      const emitter = currentScene.add.particles(0, 0, 'bullet', {
+        scale: { start: 0.175, end: 0 }, // Scaled down to match the new bullet size
+        alpha: { start: 0.9, end: 0 },
+        tint: 0xffffff,
+        tintFill: true,
+        blendMode: 'ADD',
+        speed: { min: -15, max: 15 },
+        lifespan: 1000,
+        gravityY: 80,
+        frequency: 20
+      });
+      emitter.setDepth(49);
+      emitter.startFollow(bullet);
+      
+      bullet.on('destroy', () => {
+        emitter.stop();
+        if (currentScene && currentScene.time) {
+          currentScene.time.delayedCall(1000, () => { if (emitter && emitter.active) emitter.destroy(); });
+        }
+      });
+
+      const scene = currentScene as any;
       if (scene.enemyBullets) {
         scene.enemyBullets.add(bullet);
       } else {
-        this.scene.physics.add.overlap(bullet, this.player, () => {
+        currentScene.physics.add.overlap(bullet, this.player, () => {
           this.player.takeDamage(this.config.damage);
           bullet.destroy();
         });
@@ -766,10 +871,45 @@ export class Spider extends Enemy {
       bullet.setData('speedY', Math.sin(angle) * baseSpeed);
       bullet.setData('born', 0);
       
-      this.scene.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
+      currentScene.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
     });
 
-    this.scene.sound.play('spit', { volume: 0.3 });
+    currentScene.sound.play('spit', { volume: 0.3 });
+  }
+
+  private initiateJump(targetX: number, targetY: number, speedMult: number) {
+    this.isJumping = true;
+    this.anims.play('walkSpider', true);
+
+    // Use native moveTowardsTarget to leverage the built-in obstacle evasion while jumping!
+    this.moveTowardsTarget(targetX, targetY, this.config.speed * 4 * speedMult);
+
+    const originalOrigin = this.displayOriginY;
+    const jumpHeight = 15;
+
+    this.scene.tweens.add({
+      targets: this,
+      displayOriginY: originalOrigin + jumpHeight,
+      duration: 150,
+      yoyo: true,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.isJumping = false;
+        this.displayOriginY = originalOrigin;
+        this.setVelocity(0, 0);
+        this.jumpCooldown = Phaser.Math.Between(400, 1200); // Erratic pause duration
+        if (this.active) this.anims.stop();
+      }
+    });
+
+    if (this.shadow) {
+      const origScaleX = this.shadow.scaleX;
+      const origScaleY = this.shadow.scaleY;
+      this.scene.tweens.add({
+        targets: this.shadow, scaleX: origScaleX * 0.6, scaleY: origScaleY * 0.6,
+        duration: 150, yoyo: true, ease: 'Sine.easeInOut'
+      });
+    }
   }
 
   protected die(): void {

@@ -180,15 +180,35 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     // Background - Anchor to top left and explicitly send to the absolute back
+    const getTileTint = (baseColor: number = 0xffffff) => {
+      let modeTint = 0xffffff;
+      if (this.gameDifficulty === 'medium') modeTint = 0xe8e0cc; // 50% Khaki
+      else if (this.gameDifficulty === 'hard') modeTint = 0xd8c8e8; // 30% Purple
+
+      if (baseColor === 0xffffff) return modeTint;
+      if (modeTint === 0xffffff) return baseColor;
+
+      const r = Math.floor(((baseColor >> 16) & 0xff) * ((modeTint >> 16) & 0xff) / 255);
+      const g = Math.floor(((baseColor >> 8) & 0xff) * ((modeTint >> 8) & 0xff) / 255);
+      const b = Math.floor((baseColor & 0xff) * (modeTint & 0xff) / 255);
+      return (r << 16) | (g << 8) | b;
+    };
+
+    const applyTint = (gameObject: any, tint: number) => {
+      if (tint !== 0xffffff) gameObject.setTint(tint);
+    };
+
     if (useCellularAutomata) {
       const isMixedTerrain = this.currentDungeon === 2 || this.currentDungeon === 4;
 
       // Draw a base layer for mixed terrain
       if (isMixedTerrain) {
         if (this.currentDungeon === 2 && this.textures.exists('ground_medium')) {
-          this.add.tileSprite(0, 0, width, height, 'ground_medium').setOrigin(0, 0).setDepth(-11);
+          const bg = this.add.tileSprite(0, 0, width, height, 'ground_medium').setOrigin(0, 0).setDepth(-11);
+          applyTint(bg, getTileTint());
         } else if (this.currentDungeon === 4 && this.textures.exists('ground_hard')) {
-          this.add.tileSprite(0, 0, width, height, 'ground_hard').setOrigin(0, 0).setDepth(-11).setTint(0xd8c8e8);
+          const bg = this.add.tileSprite(0, 0, width, height, 'ground_hard').setOrigin(0, 0).setDepth(-11);
+          applyTint(bg, getTileTint(0xd8c8e8));
         }
       }
 
@@ -247,6 +267,7 @@ export class DungeonGameScene extends Phaser.Scene {
               const tile = this.add.tileSprite(x * tileSize, y * tileSize, tileSize, tileSize, 'ground_easy')
                 .setOrigin(0, 0)
                 .setDepth(-10);
+              applyTint(tile, getTileTint());
               tile.tilePositionX = x * tileSize;
               tile.tilePositionY = y * tileSize;
             }
@@ -255,30 +276,33 @@ export class DungeonGameScene extends Phaser.Scene {
               // Draw sand clumps on top of the asphalt
               const tile = this.add.tileSprite(x * tileSize, y * tileSize, tileSize, tileSize, 'ground_medium')
                 .setOrigin(0, 0)
-                .setDepth(-10)
-                .setTint(0xd8c8e8); // Maintain purple tint
+                .setDepth(-10);
+              applyTint(tile, getTileTint(0xd8c8e8)); // Maintain purple tint + mode tint
               tile.tilePositionX = x * tileSize;
               tile.tilePositionY = y * tileSize;
             }
           } else if (this.textures.exists('tilea2')) {
             const frame = isDense ? 0 : 1; // Assuming frame 0 is dense, frame 1 is patchy
-            this.add.image(x * tileSize, y * tileSize, 'tilea2', frame)
+            const tile = this.add.image(x * tileSize, y * tileSize, 'tilea2', frame)
               .setOrigin(0, 0)
               .setDisplaySize(tileSize, tileSize)
               .setDepth(-10);
+            applyTint(tile, getTileTint());
           } else {
-            this.add.rectangle(x * tileSize, y * tileSize, tileSize, tileSize, isDense ? 0x2d4a22 : 0x1f3d1f)
+            const color = isDense ? 0x2d4a22 : 0x1f3d1f;
+            this.add.rectangle(x * tileSize, y * tileSize, tileSize, tileSize, getTileTint(color))
               .setOrigin(0, 0).setDepth(-10);
           }
         }
       }
     } else if (this.textures.exists(groundTexture)) {
-      this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
+      const ground = this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
+      applyTint(ground, getTileTint());
     } else {
       // Safe fallback if image is missing
       const fallbackColors: { [key: number]: number } = { 1: 0x292524, 2: 0x3d3730, 3: 0x44403c, 4: 0x3d334d, 5: 0x1c1917 };
       const color = fallbackColors[this.currentDungeon] || 0x292524;
-      this.add.rectangle(0, 0, width, height, color).setOrigin(0, 0).setDepth(-10);
+      this.add.rectangle(0, 0, width, height, getTileTint(color)).setOrigin(0, 0).setDepth(-10);
     }
 
     this.generateDungeonQuestions();
