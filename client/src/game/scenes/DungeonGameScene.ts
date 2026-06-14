@@ -112,6 +112,8 @@ export class DungeonGameScene extends Phaser.Scene {
   private isTouchingDoor: boolean = false;
   private enemiesFrozenUntil: number = 0;
   
+  private isOrangeCrystalActive: boolean = false;
+  private orangeEffectEndTime: number = 0;
   private playerShadow!: Phaser.GameObjects.Ellipse;
   private effectCountdownText: Phaser.GameObjects.Text | null = null;
   private effectEndTime: number = 0;
@@ -149,6 +151,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.enemiesFrozenUntil = 0;
     this.effectCountdownText = null;
     this.effectEndTime = 0;
+    this.isOrangeCrystalActive = false;
+    this.orangeEffectEndTime = 0;
     this.resetJoystick();
   }
 
@@ -302,6 +306,15 @@ export class DungeonGameScene extends Phaser.Scene {
       this.anims.create({
         key: 'spin-yellowcrystal',
         frames: this.anims.generateFrameNumbers('yellowcrystal', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1
+      });
+    }
+
+    if (!this.anims.exists('spin-orangecrystal')) {
+      this.anims.create({
+        key: 'spin-orangecrystal',
+        frames: this.anims.generateFrameNumbers('orangecrystal', { start: 0, end: 7 }),
         frameRate: 10,
         repeat: -1
       });
@@ -700,6 +713,7 @@ export class DungeonGameScene extends Phaser.Scene {
       chest.setScale(1.0); // Normal scale since chests are properly sized now
       chest.setData('questionIndex', index);
       chest.setData('opened', false);
+      chest.setDepth(2); // Render below active entities
       
       // Use pixelPerfect so the hitbox perfectly wraps the actual visible sprite pixels
       chest.setInteractive({ useHandCursor: true, pixelPerfect: true });
@@ -864,6 +878,8 @@ export class DungeonGameScene extends Phaser.Scene {
       });
       this.physics.add.collider(this.bullets, walls, (bullet: any) => {
         bullet.destroy(); // Bullets destroyed when hitting walls
+      }, (bullet: any) => {
+        return !bullet.getData('ignoreWalls');
       });
       this.physics.add.collider(this.enemyBullets, walls, (bullet: any) => {
         bullet.destroy(); // Enemy bullets destroyed when hitting walls
@@ -1106,6 +1122,10 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     }
 
+    if (this.isOrangeCrystalActive && time >= this.orangeEffectEndTime) {
+      this.isOrangeCrystalActive = false;
+    }
+
     if (this.playerShadow && !this.player.getData('isDead')) {
       this.playerShadow.setPosition(this.player.x, this.player.y + 26);
     }
@@ -1147,6 +1167,27 @@ export class DungeonGameScene extends Phaser.Scene {
       bullet.body.setVelocityX(delta * speedX * 50);
       bullet.body.setVelocityY(delta * speedY * 50);
       
+      // Add particle trail for special bullets
+      if (bullet.getData('isSpecial') && bullet.active) {
+        if (Math.random() < 0.7) {
+          const orangeShades = [0xf97316, 0xfb923c, 0xfcd34d, 0xffedd5];
+          const color = Phaser.Utils.Array.GetRandom(orangeShades);
+          const offsetX = Phaser.Math.FloatBetween(-5, 5);
+          const offsetY = Phaser.Math.FloatBetween(-5, 5);
+          const spark = this.add.star(bullet.x + offsetX, bullet.y + offsetY, 4, 4, 14, color);
+          spark.setStrokeStyle(1, 0xb45309, 0.8);
+          spark.setDepth(49);
+          this.tweens.add({
+            targets: spark,
+            alpha: 0,
+            scale: 0,
+            angle: Phaser.Math.Between(90, 270),
+            duration: Phaser.Math.Between(300, 500),
+            onComplete: () => spark.destroy()
+          });
+        }
+      }
+
       // Remove bullet after lifetime expires (original used 1750ms)
       const lifespan = bullet.getData('lifespan') || 1750;
       if (born > lifespan) {
@@ -1233,9 +1274,14 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private fireBullet(targetX?: number, targetY?: number) {
+    if (this.isOrangeCrystalActive && this.bullets.getChildren().length >= 1) {
+      return; // Only 1 instance at a time for special attack
+    }
+
     const bullet = this.physics.add.sprite(this.player.x, this.player.y, 'bullet');
-    bullet.setScale(0.4); // Reduced to 1/3 of original (1.2 / 3)
-    bullet.setTint(0xfcd34d); // Golden/Amber tint for magic effect
+    const isSpecial = this.isOrangeCrystalActive;
+    bullet.setScale(isSpecial ? 1.2 : 0.4); // 3x larger if special
+    bullet.setTint(isSpecial ? 0xf97316 : 0xfcd34d); // Orange if special
     
     // Use the exact touch coordinate if provided, otherwise fallback to the active pointer
     const pointer = this.input.activePointer;
@@ -1248,7 +1294,7 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Normalize direction and set speed properties like original
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const baseSpeed = 0.75; // Doubled from 0.375
+    const baseSpeed = isSpecial ? 0.375 : 0.75; // Half speed if special
     
     if (distance > 0) {
       bullet.setData('speedX', (deltaX / distance) * baseSpeed);
@@ -1260,7 +1306,11 @@ export class DungeonGameScene extends Phaser.Scene {
     }
     
     bullet.setData('born', 0); // Track lifetime like original
-    bullet.setData('lifespan', 738.28125); // Limit range to 75% of current 984.375ms
+    bullet.setData('lifespan', isSpecial ? 738.28125 * 2 : 738.28125); // Double lifespan so it travels full distance at half speed
+    bullet.setData('damage', isSpecial ? 125 : 25); // 5x damage
+    bullet.setData('bossDamage', isSpecial ? 250 : 50); // 5x damage for boss
+    bullet.setData('ignoreWalls', isSpecial); // Ignores obstacles
+    bullet.setData('isSpecial', isSpecial); // Flag for particle trail
     
     this.bullets.add(bullet);
     
@@ -1291,7 +1341,35 @@ export class DungeonGameScene extends Phaser.Scene {
     this.showQuestionModal(question, (isCorrect: boolean) => {
       if (isCorrect) {
         chest.setData('opened', true);
-        chest.setTint(0x00ff00); // Green tint for opened
+        chest.setTint(0xffd700); // Gold tint for opened
+        
+        // Glitter effect
+        const goldShades = [0xfffbeb, 0xfde68a, 0xfcd34d, 0xfbbf24, 0xf59e0b, 0xd97706];
+        for (let i = 0; i < 30; i++) {
+          const color = Phaser.Utils.Array.GetRandom(goldShades);
+          // 4-pointed star (glint/sparkle shape), inner radius 3, outer 12, shaded gold color
+          const spark = this.add.star(chest.x, chest.y, 4, 3, 12, color);
+          spark.setStrokeStyle(1, 0xb45309, 0.8); // Amber-700 stroke for 3D depth
+          spark.setScale(Phaser.Math.FloatBetween(0.3, 0.8)); // Larger particles
+          spark.setDepth(1500);
+          spark.setAngle(Phaser.Math.Between(0, 90)); // Random starting rotation
+          
+          const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+          const speed = Phaser.Math.FloatBetween(25, 70); // Reduced spread
+          
+          this.tweens.add({
+            targets: spark,
+            x: chest.x + Math.cos(angle) * speed,
+            y: chest.y + Math.sin(angle) * speed - 30, // Drifts slightly upward
+            angle: spark.angle + Phaser.Math.Between(180, 360), // Add spinning rotation
+            alpha: 0,
+            scale: 0,
+            duration: Phaser.Math.Between(1500, 3000), // Slower animation
+            ease: 'Cubic.easeOut',
+            onComplete: () => spark.destroy()
+          });
+        }
+        
         this.levelCorrectAnswers++;
         this.correctAnswers++;
         this.playerScore += 100;
@@ -1563,12 +1641,14 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private hitEnemy(bullet: any, enemy: any) {
     if (enemy.getData('isDead')) return;
+    const damage = bullet.getData('damage') || 25;
     bullet.destroy();
-    enemy.takeDamage(25);
+    enemy.takeDamage(damage);
   }
 
   private hitBoss(boss: any, bullet: any) {
     if (boss.getData('isDead')) return;
+    const damage = bullet.getData('bossDamage') || 50;
     bullet.destroy();
     
     if (this.bossVulnerability < 100) {
@@ -1576,7 +1656,7 @@ export class DungeonGameScene extends Phaser.Scene {
       return;
     }
     
-    boss.takeDamage(50);
+    boss.takeDamage(damage);
     if (boss.isDead) {
       this.boss = undefined;
       this.showMessage('Boss defeated! Proceed to exit!');
@@ -1648,7 +1728,32 @@ export class DungeonGameScene extends Phaser.Scene {
     const isMediumRed = this.gameDifficulty === 'medium' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'spider' || enemyType === 'zombie');
     const isEasyRed = this.gameDifficulty === 'easy' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'skeleton' || enemyType === 'spider' || enemyType === 'zombie');
 
+    const isOrangeDrop = enemyType === 'zombie' && this.currentDungeon >= 1 && this.currentDungeon <= 3;
+
     if (enemyType === 'bat') {
+      // Green blood burst effect
+      const greenShades = [0xbbf7d0, 0x86efac, 0x4ade80, 0x22c55e, 0x16a34a, 0x15803d];
+      for (let i = 0; i < 30; i++) {
+        const color = Phaser.Utils.Array.GetRandom(greenShades);
+        const blood = this.add.circle(x, y, Phaser.Math.FloatBetween(4, 10), color);
+        blood.setStrokeStyle(1, 0x064e3b, 0.8); // Dark green stroke for 3D depth
+        blood.setDepth(1500);
+        
+        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const speed = Phaser.Math.FloatBetween(25, 70); // Reduced spread
+        
+        this.tweens.add({
+          targets: blood,
+          x: x + Math.cos(angle) * speed,
+          y: y + Math.sin(angle) * speed + 30, // Drifts downward to simulate liquid falling
+          alpha: 0,
+          scale: 0,
+          duration: Phaser.Math.Between(1500, 3000),
+          ease: 'Cubic.easeOut',
+          onComplete: () => blood.destroy()
+        });
+      }
+
       let dropChance = 0;
       if (this.gameDifficulty === 'easy') dropChance = 0.6;
       else if (this.gameDifficulty === 'medium') dropChance = 0.5;
@@ -1661,6 +1766,13 @@ export class DungeonGameScene extends Phaser.Scene {
         crystal.setDepth(4);
         this.droppedItems.add(crystal);
       }
+    }
+    else if (isOrangeDrop && Math.random() < (1 / 3)) { // 1 in 3 drop rate for orange crystal
+      const crystal = this.physics.add.sprite(x, y, 'orangecrystal');
+      crystal.anims.play('spin-orangecrystal');
+      crystal.setScale(0.8);
+      crystal.setDepth(4);
+      this.droppedItems.add(crystal);
     }
     else if (isHardBlue || isMediumBlue || isEasyBlue) {
       if (Math.random() < 0.50) {
@@ -1695,8 +1807,26 @@ export class DungeonGameScene extends Phaser.Scene {
     const isRedCrystal = item.texture.key === 'redcrystal';
     const isBlueCrystal = item.texture.key === 'bluecrystal';
     const isYellowCrystal = item.texture.key === 'yellowcrystal';
+    const isOrangeCrystal = item.texture.key === 'orangecrystal';
     item.destroy();
     
+    if (isOrangeCrystal) {
+      this.isOrangeCrystalActive = true;
+      this.orangeEffectEndTime = this.time.now + 8000;
+      
+      this.sound.play('star', { volume: 0.5 });
+      this.startEffectCountdown(8000, '#f97316'); // orange-500
+      
+      const specialText = this.add.text(this.player.x, this.player.y - 30, 'SPECIAL ATTACK!', {
+        fontSize: '16px', fill: '#f97316', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(100);
+      
+      this.tweens.add({
+        targets: specialText, y: specialText.y - 30, alpha: 0, duration: 1000, onComplete: () => specialText.destroy()
+      });
+      return;
+    }
+
     if (isYellowCrystal) {
       this.player.setData('isInvincible', true);
       this.player.setTint(0xffff33); // 80% yellow tint

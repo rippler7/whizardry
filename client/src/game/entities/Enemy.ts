@@ -350,6 +350,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected die(): void {
     this.isAlive = false;
     this.body.enable = false;
+    this.setDepth(2); // Render dead bodies under active entities
     if (this.shadow) this.shadow.destroy();
     
     // Give player rewards
@@ -473,6 +474,7 @@ export class Skeleton extends Enemy {
       this.revivesLeft--;
       this.isAlive = false;
       this.body.enable = false; // Disables collisions, making it invulnerable
+      this.setDepth(2); // Render dead bodies under active entities
       if (this.shadow) this.shadow.setVisible(false);
       
       this.scene.sound.play('enemy-death', { volume: 0.3 });
@@ -498,6 +500,7 @@ export class Skeleton extends Enemy {
     this.isAlive = true;
     this.setData('health', this.config.health);
     this.body.enable = true;
+    this.setDepth(5); // Render as active entity again
     if (this.shadow) this.shadow.setVisible(true);
     this.clearTint();
     this.state = 'patrol';
@@ -750,6 +753,66 @@ export class Spider extends Enemy {
     });
 
     this.scene.sound.play('spit', { volume: 0.3 });
+  }
+
+  protected die(): void {
+    this.isAlive = false;
+    this.body.enable = false;
+    this.setDepth(2); // Render dead bodies under active entities
+    
+    // Give player rewards
+    if (this.player.gainExperience) this.player.gainExperience(this.config.experienceReward);
+    if (this.player.addScore) this.player.addScore(this.config.scoreReward);
+    
+    this.scene.sound.play('enemy-death', { volume: 0.3 });
+    this.scene.events.emit('enemyDefeated', this.config.type, this.x, this.y);
+    
+    const dieAnim = `${this.config.type}Die`;
+    if (this.scene.anims.exists(dieAnim)) {
+      this.anims.play(dieAnim);
+    } else {
+      this.setTint(0xff0000);
+    }
+
+    // Calculate pushback direction (away from player)
+    const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.x, this.y);
+    const dist = 60;
+    const targetX = this.x + Math.cos(angle) * dist;
+    const targetY = this.y + Math.sin(angle) * dist;
+
+    // Use a proxy object for true 3D jump/hop effect
+    const pos = { x: this.x, y: this.y, z: 0 };
+
+    // Base translation movement
+    this.scene.tweens.add({
+      targets: pos, x: targetX, y: targetY, duration: 400, ease: 'Linear',
+      onUpdate: () => {
+        if (this.active) {
+          this.setPosition(pos.x, pos.y - pos.z);
+          if (this.shadow && this.shadow.active) {
+            this.shadow.setPosition(pos.x, pos.y + this.shadowOffset);
+            this.shadow.setScale(Math.max(0.4, 1 - (pos.z / 60))); // Shrink shadow during hop
+          }
+        }
+      }
+    });
+
+    // Bounce (Z-axis) tween
+    this.scene.tweens.add({
+      targets: pos, z: 30, duration: 150, ease: 'Sine.easeOut', yoyo: true, // Jump height
+      onComplete: () => {
+        // Small secondary bounce
+        this.scene.tweens.add({
+          targets: pos, z: 10, duration: 75, ease: 'Sine.easeOut', yoyo: true,
+          onComplete: () => {
+            this.scene.time.delayedCall(150, () => {
+              if (this.shadow) this.shadow.destroy();
+              if (this.active) this.destroy();
+            });
+          }
+        });
+      }
+    });
   }
 }
 
