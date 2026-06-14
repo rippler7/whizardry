@@ -17,7 +17,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
   zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 15, scoreReward: 75 },
   bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 150, detectionRange: 250, experienceReward: 10, scoreReward: 50 },
   spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
-  boss: { type: 'boss', health: 10500, speed: 40, damage: 30, attackRange: 80, detectionRange: 400, experienceReward: 100, scoreReward: 500 }
+  boss: { type: 'boss', health: 10500, speed: 40, damage: 30, attackRange: 80, detectionRange: 200, experienceReward: 100, scoreReward: 500 }
 };
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {

@@ -152,7 +152,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
     damage: 35,
     speed: 90,
     attackRange: 64,
-    detectionRange: 200,
+    detectionRange: 100,
     experienceReward: 100,
     scoreReward: 1000
   }
