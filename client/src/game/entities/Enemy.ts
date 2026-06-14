@@ -32,6 +32,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected patrolTarget: { x: number; y: number } = { x: 0, y: 0 };
   protected lastDirection: { x: number; y: number } = { x: 0, y: 0 };
   protected walls: Phaser.Physics.Arcade.StaticGroup | null = null;
+  protected chests: Phaser.Physics.Arcade.Group | null = null;
   protected shadow!: Phaser.GameObjects.Ellipse;
   protected shadowOffset: number = 20;
   protected evasionDirection: { x: number; y: number } = { x: 0, y: 0 };
@@ -71,6 +72,10 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   
   public setWallsGroup(walls: Phaser.Physics.Arcade.StaticGroup): void {
     this.walls = walls;
+  }
+  
+  public setChestsGroup(chests: Phaser.Physics.Arcade.Group): void {
+    this.chests = chests;
   }
   
   protected createShadow(width: number, height: number, offset: number) {
@@ -266,7 +271,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
   
   protected checkWallCollision(x: number, y: number): boolean | Phaser.Physics.Arcade.Sprite {
-    if (!this.walls) return false;
+    if (!this.walls && !this.chests) return false;
     
     // Use the exact physics body dimensions instead of the wildly scaling visual texture bounds
     const bodyW = this.body ? this.body.width : this.width;
@@ -289,6 +294,14 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Allow spiders to bypass wall collision checks
         if (this.config.type !== 'spider' && Phaser.Geom.Intersects.RectangleToRectangle(bounds, (wall as Phaser.Physics.Arcade.Sprite).getBounds())) {
           collided = wall as Phaser.Physics.Arcade.Sprite;
+        }
+      });
+    }
+    
+    if (!collided && this.chests) {
+      this.chests.getChildren().forEach(chest => {
+        if (this.config.type !== 'spider' && Phaser.Geom.Intersects.RectangleToRectangle(bounds, (chest as Phaser.Physics.Arcade.Sprite).getBounds())) {
+          collided = chest as Phaser.Physics.Arcade.Sprite;
         }
       });
     }

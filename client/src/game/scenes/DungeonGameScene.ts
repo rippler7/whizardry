@@ -115,9 +115,9 @@ export class DungeonGameScene extends Phaser.Scene {
   private modalOpenTimestamp: number = 0;
   private isOrangeCrystalActive: boolean = false;
   private orangeEffectEndTime: number = 0;
+  private yellowEffectEndTime: number = 0;
+  private activeEffects: { type: string, endTime: number, textObj: Phaser.GameObjects.Text, color: string }[] = [];
   private playerShadow!: Phaser.GameObjects.Ellipse;
-  private effectCountdownText: Phaser.GameObjects.Text | null = null;
-  private effectEndTime: number = 0;
 
   // UI elements
   private healthBar!: Phaser.GameObjects.Graphics;
@@ -151,8 +151,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.isTouchingDoor = false;
     this.enemiesFrozenUntil = 0;
     this.modalOpenTimestamp = 0;
-    this.effectCountdownText = null;
-    this.effectEndTime = 0;
+    this.activeEffects = [];
+    this.yellowEffectEndTime = 0;
     this.isOrangeCrystalActive = false;
     this.orangeEffectEndTime = 0;
     this.resetJoystick();
@@ -364,6 +364,8 @@ export class DungeonGameScene extends Phaser.Scene {
     } else {
       this.sound.play('enchanted_forest', { volume: 0.2, loop: true });
     }
+
+    this.showLevelIntro();
   }
 
   private createPlayerAnimations() {
@@ -651,6 +653,7 @@ export class DungeonGameScene extends Phaser.Scene {
         enemy = new Skeleton(this, x, y, this.player, hp, baseSpeed);
       }
       enemy.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
+      enemy.setChestsGroup(this.chests);
       this.enemies.add(enemy);
     }
   }
@@ -715,6 +718,12 @@ export class DungeonGameScene extends Phaser.Scene {
       chest.setScale(1.0); // Normal scale since chests are properly sized now
       chest.setData('questionIndex', index);
       chest.setData('opened', false);
+      chest.setData('nextInteractionTime', 0);
+      chest.setImmovable(true);
+
+      // Stop Phaser 3.50+ from allowing the player to push this immovable body
+      if (typeof (chest as any).setPushable === 'function') { (chest as any).setPushable(false); }
+      
       chest.setDepth(2); // Render below active entities
       
       // Use pixelPerfect so the hitbox perfectly wraps the actual visible sprite pixels
@@ -786,6 +795,7 @@ export class DungeonGameScene extends Phaser.Scene {
       const baseSpeed = (55 + this.currentDungeon * 5) * 1.4; // Reduced to 80% of 1.75
       this.boss = new Boss(this, this.scale.width / 2, this.scale.height / 2, this.player, bossHp, baseSpeed);
       this.boss.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
+      this.boss.setChestsGroup(this.chests);
       this.boss.setScale(1.5); // Proper scale for boss
       this.boss.setTint(0xf59e0b); // Golden amber tint when invulnerable instead of pure green
     }
@@ -890,11 +900,20 @@ export class DungeonGameScene extends Phaser.Scene {
       });
     }
     
+    // Enemies vs chests
+    this.physics.add.collider(this.enemies, this.chests, undefined, (obj1: any, obj2: any) => {
+      const enemy = obj1.getData && obj1.getData('type') ? obj1 : obj2;
+      return enemy.getData('type') !== 'spider';
+    });
+    
     // Player vs enemies
     this.physics.add.overlap(this.player, this.enemies, this.hitPlayer, undefined, this);
     
     // Player vs enemy bullets
     this.physics.add.overlap(this.player, this.enemyBullets, this.hitPlayerWithBullet, undefined, this);
+    
+    // Player vs chests
+    this.physics.add.collider(this.player, this.chests, (player, chest) => this.openChest(chest as Phaser.Physics.Arcade.Sprite), undefined, this);
     
     // Bullets vs enemies
     this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, undefined, this);
@@ -911,6 +930,7 @@ export class DungeonGameScene extends Phaser.Scene {
       if (walls) {
         this.physics.add.collider(this.boss, walls);
       }
+      this.physics.add.collider(this.boss, this.chests);
     }
   }
 
@@ -1130,6 +1150,25 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     }
 
+    // Dynamically manage Invincibility (Yellow Crystal)
+    if (this.player.getData('isInvincible')) {
+      if (time >= this.yellowEffectEndTime) {
+        this.player.setData('isInvincible', false);
+        this.player.clearTint();
+      } else {
+        const timeLeft = this.yellowEffectEndTime - time;
+        if (timeLeft <= 1000) { // Flicker in the last 1 second
+          if (Math.floor(time / 100) % 2 === 0) {
+            this.player.setTint(0xffff33);
+          } else {
+            this.player.clearTint();
+          }
+        } else {
+          this.player.setTint(0xffff33);
+        }
+      }
+    }
+
     if (this.isOrangeCrystalActive && time >= this.orangeEffectEndTime) {
       this.isOrangeCrystalActive = false;
     }
@@ -1138,14 +1177,30 @@ export class DungeonGameScene extends Phaser.Scene {
       this.playerShadow.setPosition(this.player.x, this.player.y + 26);
     }
 
-    if (this.effectCountdownText) {
-      if (time < this.effectEndTime && !this.player.getData('isDead')) {
-        this.effectCountdownText.setPosition(this.player.x, this.player.y - 45);
-        const secondsLeft = Math.ceil((this.effectEndTime - time) / 1000);
-        this.effectCountdownText.setText(secondsLeft.toString());
-      } else {
-        this.effectCountdownText.destroy();
-        this.effectCountdownText = null;
+    // Group and perfectly center all active effect countdowns
+    if (!this.player.getData('isDead')) {
+      this.activeEffects = this.activeEffects.filter(effect => {
+        if (time < effect.endTime) return true;
+        effect.textObj.destroy();
+        return false;
+      });
+
+      if (this.activeEffects.length > 0) {
+        const spacing = 15;
+        let totalWidth = 0;
+        this.activeEffects.forEach(effect => {
+          const secondsLeft = Math.ceil((effect.endTime - time) / 1000);
+          effect.textObj.setText(secondsLeft.toString());
+          totalWidth += effect.textObj.width + spacing;
+        });
+        totalWidth -= spacing; // remove trailing spacing
+
+        let currentX = this.player.x - (totalWidth / 2);
+        this.activeEffects.forEach(effect => {
+          const w = effect.textObj.width;
+          effect.textObj.setPosition(currentX + (w / 2), this.player.y - 45);
+          currentX += w + spacing;
+        });
       }
     }
 
@@ -1331,6 +1386,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private openChest(chest: Phaser.Physics.Arcade.Sprite) {
     if (this.isModalOpen) return;
     if (chest.getData('opened')) return;
+    if (chest.getData('nextInteractionTime') && this.time.now < chest.getData('nextInteractionTime')) return;
     
     const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, chest.x, chest.y);
     if (distance > 100) { // Increased from 80 to 100 to make clicking more forgiving
@@ -1396,6 +1452,7 @@ export class DungeonGameScene extends Phaser.Scene {
         chest.anims.play(openAnimKey);
       } else {
         chest.setTint(0xff0000); // Red tint for wrong answer
+        chest.setData('nextInteractionTime', this.time.now + 1500); // Prevent instant re-trigger if colliding
         this.time.delayedCall(1000, () => {
           chest.clearTint();
         });
@@ -1417,6 +1474,48 @@ export class DungeonGameScene extends Phaser.Scene {
     if (this.joystickBase) this.joystickBase.setVisible(false);
     if (this.joystickThumb) this.joystickThumb.setVisible(false);
     if (this.moveVector) this.moveVector.set(0, 0);
+  }
+
+  private showLevelIntro() {
+    this.isModalOpen = true;
+    this.physics.pause();
+    this.resetJoystick();
+    
+    const modalBg = this.add.rectangle(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      450,
+      150,
+      0x1c1917,
+      0.95
+    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(3000).setRounded(16);
+
+    const title = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      `Dungeon ${this.currentDungeon} of ${this.maxDungeons}`,
+      {
+        fontSize: '36px',
+        fill: '#fde68a',
+        align: 'center',
+        fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
+        fontStyle: 'bold'
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
+
+    this.time.delayedCall(2500, () => {
+      this.tweens.add({
+        targets: [modalBg, title],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          modalBg.destroy();
+          title.destroy();
+          this.physics.resume();
+          this.isModalOpen = false;
+        }
+      });
+    });
   }
 
   private showQuestionModal(question: Question, callback: (isCorrect: boolean) => void) {
@@ -1529,8 +1628,10 @@ export class DungeonGameScene extends Phaser.Scene {
     
     const timePaused = this.time.now - this.modalOpenTimestamp;
     this.orangeEffectEndTime += timePaused;
-    this.effectEndTime += timePaused;
+    this.yellowEffectEndTime += timePaused;
     this.enemiesFrozenUntil += timePaused;
+    
+    this.activeEffects.forEach(effect => { effect.endTime += timePaused; });
     
     this.enemies.getChildren().forEach((enemy: any) => {
       if (typeof enemy.shiftTimers === 'function') enemy.shiftTimers(timePaused);
@@ -1643,10 +1744,8 @@ export class DungeonGameScene extends Phaser.Scene {
     
     if (this.playerHealth <= 0) {
       if (this.playerShadow) this.playerShadow.destroy();
-      if (this.effectCountdownText) {
-        this.effectCountdownText.destroy();
-        this.effectCountdownText = null;
-      }
+      this.activeEffects.forEach(e => e.textObj.destroy());
+      this.activeEffects = [];
       this.playerHealth = 0;
       this.updateHealthBar();
       
@@ -1745,14 +1844,18 @@ export class DungeonGameScene extends Phaser.Scene {
     this.questionsText.setText(`Questions: ${this.levelCorrectAnswers}/4`);
   }
 
-  private startEffectCountdown(duration: number, color: string) {
-    if (this.effectCountdownText) {
-      this.effectCountdownText.destroy();
+  private addOrResetEffect(type: string, duration: number, color: string) {
+    const endTime = this.time.now + duration;
+    const existing = this.activeEffects.find(e => e.type === type);
+    
+    if (existing) {
+      existing.endTime = endTime; // Reset timer for this specific effect
+    } else {
+      const textObj = this.add.text(0, 0, '', {
+        fontSize: '24px', fill: color, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(100);
+      this.activeEffects.push({ type, endTime, textObj, color });
     }
-    this.effectEndTime = this.time.now + duration;
-    this.effectCountdownText = this.add.text(this.player.x, this.player.y - 45, Math.ceil(duration / 1000).toString(), {
-      fontSize: '24px', fill: color, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-    }).setOrigin(0.5).setDepth(100);
   }
 
   private handleEnemyDefeated(enemyType: string, x: number, y: number) {
@@ -1857,10 +1960,10 @@ export class DungeonGameScene extends Phaser.Scene {
       this.orangeEffectEndTime = this.time.now + 8000;
       
       this.sound.play('star', { volume: 0.5 });
-      this.startEffectCountdown(8000, '#f97316'); // orange-500
+      this.addOrResetEffect('orange', 8000, '#f97316');
       
-      const specialText = this.add.text(this.player.x, this.player.y - 30, 'SPECIAL ATTACK!', {
-        fontSize: '16px', fill: '#f97316', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+      const specialText = this.add.text(this.player.x, this.player.y - 30, 'FIREBALL!', {
+        fontSize: '16px', fill: '#ffb47e', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
       }).setOrigin(0.5).setDepth(100);
       
       this.tweens.add({
@@ -1872,9 +1975,10 @@ export class DungeonGameScene extends Phaser.Scene {
     if (isYellowCrystal) {
       this.player.setData('isInvincible', true);
       this.player.setTint(0xffff33); // 80% yellow tint
+      this.yellowEffectEndTime = this.time.now + 5000;
       
       this.sound.play('star', { volume: 0.5 });
-      this.startEffectCountdown(5000, '#fbbf24');
+      this.addOrResetEffect('yellow', 5000, '#fbbf24');
       
       const invulnText = this.add.text(this.player.x, this.player.y - 30, 'INVINCIBLE!', {
         fontSize: '16px', fill: '#fbbf24', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
@@ -1883,42 +1987,11 @@ export class DungeonGameScene extends Phaser.Scene {
       this.tweens.add({
         targets: invulnText, y: invulnText.y - 30, alpha: 0, duration: 1000, onComplete: () => invulnText.destroy()
       });
-
-      // Flicker effect starting at 4 seconds
-      this.time.delayedCall(4000, () => {
-        let blinkCount = 0;
-        this.time.addEvent({
-          delay: 100,
-          repeat: 9, // 10 times total = 1000ms
-          callback: () => {
-            if (this.player.getData('isDead')) return;
-            blinkCount++;
-                  if (blinkCount % 2 === 0 && this.player.getData('isInvincible')) {
-              this.player.setTint(0xffff33);
-            } else {
-              this.player.clearTint();
-            }
-                  
-                  // Failsafe: Ensure it clears exactly at the end
-                  if (blinkCount >= 10) {
-                    this.player.clearTint();
-                  }
-          }
-        });
-      });
-
-      // Remove invincibility at exactly 5 seconds
-      this.time.delayedCall(5000, () => {
-        if (!this.player.getData('isDead')) {
-          this.player.setData('isInvincible', false);
-          this.player.clearTint();
-        }
-      });
       return;
     }
 
     if (isBlueCrystal) {
-      this.enemiesFrozenUntil = this.time.now + 3000;
+      this.enemiesFrozenUntil = this.time.now + 8000;
       
       this.enemies.getChildren().forEach((enemy: any) => {
         if (enemy.setVelocity) enemy.setVelocity(0, 0);
@@ -1930,7 +2003,7 @@ export class DungeonGameScene extends Phaser.Scene {
       }
       
       this.sound.play('star', { volume: 0.5 });
-      this.startEffectCountdown(3000, '#60a5fa'); // blue-400
+      this.addOrResetEffect('blue', 8000, '#60a5fa'); // blue-400
       
       const freezeText = this.add.text(this.player.x, this.player.y - 30, 'TIME FREEZE!', {
         fontSize: '16px', fill: '#fcd34d', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
