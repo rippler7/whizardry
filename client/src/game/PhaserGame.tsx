@@ -286,15 +286,21 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
   }, [playerName]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className="bg-black flex items-center justify-center"
-      style={{ 
-        width: '100vw', 
-        height: '100vh', 
-        overflow: 'hidden' 
-      }}
-    />
+    <div className="w-full h-full bg-black overflow-hidden flex items-center justify-center">
+      <div 
+        style={{ 
+          width: '100%',
+          aspectRatio: '16/10',
+          maxWidth: '100%',
+          maxHeight: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
+      >
+        <div ref={containerRef} className="w-full h-full" />
+      </div>
+    </div>
   );
 };
 
