@@ -63,6 +63,10 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.createAnimations();
   }
   
+  public shiftTimers(timePaused: number): void {
+    this.lastAttack += timePaused;
+  }
+  
   protected abstract createAnimations(): void;
   
   public setWallsGroup(walls: Phaser.Physics.Arcade.StaticGroup): void {

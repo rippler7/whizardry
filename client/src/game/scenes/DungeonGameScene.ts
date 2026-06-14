@@ -112,6 +112,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private isTouchingDoor: boolean = false;
   private enemiesFrozenUntil: number = 0;
   
+  private modalOpenTimestamp: number = 0;
   private isOrangeCrystalActive: boolean = false;
   private orangeEffectEndTime: number = 0;
   private playerShadow!: Phaser.GameObjects.Ellipse;
@@ -149,6 +150,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.boss = undefined;
     this.isTouchingDoor = false;
     this.enemiesFrozenUntil = 0;
+    this.modalOpenTimestamp = 0;
     this.effectCountdownText = null;
     this.effectEndTime = 0;
     this.isOrangeCrystalActive = false;
@@ -1321,6 +1323,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private openChest(chest: Phaser.Physics.Arcade.Sprite) {
+    if (this.isModalOpen) return;
     if (chest.getData('opened')) return;
     
     const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, chest.x, chest.y);
@@ -1413,6 +1416,9 @@ export class DungeonGameScene extends Phaser.Scene {
   private showQuestionModal(question: Question, callback: (isCorrect: boolean) => void) {
     this.isModalOpen = true;
     this.physics.pause();
+    this.time.paused = true;
+    this.tweens.pauseAll();
+    this.modalOpenTimestamp = this.time.now;
     this.resetJoystick();
     
     const playerName = this.registry.get('playerName') || 'Hero';
@@ -1506,6 +1512,21 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private cleanupQuestionModal(elements: Phaser.GameObjects.GameObject[]) {
     elements.forEach((element) => element.destroy());
+    
+    const timePaused = this.time.now - this.modalOpenTimestamp;
+    this.orangeEffectEndTime += timePaused;
+    this.effectEndTime += timePaused;
+    this.enemiesFrozenUntil += timePaused;
+    
+    this.enemies.getChildren().forEach((enemy: any) => {
+      if (typeof enemy.shiftTimers === 'function') enemy.shiftTimers(timePaused);
+    });
+    if (this.boss && typeof this.boss.shiftTimers === 'function') {
+      this.boss.shiftTimers(timePaused);
+    }
+    
+    this.time.paused = false;
+    this.tweens.resumeAll();
     this.physics.resume();
     this.isModalOpen = false;
   }
