@@ -46,6 +46,34 @@ export class GameOverScene extends Phaser.Scene {
     const sliderWidth = 100;
     const sliderX = width - 140;
     const iconX = sliderX - 35;
+    const fsX = iconX - 50;
+
+    // --- Fullscreen Button ---
+    const fsBtn = this.add.container(fsX, audioY);
+    const fsBg = this.add.rectangle(0, 0, 40, 40, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(8);
+    const fsIcon = this.add.text(0, 0, this.scale.isFullscreen ? '⤡' : '⤢', { fontSize: '24px', fontFamily: 'Arial' }).setOrigin(0.5);
+    fsBtn.add([fsBg, fsIcon]);
+    fsBtn.setSize(40, 40);
+    fsBtn.setInteractive({ useHandCursor: true });
+
+    fsBtn.on('pointerover', () => fsBg.setFillStyle(0x6b3619));
+    fsBtn.on('pointerout', () => fsBg.setFillStyle(0x4a2511));
+    fsBtn.on('pointerup', () => {
+      if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+      } else {
+        this.scale.startFullscreen();
+      }
+    });
+
+    const enterFs = () => { if (fsIcon.active) fsIcon.setText('⤡'); };
+    const leaveFs = () => { if (fsIcon.active) fsIcon.setText('⤢'); };
+    this.scale.on('enterfullscreen', enterFs);
+    this.scale.on('leavefullscreen', leaveFs);
+    this.events.once('destroy', () => {
+      this.scale.off('enterfullscreen', enterFs);
+      this.scale.off('leavefullscreen', leaveFs);
+    });
 
     // --- Mute Button Container ---
     const muteBtn = this.add.container(iconX, audioY);
