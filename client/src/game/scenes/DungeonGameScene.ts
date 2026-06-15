@@ -376,6 +376,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     // Listen to enemy deaths to drop items
+    this.events.off('enemyDefeated', this.handleEnemyDefeated, this);
     this.events.on('enemyDefeated', this.handleEnemyDefeated, this);
 
     // Create dungeon layout
@@ -715,7 +716,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const validQuestions = getValidQuestions(questionsData);
     const pool = validQuestions.filter((question) => {
       if (this.gameDifficulty === 'hard') {
-        return question.difficulty >= 5;
+        return question.difficulty >= 4;
       } else if (this.gameDifficulty === 'medium') {
         return question.difficulty >= 3 && question.difficulty <= 4;
       } else {
@@ -731,12 +732,11 @@ export class DungeonGameScene extends Phaser.Scene {
       availablePool = pool;
     }
 
-    // Use true Math.random() Fisher-Yates shuffle to bypass Phaser's deterministic seeded RNG
-    const shuffled = [...availablePool];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    // Use a new, time-seeded RNG to shuffle questions. This ensures that each new game
+    // gets a different random set of questions, bypassing any global deterministic seeding
+    // that might be affecting Math.random() or Phaser's default RNG.
+    const questionRNG = new Phaser.Math.RandomDataGenerator([(new Date()).getTime().toString()]);
+    const shuffled = questionRNG.shuffle([...availablePool]);
     this.dungeonQuestions = shuffled.slice(0, 4);
 
     // Mark these selected questions as used for future levels
@@ -1113,6 +1113,9 @@ export class DungeonGameScene extends Phaser.Scene {
     });
 
     exitBtnBg.on('pointerdown', () => {
+      this.isModalOpen = false;
+      this.time.paused = false;
+      this.physics.resume();
       this.sound.stopAll();
       this.scene.start('MainMenuScene');
     });
@@ -1166,7 +1169,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const leaveFs = () => { if (fsIcon.active) fsIcon.setText('⤢'); };
     this.scale.on('enterfullscreen', enterFs);
     this.scale.on('leavefullscreen', leaveFs);
-    this.events.once('destroy', () => {
+    this.events.once('shutdown', () => {
       this.scale.off('enterfullscreen', enterFs);
       this.scale.off('leavefullscreen', leaveFs);
     });
@@ -1196,12 +1199,14 @@ export class DungeonGameScene extends Phaser.Scene {
     syncAudioUI(); // Instantly sync on load in case the game is already muted
 
     // Continuously listen to the actual audio state to sync the icon perfectly
-    this.events.on('update', () => {
+    const syncAudioIcon = () => {
       if (muteIcon && muteIcon.active) {
         const isMuted = this.sound.mute || this.sound.volume === 0;
         muteIcon.setText(isMuted ? '🔇' : '🔊');
       }
-    });
+    };
+    this.events.on('update', syncAudioIcon);
+    this.events.once('shutdown', () => this.events.off('update', syncAudioIcon));
 
     muteBtn.on('pointerdown', () => {
       if (this.sound.volume === 0) {
@@ -1299,7 +1304,9 @@ export class DungeonGameScene extends Phaser.Scene {
     this.handleShooting();
     this.updateBullets(delta);
     
-    if (time >= this.enemiesFrozenUntil) {
+    const currentTime = this.time.now;
+    
+    if (currentTime >= this.enemiesFrozenUntil) {
       this.enemies.getChildren().forEach((enemy: any) => {
         if (enemy.update) enemy.update();
       });
@@ -1318,13 +1325,13 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // Dynamically manage Invincibility (Yellow Crystal)
     if (this.player.getData('isInvincible')) {
-      if (time >= this.yellowEffectEndTime) {
+      if (currentTime >= this.yellowEffectEndTime) {
         this.player.setData('isInvincible', false);
         this.player.clearTint();
       } else {
-        const timeLeft = this.yellowEffectEndTime - time;
+        const timeLeft = this.yellowEffectEndTime - currentTime;
         if (timeLeft <= 1000) { // Flicker in the last 1 second
-          if (Math.floor(time / 100) % 2 === 0) {
+          if (Math.floor(currentTime / 100) % 2 === 0) {
             this.player.setTint(0xffff33);
           } else {
             this.player.clearTint();
@@ -1335,7 +1342,7 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     }
 
-    if (this.isOrangeCrystalActive && time >= this.orangeEffectEndTime) {
+    if (this.isOrangeCrystalActive && currentTime >= this.orangeEffectEndTime) {
       this.isOrangeCrystalActive = false;
     }
 
@@ -1346,7 +1353,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // Group and perfectly center all active effect countdowns
     if (!this.player.getData('isDead')) {
       this.activeEffects = this.activeEffects.filter(effect => {
-        if (time < effect.endTime) return true;
+        if (currentTime < effect.endTime) return true;
         effect.textObj.destroy();
         return false;
       });
@@ -1355,7 +1362,7 @@ export class DungeonGameScene extends Phaser.Scene {
         const spacing = 15;
         let totalWidth = 0;
         this.activeEffects.forEach(effect => {
-          const secondsLeft = Math.ceil((effect.endTime - time) / 1000);
+          const secondsLeft = Math.ceil((effect.endTime - currentTime) / 1000);
           effect.textObj.setText(secondsLeft.toString());
           totalWidth += effect.textObj.width + spacing;
         });
@@ -1673,13 +1680,14 @@ export class DungeonGameScene extends Phaser.Scene {
     ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
 
     this.time.delayedCall(2500, () => {
+      if (!this.sys || !this.sys.isActive() || !modalBg.active) return;
       this.tweens.add({
         targets: [modalBg, title],
         alpha: 0,
         duration: 500,
         onComplete: () => {
-          modalBg.destroy();
-          title.destroy();
+          if (modalBg.active) modalBg.destroy();
+          if (title.active) title.destroy();
           this.physics.resume();
           this.isModalOpen = false;
         }
@@ -2061,6 +2069,39 @@ export class DungeonGameScene extends Phaser.Scene {
 
     const isOrangeDrop = enemyType === 'zombie' && this.currentDungeon >= 1 && this.currentDungeon <= 5;
 
+    // Adaptive drop rates for healing crystals based on player's current health ratio
+    const healthRatio = this.playerHealth / this.playerMaxHealth;
+    const getAdjustedHealDropChance = (baseChance: number) => {
+      if (healthRatio <= 0.25) return 0.90; // 90% chance if health is 25% or lower
+      if (healthRatio <= 0.40) return Math.min(1.0, baseChance * 1.5); // 50% higher chance if health is between 25% and 40%
+      return baseChance;
+    };
+
+    if (enemyType === 'spider') {
+      // Red blood burst effect
+      const redShades = [0xfca5a5, 0xf87171, 0xef4444, 0xdc2626, 0xb91c1c, 0x991b1b];
+      for (let i = 0; i < 30; i++) {
+        const color = Phaser.Utils.Array.GetRandom(redShades);
+        const blood = this.add.circle(x, y, Phaser.Math.FloatBetween(4, 10), color);
+        blood.setStrokeStyle(1, 0x450a0a, 0.8); // Dark red stroke for 3D depth
+        blood.setDepth(1500);
+        
+        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const speed = Phaser.Math.FloatBetween(25, 70); // Reduced spread
+        
+        this.tweens.add({
+          targets: blood,
+          x: x + Math.cos(angle) * speed,
+          y: y + Math.sin(angle) * speed + 30, // Drifts downward to simulate liquid falling
+          alpha: 0,
+          scale: 0,
+          duration: Phaser.Math.Between(1500, 3000),
+          ease: 'Cubic.easeOut',
+          onComplete: () => blood.destroy()
+        });
+      }
+    }
+
     if (enemyType === 'bat') {
       // Green blood burst effect
       const greenShades = [0xbbf7d0, 0x86efac, 0x4ade80, 0x22c55e, 0x16a34a, 0x15803d];
@@ -2090,6 +2131,8 @@ export class DungeonGameScene extends Phaser.Scene {
       else if (this.gameDifficulty === 'medium') dropChance = 0.5;
       else if (this.gameDifficulty === 'hard') dropChance = 0.3;
 
+      dropChance = getAdjustedHealDropChance(dropChance);
+
       if (Math.random() < dropChance) {
         const crystal = this.physics.add.sprite(x, y, 'greencrystal');
         crystal.anims.play('spin-greencrystal');
@@ -2098,14 +2141,16 @@ export class DungeonGameScene extends Phaser.Scene {
         this.droppedItems.add(crystal);
       }
     }
-    else if (isOrangeDrop && Math.random() < (1 / 3)) { // 1 in 3 drop rate for orange crystal
+
+    if (isOrangeDrop && Math.random() < (1 / 3)) { // 1 in 3 drop rate for orange crystal
       const crystal = this.physics.add.sprite(x, y, 'orangecrystal');
       crystal.anims.play('spin-orangecrystal');
       crystal.setScale(0.8);
       crystal.setDepth(4);
       this.droppedItems.add(crystal);
     }
-    else if (isHardBlue || isMediumBlue || isEasyBlue) {
+
+    if (isHardBlue || isMediumBlue || isEasyBlue) {
       if (Math.random() < 0.50) {
         const crystal = this.physics.add.sprite(x, y, 'bluecrystal');
         crystal.anims.play('spin-bluecrystal');
@@ -2114,8 +2159,10 @@ export class DungeonGameScene extends Phaser.Scene {
         this.droppedItems.add(crystal);
       }
     }
-    else if (isHardRed || isMediumRed || isEasyRed || isZombie2Red) {
-      if (Math.random() < 0.20) {
+
+    if (isHardRed || isMediumRed || isEasyRed || isZombie2Red) {
+      const redDropChance = getAdjustedHealDropChance(0.20);
+      if (Math.random() < redDropChance) {
         const crystal = this.physics.add.sprite(x, y, 'redcrystal');
         crystal.anims.play('spin-redcrystal');
         crystal.setScale(0.8);
@@ -2123,7 +2170,8 @@ export class DungeonGameScene extends Phaser.Scene {
         this.droppedItems.add(crystal);
       }
     }
-    else if (enemyType === 'spider' && this.currentDungeon === 5 && this.gameDifficulty === 'hard') {
+
+    if (enemyType === 'spider' && this.currentDungeon === 5 && this.gameDifficulty === 'hard') {
       if (Math.random() < (1 / 3)) {
         const crystal = this.physics.add.sprite(x, y, 'yellowcrystal');
         crystal.anims.play('spin-yellowcrystal');
@@ -2192,7 +2240,7 @@ export class DungeonGameScene extends Phaser.Scene {
       this.addOrResetEffect('blue', 8000, '#60a5fa'); // blue-400
       
       const freezeText = this.add.text(this.player.x, this.player.y - 30, 'TIME FREEZE!', {
-        fontSize: '16px', fill: '#fcd34d', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+        fontSize: '16px', fill: '#60a5fa', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
       }).setOrigin(0.5).setDepth(100);
       
       this.tweens.add({

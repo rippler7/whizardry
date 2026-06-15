@@ -70,7 +70,7 @@ export class GameOverScene extends Phaser.Scene {
     const leaveFs = () => { if (fsIcon.active) fsIcon.setText('⤢'); };
     this.scale.on('enterfullscreen', enterFs);
     this.scale.on('leavefullscreen', leaveFs);
-    this.events.once('destroy', () => {
+    this.events.once('shutdown', () => {
       this.scale.off('enterfullscreen', enterFs);
       this.scale.off('leavefullscreen', leaveFs);
     });
@@ -100,12 +100,14 @@ export class GameOverScene extends Phaser.Scene {
     syncAudioUI(); // Instantly sync on load in case the game is already muted
 
     // Continuously listen to the actual audio state to sync the icon perfectly
-    this.events.on('update', () => {
+    const syncAudioIcon = () => {
       if (muteIcon && muteIcon.active) {
         const isMuted = this.sound.mute || this.sound.volume === 0;
         muteIcon.setText(isMuted ? '🔇' : '🔊');
       }
-    });
+    };
+    this.events.on('update', syncAudioIcon);
+    this.events.once('shutdown', () => this.events.off('update', syncAudioIcon));
 
     muteBtn.on('pointerdown', () => {
       if (this.sound.volume === 0) {

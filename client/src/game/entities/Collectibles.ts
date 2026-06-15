@@ -144,24 +144,33 @@ export class Chest extends Collectible {
       buttons.push(button);
     });
     
+    this.questionModal = {
+      elements: [modalBg, questionText, ...buttons],
+      player: player
+    };
+
     // Keyboard input for answers
-    const keys = [
-      this.scene.input.keyboard!.addKey('ONE'),
-      this.scene.input.keyboard!.addKey('TWO'),
-      this.scene.input.keyboard!.addKey('THREE'),
-      this.scene.input.keyboard!.addKey('FOUR')
-    ];
+    this.scene.input.keyboard!.once('keydown-ONE', () => this.answerFromKey(0));
+    this.scene.input.keyboard!.once('keydown-TWO', () => this.answerFromKey(1));
+    this.scene.input.keyboard!.once('keydown-THREE', () => this.answerFromKey(2));
+    this.scene.input.keyboard!.once('keydown-FOUR', () => this.answerFromKey(3));
+  }
     
-    keys.forEach((key, index) => {
-      if (index < this.question.options.length) {
-        key.once('down', () => {
-          this.handleAnswer(this.question.options[index], player, [modalBg, questionText, ...buttons]);
-        });
-      }
-    });
+  private answerFromKey(index: number): void {
+    this.scene.input.keyboard!.off('keydown-ONE');
+    this.scene.input.keyboard!.off('keydown-TWO');
+    this.scene.input.keyboard!.off('keydown-THREE');
+    this.scene.input.keyboard!.off('keydown-FOUR');
+    if (this.questionModal && index < this.question.options.length) {
+      this.handleAnswer(this.question.options[index], this.questionModal.player, this.questionModal.elements);
+    }
   }
   
   private handleAnswer(selectedAnswer: string, player: Player, modalElements: Phaser.GameObjects.GameObject[]): void {
+    this.scene.input.keyboard!.off('keydown-ONE');
+    this.scene.input.keyboard!.off('keydown-TWO');
+    this.scene.input.keyboard!.off('keydown-THREE');
+    this.scene.input.keyboard!.off('keydown-FOUR');
     const isCorrect = this.normalizeAnswer(selectedAnswer) === this.normalizeAnswer(this.question.correctAnswer);
     
     // Update player stats

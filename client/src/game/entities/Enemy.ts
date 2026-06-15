@@ -16,7 +16,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
   zombie: { type: 'zombie', health: 150, speed: 40, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
   zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 15, scoreReward: 75 },
   bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 150, detectionRange: 250, experienceReward: 10, scoreReward: 50 },
-  spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
+  spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 350, experienceReward: 10, scoreReward: 50 },
   boss: { type: 'boss', health: 10500, speed: 40, damage: 30, attackRange: 80, detectionRange: 300, experienceReward: 100, scoreReward: 500 }
 };
 
@@ -70,11 +70,11 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   
   protected abstract createAnimations(): void;
   
-  public setWallsGroup(walls: Phaser.Physics.Arcade.StaticGroup): void {
+  public setWallsGroup(walls: Phaser.Physics.Arcade.StaticGroup | null): void {
     this.walls = walls;
   }
   
-  public setChestsGroup(chests: Phaser.Physics.Arcade.Group): void {
+  public setChestsGroup(chests: Phaser.Physics.Arcade.Group | null): void {
     this.chests = chests;
   }
   
@@ -736,19 +736,32 @@ export class Bat extends Enemy {
 export class Spider extends Enemy {
   private jumpCooldown: number = 0;
   private isJumping: boolean = false;
+  private patrolAction: 'jump' | 'walk' = 'jump';
+  private spiderActionTimer: number = 0;
+  private isSmall: boolean = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number, isSmall: boolean = false) {
     super(scene, x, y, 'spider', 'spider', player, hp, speed);
     this.setSize(32, 32);
     this.setOffset(16, 16);
     this.attackRate = 2000;
-    this.createShadow(40, 16, 28);
+    this.isSmall = isSmall;
+
+    if (this.isSmall) {
+      this.setScale(0.75);
+      this.createShadow(30, 12, 21);
+      this.config.attackRange = this.config.attackRange * 0.5;
+    } else {
+      this.setScale(1.0);
+      this.createShadow(40, 16, 28);
+    }
   }
   
   protected createAnimations(): void {
     const anims = this.scene.anims;
     if (!anims.exists('walkSpider')) {
       anims.create({ key: 'walkSpider', frames: anims.generateFrameNumbers('spider', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'idleSpider', frames: anims.generateFrameNumbers('spider', { start: 0, end: 3 }), frameRate: 4, repeat: -1 });
       anims.create({ key: 'attackSpider', frames: anims.generateFrameNumbers('spider', { start: 13, end: 16 }), frameRate: 8, repeat: -1 });
       anims.create({ key: 'spiderDie', frames: anims.generateFrameNumbers('spider', { start: 51, end: 54 }), frameRate: 8, repeat: 0 });
     }
@@ -766,32 +779,62 @@ export class Spider extends Enemy {
       }
     } else {
       if (!this.isJumping) {
-        this.anims.stop();
+        this.anims.play('idleSpider', true);
       }
     }
+  }
+
+  protected setNewPatrolTarget(): void {
+    const range = this.isSmall ? 75 : 150;
+    this.patrolTarget = {
+      x: this.x + Phaser.Math.Between(-range, range),
+      y: this.y + Phaser.Math.Between(-range, range)
+    };
+    
+    // Keep within world bounds
+    const worldBounds = this.scene.physics.world.bounds;
+    this.patrolTarget.x = Phaser.Math.Clamp(this.patrolTarget.x, 50, worldBounds.width - 50);
+    this.patrolTarget.y = Phaser.Math.Clamp(this.patrolTarget.y, 50, worldBounds.height - 50);
+
+    this.patrolAction = Phaser.Math.RND.pick(['jump', 'walk']);
+    this.spiderActionTimer = Phaser.Math.Between(1000, 3000);
   }
 
   protected handlePatrol(): void {
     if (this.isJumping) return;
 
-    if (this.jumpCooldown > 0) {
-      this.jumpCooldown -= this.scene.game.loop.delta;
-      this.setVelocity(0, 0);
-      return;
-    }
+    this.spiderActionTimer -= this.scene.game.loop.delta;
 
     const distanceToTarget = Phaser.Math.Distance.Between(
       this.x, this.y, this.patrolTarget.x, this.patrolTarget.y
     );
-
-    if (distanceToTarget < 32) {
-      this.state = 'idle';
-      this.stateTimer = Phaser.Math.Between(1000, 3000);
-      this.setVelocity(0, 0);
+    
+    if (distanceToTarget < 32 || this.spiderActionTimer <= 0) {
+      const goIdle = Phaser.Math.RND.pick([true, false]);
+      
+      if (goIdle) {
+        this.state = 'idle';
+        this.stateTimer = Phaser.Math.Between(1000, 2500);
+        this.setVelocity(0, 0);
+        this.anims.play('idleSpider', true);
+      } else {
+        this.setNewPatrolTarget();
+      }
       return;
     }
-
-    this.initiateJump(this.patrolTarget.x, this.patrolTarget.y, 0.6);
+    
+    if (this.patrolAction === 'walk') {
+      const walkSpeed = this.isSmall ? this.config.speed * 0.25 : this.config.speed * 0.5;
+      this.moveTowardsTarget(this.patrolTarget.x, this.patrolTarget.y, walkSpeed);
+    } else {
+      if (this.jumpCooldown > 0) {
+        this.jumpCooldown -= this.scene.game.loop.delta;
+        this.setVelocity(0, 0);
+        return;
+      }
+      const jumpMult = this.isSmall ? 0.3 : 0.6;
+      this.initiateJump(this.patrolTarget.x, this.patrolTarget.y, jumpMult);
+    }
   }
 
   protected handleChase(): void {
@@ -806,7 +849,8 @@ export class Spider extends Enemy {
     const targetX = this.canSeePlayer() ? this.player.x : this.patrolTarget.x;
     const targetY = this.canSeePlayer() ? this.player.y : this.patrolTarget.y;
 
-    this.initiateJump(targetX, targetY, 1.2);
+    const jumpMult = this.isSmall ? 0.6 : 1.2;
+    this.initiateJump(targetX, targetY, jumpMult);
   }
 
   protected handleAttack(): void {
@@ -824,13 +868,13 @@ export class Spider extends Enemy {
     
     const baseSpeed = 0.25;
     const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
-    const spreadAngles = [baseAngle - 0.25, baseAngle, baseAngle + 0.25]; // Shoot left, center, and right
+    const spreadAngles = this.isSmall ? [baseAngle] : [baseAngle - 0.25, baseAngle, baseAngle + 0.25]; // Shoot 1 if small, 3 if big
     
     const currentScene = this.scene;
     
     spreadAngles.forEach(angle => {
       const bullet = currentScene.physics.add.sprite(this.x, this.y, 'bullet');
-      bullet.setScale(0.2); // Half of 0.4
+      bullet.setScale(this.isSmall ? 0.15 : 0.2); // 75% of original 0.2
       bullet.setTintFill(0xffffff); // Pure white web projectile
       bullet.setAlpha(0.9); // 90% opacity
       bullet.setDepth(50);
@@ -839,7 +883,7 @@ export class Spider extends Enemy {
       
       // Sticky fluid particle trail
       const emitter = currentScene.add.particles(0, 0, 'bullet', {
-        scale: { start: 0.175, end: 0 }, // Scaled down to match the new bullet size
+        scale: { start: this.isSmall ? 0.13125 : 0.175, end: 0 }, // Scaled down to match the new bullet size
         alpha: { start: 0.9, end: 0 },
         tint: 0xffffff,
         tintFill: true,
@@ -879,7 +923,7 @@ export class Spider extends Enemy {
     currentScene.sound.play('spit', { volume: 0.3 });
   }
 
-  private initiateJump(targetX: number, targetY: number, speedMult: number) {
+  public initiateJump(targetX: number, targetY: number, speedMult: number) {
     this.isJumping = true;
     this.anims.play('walkSpider', true);
 
@@ -896,11 +940,12 @@ export class Spider extends Enemy {
       yoyo: true,
       ease: 'Sine.easeInOut',
       onComplete: () => {
+        if (!this.active || !this.isAlive) return;
         this.isJumping = false;
         this.displayOriginY = originalOrigin;
         this.setVelocity(0, 0);
         this.jumpCooldown = Phaser.Math.Between(400, 1200); // Erratic pause duration
-        if (this.active) this.anims.stop();
+        this.anims.play('idleSpider', true);
       }
     });
 
@@ -915,34 +960,53 @@ export class Spider extends Enemy {
   }
 
   protected die(): void {
+    if (this.isSmall) {
+      // Small spiders die for good. No rewards, no splitting.
+      this.isAlive = false;
+      this.body.enable = false;
+      this.setDepth(2);
+      if (this.shadow) this.shadow.destroy();
+      
+      this.scene.sound.play('enemy-death', { volume: 0.3 });
+      
+      const dieAnim = `${this.config.type}Die`;
+      if (this.scene.anims.exists(dieAnim)) {
+          this.anims.play(dieAnim);
+          this.once('animationcomplete', () => this.destroy());
+          // Safety fallback to ensure it disappears even if animationcomplete is somehow missed
+          this.scene.time.delayedCall(1000, () => {
+              if (this.active) this.destroy();
+          });
+      } else {
+          this.setTint(0xff0000);
+          this.scene.tweens.add({
+              targets: this, alpha: 0, angle: 90, scaleX: 0.5, scaleY: 0.5,
+              duration: 500, onComplete: () => this.destroy()
+          });
+      }
+      return;
+    }
+
+    // This is a big spider. It will split.
     this.isAlive = false;
     this.body.enable = false;
-    this.setDepth(2); // Render dead bodies under active entities
+    this.setDepth(2);
     
-    // Give player rewards
     if (this.player.gainExperience) this.player.gainExperience(this.config.experienceReward);
     if (this.player.addScore) this.player.addScore(this.config.scoreReward);
     
     this.scene.sound.play('enemy-death', { volume: 0.3 });
-    this.scene.events.emit('enemyDefeated', this.config.type, this.x, this.y);
     
     const dieAnim = `${this.config.type}Die`;
-    if (this.scene.anims.exists(dieAnim)) {
-      this.anims.play(dieAnim);
-    } else {
-      this.setTint(0xff0000);
-    }
+    if (this.scene.anims.exists(dieAnim)) this.anims.play(dieAnim);
+    else this.setTint(0xff0000);
 
-    // Calculate pushback direction (away from player)
     const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, this.x, this.y);
-    const dist = 60;
+    const dist = 30;
     const targetX = this.x + Math.cos(angle) * dist;
     const targetY = this.y + Math.sin(angle) * dist;
-
-    // Use a proxy object for true 3D jump/hop effect
     const pos = { x: this.x, y: this.y, z: 0 };
 
-    // Base translation movement
     this.scene.tweens.add({
       targets: pos, x: targetX, y: targetY, duration: 400, ease: 'Linear',
       onUpdate: () => {
@@ -950,23 +1014,42 @@ export class Spider extends Enemy {
           this.setPosition(pos.x, pos.y - pos.z);
           if (this.shadow && this.shadow.active) {
             this.shadow.setPosition(pos.x, pos.y + this.shadowOffset);
-            this.shadow.setScale(Math.max(0.4, 1 - (pos.z / 60))); // Shrink shadow during hop
+            this.shadow.setScale(Math.max(0.4, 1 - (pos.z / 60)));
           }
         }
       }
     });
 
-    // Bounce (Z-axis) tween
     this.scene.tweens.add({
-      targets: pos, z: 30, duration: 150, ease: 'Sine.easeOut', yoyo: true, // Jump height
+      targets: pos, z: 30, duration: 150, ease: 'Sine.easeOut', yoyo: true,
       onComplete: () => {
-        // Small secondary bounce
         this.scene.tweens.add({
           targets: pos, z: 10, duration: 75, ease: 'Sine.easeOut', yoyo: true,
           onComplete: () => {
             this.scene.time.delayedCall(150, () => {
               if (this.shadow) this.shadow.destroy();
-              if (this.active) this.destroy();
+              
+              if (!this.active) return;
+              
+              // Delay the particle burst and item drops so they happen exactly when it splits
+              this.scene.events.emit('enemyDefeated', this.config.type, this.x, this.y);
+              this.scene.sound.play('spit', { volume: 0.4 });
+              
+              const smallHp = this.config.health / 3;
+              const scene = this.scene as any;
+              for (let i = 0; i < 3; i++) {
+                const spiderling = new Spider(this.scene, this.x, this.y, this.player, smallHp, this.config.speed, true);
+                spiderling.setWallsGroup(this.walls);
+                spiderling.setChestsGroup(this.chests);
+                if (scene.enemies) scene.enemies.add(spiderling);
+                
+                // Make them aggressively scatter jump outward
+                const jumpAngle = (i * (Math.PI * 2 / 3)) + Phaser.Math.FloatBetween(-0.3, 0.3);
+                const jumpDist = 45;
+                spiderling.initiateJump(this.x + Math.cos(jumpAngle) * jumpDist, this.y + Math.sin(jumpAngle) * jumpDist, 0.75);
+              }
+
+              this.destroy();
             });
           }
         });

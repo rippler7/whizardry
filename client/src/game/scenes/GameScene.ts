@@ -195,6 +195,10 @@ export class GameScene extends Phaser.Scene {
     }
     
     // Setup player events
+    this.events.off('playerHealthChanged', this.updateHealthBar, this);
+    this.events.off('playerScoreChanged', this.updateScore, this);
+    this.events.off('playerLevelUp', this.onPlayerLevelUp, this);
+    this.events.off('enemyDefeated', this.onEnemyDefeated, this);
     this.events.on('playerHealthChanged', this.updateHealthBar, this);
     this.events.on('playerScoreChanged', this.updateScore, this);
     this.events.on('playerLevelUp', this.onPlayerLevelUp, this);
