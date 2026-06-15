@@ -120,6 +120,9 @@ export class DungeonGameScene extends Phaser.Scene {
   private isStatsExpanded: boolean = false;
   private isOrangeCrystalActive: boolean = false;
   private orangeEffectEndTime: number = 0;
+  private guaranteedZombieDropReady: boolean = false;
+  private guaranteedZombie2DropReady: boolean = false;
+  private guaranteedSpiderDropReady: boolean = false;
   private yellowEffectEndTime: number = 0;
   private activeEffects: { type: string, endTime: number, textObj: Phaser.GameObjects.Text, color: string }[] = [];
   private playerShadow!: Phaser.GameObjects.Ellipse;
@@ -163,6 +166,9 @@ export class DungeonGameScene extends Phaser.Scene {
     this.isOrangeCrystalActive = false;
     this.orangeEffectEndTime = 0;
     this.resetJoystick();
+    this.guaranteedZombieDropReady = this.currentDungeon >= 4;
+    this.guaranteedZombie2DropReady = this.currentDungeon >= 4;
+    this.guaranteedSpiderDropReady = this.currentDungeon >= 4;
   }
 
   create() {
@@ -678,16 +684,34 @@ export class DungeonGameScene extends Phaser.Scene {
       enemyTypes = ['skeleton', 'chiroptera', 'spider', 'zombie', 'zombie2'];
     }
 
+    if (this.currentDungeon >= 4) {
+      enemyTypes = ['skeleton', 'chiroptera', 'spider', 'zombie', 'zombie2'];
+    }
+
     // Minimum 5 enemies (2 bats + 3 random) on level 1, scaling up each level
     const batCount = 1 + this.currentDungeon;
     const randomCount = 1 + (this.currentDungeon * 2);
     const totalEnemies = batCount + randomCount;
 
-    for (let i = 0; i < totalEnemies; i++) {
+    let enemiesToSpawn: string[] = [];
+
+    if (this.currentDungeon >= 4) {
+      enemiesToSpawn.push('zombie', 'zombie2', 'spider');
+    }
+
+    for (let i = 0; i < batCount; i++) {
+      enemiesToSpawn.push('chiroptera');
+    }
+
+    const remainingToSpawn = totalEnemies - enemiesToSpawn.length;
+    for (let i = 0; i < Math.max(0, remainingToSpawn); i++) {
+      enemiesToSpawn.push(enemyTypes[Phaser.Math.Between(0, enemyTypes.length - 1)]);
+    }
+
+    for (const enemyType of enemiesToSpawn) {
       const pos = this.getValidSpawnPosition();
       if (!pos) continue;
       const { x, y } = pos;
-      const enemyType = i < batCount ? 'chiroptera' : enemyTypes[Phaser.Math.Between(0, enemyTypes.length - 1)];
       
       let hp = 50 + this.currentDungeon * 10;
       let baseSpeed = (25 + this.currentDungeon * 5) * 1.75;
@@ -2052,32 +2076,10 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
-  private handleEnemyDefeated(enemyType: string, x: number, y: number) {
+  private handleEnemyDefeated(enemyType: string, x: number, y: number, isBabySpider: boolean = false) {
     this.enemiesKilled++;
 
-    const isHardBlue = this.gameDifficulty === 'hard' && enemyType === 'zombie2' && this.currentDungeon === 5;
-    const isMediumBlue = this.gameDifficulty === 'medium' && enemyType === 'spider' && this.currentDungeon === 5;
-    const isEasyBlue = this.gameDifficulty === 'easy' && enemyType === 'skeleton' && this.currentDungeon === 5;
-
-    const isHardRed = this.gameDifficulty === 'hard' && (
-      (enemyType === 'zombie2' && this.currentDungeon === 4)
-    );
-    const isMediumRed = this.gameDifficulty === 'medium' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && enemyType === 'spider';
-    const isEasyRed = this.gameDifficulty === 'easy' && this.currentDungeon >= 3 && this.currentDungeon <= 5 && (enemyType === 'skeleton' || enemyType === 'spider');
-
-    const isZombie2Red = enemyType === 'zombie2' && (this.currentDungeon === 2 || this.currentDungeon === 3);
-
-    const isOrangeDrop = enemyType === 'zombie' && this.currentDungeon >= 1 && this.currentDungeon <= 5;
-
-    // Adaptive drop rates for healing crystals based on player's current health ratio
-    const healthRatio = this.playerHealth / this.playerMaxHealth;
-    const getAdjustedHealDropChance = (baseChance: number) => {
-      if (healthRatio <= 0.25) return 0.90; // 90% chance if health is 25% or lower
-      if (healthRatio <= 0.40) return Math.min(1.0, baseChance * 1.5); // 50% higher chance if health is between 25% and 40%
-      return baseChance;
-    };
-
-    if (enemyType === 'spider') {
+    if (enemyType === 'spider' || enemyType === 'babyspider' || isBabySpider) {
       // Red blood burst effect
       const redShades = [0xfca5a5, 0xf87171, 0xef4444, 0xdc2626, 0xb91c1c, 0x991b1b];
       for (let i = 0; i < 30; i++) {
@@ -2100,9 +2102,13 @@ export class DungeonGameScene extends Phaser.Scene {
           onComplete: () => blood.destroy()
         });
       }
+
+      if (enemyType === 'babyspider' || isBabySpider) {
+        return; // Baby spiders don't drop anything
+      }
     }
 
-    if (enemyType === 'bat') {
+    if (enemyType === 'bat' || enemyType === 'chiroptera') {
       // Green blood burst effect
       const greenShades = [0xbbf7d0, 0x86efac, 0x4ade80, 0x22c55e, 0x16a34a, 0x15803d];
       for (let i = 0; i < 30; i++) {
@@ -2126,41 +2132,91 @@ export class DungeonGameScene extends Phaser.Scene {
         });
       }
 
-      let dropChance = 0;
-      if (this.gameDifficulty === 'easy') dropChance = 0.6;
-      else if (this.gameDifficulty === 'medium') dropChance = 0.5;
-      else if (this.gameDifficulty === 'hard') dropChance = 0.3;
-
-      dropChance = getAdjustedHealDropChance(dropChance);
-
-      if (Math.random() < dropChance) {
+      if (Math.random() < (1 / 3)) {
         const crystal = this.physics.add.sprite(x, y, 'greencrystal');
         crystal.anims.play('spin-greencrystal');
         crystal.setScale(0.8);
         crystal.setDepth(4);
         this.droppedItems.add(crystal);
       }
+      return;
     }
 
-    if (isOrangeDrop && Math.random() < (1 / 3)) { // 1 in 3 drop rate for orange crystal
-      const crystal = this.physics.add.sprite(x, y, 'orangecrystal');
-      crystal.anims.play('spin-orangecrystal');
-      crystal.setScale(0.8);
-      crystal.setDepth(4);
-      this.droppedItems.add(crystal);
-    }
-
-    if (isHardBlue || isMediumBlue || isEasyBlue) {
-      if (Math.random() < 0.50) {
-        const crystal = this.physics.add.sprite(x, y, 'bluecrystal');
-        crystal.anims.play('spin-bluecrystal');
+    if (enemyType === 'skeleton' && this.currentDungeon >= 3 && this.currentDungeon <= 5) {
+      if (Math.random() < 0.5) {
+        const crystal = this.physics.add.sprite(x, y, 'redcrystal');
+        crystal.anims.play('spin-redcrystal');
         crystal.setScale(0.8);
         crystal.setDepth(4);
         this.droppedItems.add(crystal);
       }
+      return;
     }
 
-    if (isHardRed || isMediumRed || isEasyRed || isZombie2Red) {
+    if (this.currentDungeon >= 4) {
+      let isGuaranteed = false;
+      let crystalToDrop = '';
+
+      if (enemyType === 'zombie') {
+        if (this.guaranteedZombieDropReady) {
+          this.guaranteedZombieDropReady = false;
+          isGuaranteed = true;
+        }
+      } else if (enemyType === 'zombie2') {
+        if (this.guaranteedZombie2DropReady) {
+          this.guaranteedZombie2DropReady = false;
+          isGuaranteed = true;
+        }
+      } else if (enemyType === 'spider') {
+        if (this.guaranteedSpiderDropReady) {
+          this.guaranteedSpiderDropReady = false;
+          isGuaranteed = true;
+        }
+      }
+
+      if (enemyType === 'zombie' || enemyType === 'zombie2' || enemyType === 'spider') {
+        if (this.gameDifficulty === 'hard') {
+          if (enemyType === 'zombie') crystalToDrop = 'orangecrystal';
+          else if (enemyType === 'zombie2') crystalToDrop = 'bluecrystal';
+          else if (enemyType === 'spider') crystalToDrop = 'yellowcrystal';
+        } else if (this.gameDifficulty === 'medium') {
+          if (enemyType === 'zombie') crystalToDrop = 'orangecrystal';
+          else if (enemyType === 'zombie2') crystalToDrop = 'bluecrystal';
+          else if (enemyType === 'spider') crystalToDrop = 'bluecrystal';
+        } else if (this.gameDifficulty === 'easy') {
+          crystalToDrop = Math.random() < 0.5 ? 'redcrystal' : 'orangecrystal';
+        }
+
+        if (isGuaranteed || Math.random() < (1 / 3)) {
+          if (crystalToDrop) {
+            const crystal = this.physics.add.sprite(x, y, crystalToDrop);
+            crystal.anims.play(`spin-${crystalToDrop}`);
+            crystal.setScale(0.8);
+            crystal.setDepth(4);
+            this.droppedItems.add(crystal);
+          }
+        }
+        return;
+      }
+    }
+
+    // Legacy drops for dungeons 1-3
+    const healthRatio = this.playerHealth / this.playerMaxHealth;
+    const getAdjustedHealDropChance = (baseChance: number) => {
+      if (healthRatio <= 0.25) return 0.90; 
+      if (healthRatio <= 0.40 && healthRatio > 0.25) return Math.min(1.0, baseChance * 1.5); 
+      return baseChance;
+    };
+
+    if (enemyType === 'zombie') {
+      if (Math.random() < (1 / 3)) {
+        const crystal = this.physics.add.sprite(x, y, 'orangecrystal');
+        crystal.anims.play('spin-orangecrystal');
+        crystal.setScale(0.8);
+        crystal.setDepth(4);
+        this.droppedItems.add(crystal);
+      }
+    } else if (enemyType === 'zombie2' && (this.currentDungeon === 2 || this.currentDungeon === 3)) {
       const redDropChance = getAdjustedHealDropChance(0.20);
       if (Math.random() < redDropChance) {
         const crystal = this.physics.add.sprite(x, y, 'redcrystal');
@@ -2169,15 +2225,16 @@ export class DungeonGameScene extends Phaser.Scene {
         crystal.setDepth(4);
         this.droppedItems.add(crystal);
       }
-    }
-
-    if (enemyType === 'spider' && this.currentDungeon === 5 && this.gameDifficulty === 'hard') {
-      if (Math.random() < (1 / 3)) {
-        const crystal = this.physics.add.sprite(x, y, 'yellowcrystal');
-        crystal.anims.play('spin-yellowcrystal');
-        crystal.setScale(0.8);
-        crystal.setDepth(4);
-        this.droppedItems.add(crystal);
+    } else if (enemyType === 'spider' && this.currentDungeon === 3) {
+      if (this.gameDifficulty === 'medium' || this.gameDifficulty === 'easy') {
+        const redDropChance = getAdjustedHealDropChance(0.20);
+        if (Math.random() < redDropChance) {
+          const crystal = this.physics.add.sprite(x, y, 'redcrystal');
+          crystal.anims.play('spin-redcrystal');
+          crystal.setScale(0.8);
+          crystal.setDepth(4);
+          this.droppedItems.add(crystal);
+        }
       }
     }
   }
