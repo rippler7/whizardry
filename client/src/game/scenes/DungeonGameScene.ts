@@ -1562,8 +1562,12 @@ export class DungeonGameScene extends Phaser.Scene {
       bullet.body.setVelocityY(delta * speedY * 50);
       
       if (bullet.setDepth) {
-        const depthOffset = bullet.getData('depthOffset') || 0;
-        bullet.setDepth(bullet.y + depthOffset);
+        if (bullet.getData('isSpecial')) {
+          bullet.setDepth(3000); // Fixed high depth to stay over everything
+        } else {
+          const depthOffset = bullet.getData('depthOffset') || 0;
+          bullet.setDepth(bullet.y + depthOffset);
+        }
       }
       
       // Add particle trail for special bullets
@@ -1710,6 +1714,10 @@ export class DungeonGameScene extends Phaser.Scene {
     bullet.setData('bossDamage', isSpecial ? 250 : 50); // 5x damage for boss
     bullet.setData('ignoreWalls', isSpecial); // Ignores obstacles
     bullet.setData('isSpecial', isSpecial); // Flag for particle trail
+    if (isSpecial) {
+      bullet.setData('pierceCount', 2);
+      bullet.setData('hitEnemies', []);
+    }
     
     this.bullets.add(bullet);
     
@@ -2114,14 +2122,28 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private hitEnemy(bullet: any, enemy: any) {
-    if (enemy.getData('isDead')) return;
+    if (enemy.getData('isDead') || !bullet.active) return;
+    
+    if (bullet.getData('isSpecial')) {
+      const hitEnemies = bullet.getData('hitEnemies') || [];
+      if (hitEnemies.includes(enemy)) return; // Prevent multi-hits per frame
+      hitEnemies.push(enemy);
+      bullet.setData('hitEnemies', hitEnemies);
+    }
+    
     const damage = bullet.getData('damage') || 25;
-    bullet.destroy();
     enemy.takeDamage(damage);
+    
+    const pierceCount = bullet.getData('pierceCount') || 0;
+    if (pierceCount > 0) {
+      bullet.setData('pierceCount', pierceCount - 1);
+    } else {
+      bullet.destroy();
+    }
   }
 
   private hitBoss(boss: any, bullet: any) {
-    if (boss.getData('isDead')) return;
+    if (boss.getData('isDead') || !bullet.active) return;
     const damage = bullet.getData('bossDamage') || 50;
     bullet.destroy();
     
