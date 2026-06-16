@@ -69,6 +69,66 @@ class PreloaderScene extends Phaser.Scene {
     this.load.spritesheet('chestBlue', 'assets/sprites/chestBlue_faceRight.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
     this.load.spritesheet('chestGreen', 'assets/sprites/chestGreen_faceLeft.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
     this.load.spritesheet('chestYellow', 'assets/sprites/chestYellow_faceLeft.png', { frameWidth: 32, frameHeight: 64, endFrame: 7 });
+    this.load.image('Bush_blue_flowers1', 'assets/sprites/Bush_blue_flowers1.png');
+    this.load.image('Bush_blue_flowers2', 'assets/sprites/Bush_blue_flowers2.png');
+    this.load.image('Bush_blue_flowers3', 'assets/sprites/Bush_blue_flowers3.png');
+    this.load.image('Bush_orange_flowers1', 'assets/sprites/Bush_orange_flowers1.png');
+    this.load.image('Bush_orange_flowers2', 'assets/sprites/Bush_orange_flowers2.png');
+    this.load.image('Bush_orange_flowers3', 'assets/sprites/Bush_orange_flowers3.png');
+    this.load.image('Bush_pink_flowers1', 'assets/sprites/Bush_pink_flowers1.png');
+    this.load.image('Bush_pink_flowers2', 'assets/sprites/Bush_pink_flowers2.png');
+    this.load.image('Bush_pink_flowers3', 'assets/sprites/Bush_pink_flowers3.png');
+    this.load.image('Bush_red_flowers1', 'assets/sprites/Bush_red_flowers1.png');
+    this.load.image('Bush_red_flowers2', 'assets/sprites/Bush_red_flowers2.png');
+    this.load.image('Bush_red_flowers3', 'assets/sprites/Bush_red_flowers3.png');
+    this.load.image('Bush_simple_1_1', 'assets/sprites/Bush_simple1_1.png');
+    this.load.image('Bush_simple_1_2', 'assets/sprites/Bush_simple1_2.png');
+    this.load.image('Bush_simple_1_3', 'assets/sprites/Bush_simple1_3.png');
+    this.load.image('Bush_simple_2_1', 'assets/sprites/Bush_simple2_1.png');
+    this.load.image('Bush_simple_2_2', 'assets/sprites/Bush_simple2_2.png');
+    this.load.image('Bush_simple_2_3', 'assets/sprites/Bush_simple2_3.png');
+
+    this.load.image('Rock1_1', 'assets/sprites/Rock1_1.png');
+    this.load.image('Rock1_2', 'assets/sprites/Rock1_2.png');
+    this.load.image('Rock1_3', 'assets/sprites/Rock1_3.png');
+    this.load.image('Rock1_4', 'assets/sprites/Rock1_4.png');
+    this.load.image('Rock1_5', 'assets/sprites/Rock1_5.png');
+
+    this.load.image('Rock1_grass_shadow_dark1', 'assets/sprites/Rock1_grass_shadow_dark1.png');
+    this.load.image('Rock1_grass_shadow_dark2', 'assets/sprites/Rock1_grass_shadow_dark2.png');
+    this.load.image('Rock1_grass_shadow_dark3', 'assets/sprites/Rock1_grass_shadow_dark3.png');
+    this.load.image('Rock1_grass_shadow_dark4', 'assets/sprites/Rock1_grass_shadow_dark4.png');
+    this.load.image('Rock1_grass_shadow_dark5', 'assets/sprites/Rock1_grass_shadow_dark5.png');
+
+    this.load.image('Rock2_grass_shadow_dark1', 'assets/sprites/Rock2_grass_shadow_dark1.png');
+    this.load.image('Rock2_grass_shadow_dark2', 'assets/sprites/Rock2_grass_shadow_dark2.png');
+    this.load.image('Rock2_grass_shadow_dark3', 'assets/sprites/Rock2_grass_shadow_dark3.png');
+    this.load.image('Rock2_grass_shadow_dark4', 'assets/sprites/Rock2_grass_shadow_dark4.png');
+    this.load.image('Rock2_grass_shadow_dark5', 'assets/sprites/Rock2_grass_shadow_dark5.png');
+
+    this.load.image('Rock4_1', 'assets/sprites/Rock4_1.png');
+    this.load.image('Rock4_2', 'assets/sprites/Rock4_2.png');
+    this.load.image('Rock4_3', 'assets/sprites/Rock4_3.png');
+    this.load.image('Rock4_4', 'assets/sprites/Rock4_4.png');
+    this.load.image('Rock4_5', 'assets/sprites/Rock4_5.png');
+
+    this.load.image('Rock5_1', 'assets/sprites/Rock5_1.png');
+    this.load.image('Rock5_2', 'assets/sprites/Rock5_2.png');
+    this.load.image('Rock5_3', 'assets/sprites/Rock5_3.png');
+    this.load.image('Rock5_4', 'assets/sprites/Rock5_4.png');
+    this.load.image('Rock5_5', 'assets/sprites/Rock5_5.png');
+
+    this.load.image('Rock6_1', 'assets/sprites/Rock6_1.png');
+    this.load.image('Rock6_2', 'assets/sprites/Rock6_2.png');
+    this.load.image('Rock6_3', 'assets/sprites/Rock6_3.png');
+    this.load.image('Rock6_4', 'assets/sprites/Rock6_4.png');
+    this.load.image('Rock6_5', 'assets/sprites/Rock6_5.png');
+
+    this.load.image('Rock6_grass_shadow_dark1', 'assets/sprites/Rock6_grass_shadow_dark1.png');
+    this.load.image('Rock6_grass_shadow_dark2', 'assets/sprites/Rock6_grass_shadow_dark2.png');
+    this.load.image('Rock6_grass_shadow_dark3', 'assets/sprites/Rock6_grass_shadow_dark3.png');
+    this.load.image('Rock6_grass_shadow_dark4', 'assets/sprites/Rock6_grass_shadow_dark4.png');
+    this.load.image('Rock6_grass_shadow_dark5', 'assets/sprites/Rock6_grass_shadow_dark5.png');
     
     // Load other sprites
     this.load.image('bullet', 'assets/sprites/bullet.png');

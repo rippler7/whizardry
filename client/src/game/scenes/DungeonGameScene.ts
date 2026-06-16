@@ -138,6 +138,12 @@ export class DungeonGameScene extends Phaser.Scene {
 
   constructor() {
     super({ key: 'DungeonGameScene' });
+
+    // Bind event handlers to 'this' context to ensure they are valid listeners
+    this.handlePointerDown = this.handlePointerDown.bind(this);
+    this.handlePointerMove = this.handlePointerMove.bind(this);
+    this.handlePointerUp = this.handlePointerUp.bind(this);
+    this.handlePointerOut = this.handlePointerOut.bind(this);
   }
 
   init(data: any) {
@@ -169,6 +175,19 @@ export class DungeonGameScene extends Phaser.Scene {
     this.guaranteedZombieDropReady = this.currentDungeon >= 4;
     this.guaranteedZombie2DropReady = this.currentDungeon >= 4;
     this.guaranteedSpiderDropReady = this.currentDungeon >= 4;
+  }
+
+  shutdown() {
+    // Clean up global event listeners to prevent memory leaks when the scene is restarted
+    this.input.off('pointerdown', this.handlePointerDown);
+    this.input.off('pointermove', this.handlePointerMove);
+    this.input.off('pointerup', this.handlePointerUp);
+    this.input.off('pointerout', this.handlePointerOut);
+
+    // Also good practice to remove scene-specific listeners
+    this.events.off('enemyDefeated', this.handleEnemyDefeated, this);
+    this.events.off('bossPhaseChange');
+    this.events.off('bossDefeated');
   }
 
   create() {
@@ -403,6 +422,9 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create random obstacles
     this.createRandomObstacles();
 
+    // Create decorations
+    this.createDecorations();
+
     // Create enemies based on dungeon level
     this.createEnemies();
 
@@ -432,6 +454,125 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     this.showLevelIntro();
+  }
+
+  private createDecorations() {
+    let decorationGroups: string[][] = [];
+
+    if (this.currentDungeon === 1) {
+      decorationGroups = [
+        ['Bush_simple_1_1', 'Bush_simple_1_2', 'Bush_simple_1_3', 'Bush_simple_2_1', 'Bush_simple_2_2', 'Bush_simple_2_3'],
+        ['Bush_blue_flowers1', 'Bush_blue_flowers2', 'Bush_blue_flowers3']
+      ];
+    } else if (this.currentDungeon === 2) {
+      decorationGroups = [
+        ['Bush_orange_flowers1', 'Bush_orange_flowers2', 'Bush_orange_flowers3'],
+        ['Bush_pink_flowers1', 'Bush_pink_flowers2', 'Bush_pink_flowers3'],
+        ['Bush_red_flowers1', 'Bush_red_flowers2', 'Bush_red_flowers3']
+      ];
+    } else if (this.currentDungeon === 3 || this.currentDungeon === 4) {
+      decorationGroups = [
+        ['Rock1_grass_shadow_dark1', 'Rock1_grass_shadow_dark2', 'Rock1_grass_shadow_dark3', 'Rock1_grass_shadow_dark4', 'Rock1_grass_shadow_dark5'],
+        ['Rock2_grass_shadow_dark1', 'Rock2_grass_shadow_dark2', 'Rock2_grass_shadow_dark3', 'Rock2_grass_shadow_dark4', 'Rock2_grass_shadow_dark5'],
+        ['Rock6_grass_shadow_dark1', 'Rock6_grass_shadow_dark2', 'Rock6_grass_shadow_dark3', 'Rock6_grass_shadow_dark4', 'Rock6_grass_shadow_dark5']
+      ];
+    } else if (this.currentDungeon === 5) {
+      decorationGroups = [
+        ['Rock1_1', 'Rock1_2', 'Rock1_3', 'Rock1_4', 'Rock1_5'],
+        ['Rock4_1', 'Rock4_2', 'Rock4_3', 'Rock4_4', 'Rock4_5'],
+        ['Rock5_1', 'Rock5_2', 'Rock5_3', 'Rock5_4', 'Rock5_5'],
+        ['Rock6_1', 'Rock6_2', 'Rock6_3', 'Rock6_4', 'Rock6_5']
+      ];
+    }
+
+    if (decorationGroups.length === 0) return;
+
+    const walls = this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup;
+    const numSpawns = Phaser.Math.Between(25, 45);
+
+    for (let i = 0; i < numSpawns; i++) {
+      const group = Phaser.Utils.Array.GetRandom(decorationGroups);
+      const isClump = Math.random() < 0.45; // 40-50% chance
+
+      if (isClump) {
+        // Reserve a larger area for the clump to ensure pathway is clear and prevent individual bushes from rejecting each other
+        const clumpPos = this.getValidSpawnPosition(110, 110, true);
+        if (!clumpPos) continue;
+
+        const clumpSize = Phaser.Math.Between(4, 10);
+        for (let j = 0; j < clumpSize; j++) {
+          // Compact offsets within the reserved area
+          const offsetX = Phaser.Math.FloatBetween(-35, 35);
+          const offsetY = Phaser.Math.FloatBetween(-35, 35);
+          this.spawnDecoration(clumpPos.x + offsetX, clumpPos.y + offsetY, Phaser.Utils.Array.GetRandom(group), walls);
+        }
+      } else {
+        const basePos = this.getValidSpawnPosition(48, 48, true);
+        if (basePos) {
+          this.spawnDecoration(basePos.x, basePos.y, Phaser.Utils.Array.GetRandom(group), walls);
+        }
+      }
+    }
+
+    // Add sporadic scattering for smaller and medium decorations
+    const numSporadic = Phaser.Math.Between(60, 100);
+    for (let i = 0; i < numSporadic; i++) {
+      const group = Phaser.Utils.Array.GetRandom(decorationGroups);
+      // Select non-colliding variants to safely blanket the map without blocking paths
+      const nonCollidingKeys = group.filter(k => {
+        if (k.startsWith('Bush')) return !k.endsWith('3');
+        if (k.startsWith('Rock')) return !(k.endsWith('1') || k.endsWith('2') || k.endsWith('3'));
+        return false;
+      });
+
+      const key = nonCollidingKeys.length > 0 ? Phaser.Utils.Array.GetRandom(nonCollidingKeys) : Phaser.Utils.Array.GetRandom(group);
+      
+      const pos = this.getValidSpawnPosition(32, 32, false, undefined, true); 
+      if (pos) {
+        const scaleOverride = Phaser.Math.FloatBetween(0.5, 1.1);
+        this.spawnDecoration(pos.x, pos.y, key, walls, scaleOverride);
+      }
+    }
+  }
+
+  private spawnDecoration(x: number, y: number, textureKey: string, walls: Phaser.Physics.Arcade.StaticGroup, scaleOverride?: number) {
+    const scale = scaleOverride ?? (Phaser.Math.FloatBetween(0.8, 1.2) * 1.5); // Use random scale or override
+
+    // Check the actual image dimensions to prevent small visual decorations from acting as obstacles
+    const frame = this.textures.get(textureKey).get();
+    const isSmallImage = frame && (frame.width < 40 || frame.height < 40);
+
+    let ignoreCollision = false;
+    if (textureKey.startsWith('Bush')) {
+      ignoreCollision = !textureKey.endsWith('3') || isSmallImage;
+    } else if (textureKey.startsWith('Rock')) {
+      ignoreCollision = !(textureKey.endsWith('1') || textureKey.endsWith('2') || textureKey.endsWith('3')) || isSmallImage;
+    }
+    
+    let decoration: any;
+    if (ignoreCollision) {
+      decoration = this.add.sprite(x, y, textureKey);
+    } else {
+      decoration = walls.create(x, y, textureKey);
+    }
+    
+    // Retain 'isBush' flag so bullets, bats, and spiders continue to correctly ignore it!
+    decoration.setData('isBush', true);
+    decoration.setScale(scale);
+    decoration.setDepth(decoration.y);
+
+    if (!ignoreCollision && decoration.body) {
+      const staticBody = decoration.body as Phaser.Physics.Arcade.StaticBody;
+      if (typeof decoration.refreshBody === 'function') decoration.refreshBody();
+      
+      // Dynamically size the hitbox relative to the texture's actual dimensions
+      const bodyWidth = decoration.width * scale * 0.7;
+      const bodyHeight = decoration.height * scale * 0.4;
+      
+      staticBody.setSize(bodyWidth, bodyHeight);
+      staticBody.x = decoration.x - bodyWidth / 2;
+      staticBody.y = decoration.y + (decoration.displayHeight / 2) - bodyHeight;
+    }
   }
 
   private createPlayerAnimations() {
@@ -650,7 +791,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
-  private getValidSpawnPosition(w: number = 64, h: number = 64, isObstacle: boolean = false, bounds?: {minX: number, maxX: number, minY: number, maxY: number}): { x: number, y: number } | null {
+  private getValidSpawnPosition(w: number = 64, h: number = 64, isObstacle: boolean = false, bounds?: {minX: number, maxX: number, minY: number, maxY: number}, allowNearPlayer: boolean = false): { x: number, y: number } | null {
     let x: number = 0, y: number = 0;
     let valid = false;
     const walls = this.registry.get('walls').getChildren();
@@ -691,12 +832,12 @@ export class DungeonGameScene extends Phaser.Scene {
 
         valid = true;
 
-        if (Phaser.Geom.Intersects.RectangleToRectangle(checkRect, playerBounds)) {
+        if (!allowNearPlayer && Phaser.Geom.Intersects.RectangleToRectangle(checkRect, playerBounds)) {
             valid = false;
             continue;
         }
         // Ensure non-obstacle entities (enemies/chests) don't spawn too close to the player
-        if (!isObstacle && Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 350) {
+        if (!isObstacle && !allowNearPlayer && Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 350) {
             valid = false;
             continue;
         }
@@ -968,7 +1109,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createExitDoor() {
-    this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 15);
+    this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 7);
     this.door.setScale(0.75); // Half of 1.5
     this.door.setDepth(this.door.y);
     
@@ -976,15 +1117,15 @@ export class DungeonGameScene extends Phaser.Scene {
     if (!this.anims.exists('openGate')) {
       this.anims.create({
         key: 'openGate',
-        frames: this.anims.generateFrameNumbers('gate', { start: 0, end: 15 }),
+        frames: this.anims.generateFrameNumbers('gate', { start: 0, end: 7 }),
         frameRate: 8,
-        repeat: false
+        repeat: 0
       });
       this.anims.create({
         key: 'closeGate',
-        frames: this.anims.generateFrameNumbers('gate', { start: 15, end: 0 }),
+        frames: this.anims.generateFrameNumbers('gate', { start: 7, end: 0 }),
         frameRate: 8,
-        repeat: false
+        repeat: 0
       });
     }
 
@@ -1019,64 +1160,68 @@ export class DungeonGameScene extends Phaser.Scene {
     this.joystickBase = this.add.circle(0, 0, 50, 0x888888, 0.5).setDepth(2000).setScrollFactor(0).setVisible(false);
     this.joystickThumb = this.add.circle(0, 0, 25, 0xcccccc, 0.8).setDepth(2001).setScrollFactor(0).setVisible(false);
 
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
-      if (this.isModalOpen || this.player.getData('isDead')) return;
-      if (currentlyOver.length > 0) return; // Prevent shooting/moving when clicking UI or chests
+    this.input.on('pointerdown', this.handlePointerDown);
+    this.input.on('pointermove', this.handlePointerMove);
+    this.input.on('pointerup', this.handlePointerUp);
+    this.input.on('pointerout', this.handlePointerOut);
+  }
 
-      // Touch on the left half initiates the joystick
-      if (pointer.x < this.scale.width / 2 && !this.joystickActive && !this.sys.game.device.os.desktop) {
-        this.movePointer = pointer;
-        this.joystickActive = true;
-        this.joystickBase.setPosition(pointer.x, pointer.y).setVisible(true);
-        this.joystickThumb.setPosition(pointer.x, pointer.y).setVisible(true);
-        this.moveVector.set(0, 0); // Explicitly reset vector
-      } else {
-        // Touch on the right half (or a 2nd finger) fires a bullet
+  private handlePointerDown(pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) {
+    if (this.isModalOpen || this.player.getData('isDead')) return;
+    if (currentlyOver && currentlyOver.length > 0) return; // Prevent shooting/moving when clicking UI or chests
+
+    // Touch on the left half initiates the joystick
+    if (pointer.x < this.scale.width / 2 && !this.joystickActive && !this.sys.game.device.os.desktop) {
+      this.movePointer = pointer;
+      this.joystickActive = true;
+      this.joystickBase.setPosition(pointer.x, pointer.y).setVisible(true);
+      this.joystickThumb.setPosition(pointer.x, pointer.y).setVisible(true);
+      this.moveVector.set(0, 0); // Explicitly reset vector
+    } else {
+      // Touch on the right half (or a 2nd finger) fires a bullet
+      this.fireBullet(pointer.worldX, pointer.worldY);
+    }
+  }
+
+  private handlePointerMove(pointer: Phaser.Input.Pointer) {
+    if (this.isModalOpen || this.player.getData('isDead')) return;
+
+    // Safely check pointer.id to guarantee multi-touch stability on mobile browsers
+    if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
+      if (!pointer.isDown) return; // Failsafe for loose hover events
+
+      const distance = Phaser.Math.Distance.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
+      const angle = Phaser.Math.Angle.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
+      
+      const maxRadius = 50;
+      const clampedDist = Math.min(distance, maxRadius);
+      
+      this.joystickThumb.x = this.joystickBase.x + Math.cos(angle) * clampedDist;
+      this.joystickThumb.y = this.joystickBase.y + Math.sin(angle) * clampedDist;
+      
+      this.moveVector.x = Math.cos(angle) * (clampedDist / maxRadius);
+      this.moveVector.y = Math.sin(angle) * (clampedDist / maxRadius);
+    }
+  }
+
+  private handlePointerUp(pointer: Phaser.Input.Pointer) {
+    if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
+      // If it was a very quick tap on the left side, allow it to fire a bullet instead of moving
+      const duration = pointer.upTime - pointer.downTime;
+      const distance = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.upX, pointer.upY);
+      
+      if (duration < 250 && distance < 15) {
         this.fireBullet(pointer.worldX, pointer.worldY);
       }
-    });
 
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (this.isModalOpen || this.player.getData('isDead')) return;
-
-      // Safely check pointer.id to guarantee multi-touch stability on mobile browsers
-      if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
-        if (!pointer.isDown) return; // Failsafe for loose hover events
-
-        const distance = Phaser.Math.Distance.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
-        const angle = Phaser.Math.Angle.Between(this.joystickBase.x, this.joystickBase.y, pointer.x, pointer.y);
-        
-        const maxRadius = 50;
-        const clampedDist = Math.min(distance, maxRadius);
-        
-        this.joystickThumb.x = this.joystickBase.x + Math.cos(angle) * clampedDist;
-        this.joystickThumb.y = this.joystickBase.y + Math.sin(angle) * clampedDist;
-        
-        this.moveVector.x = Math.cos(angle) * (clampedDist / maxRadius);
-        this.moveVector.y = Math.sin(angle) * (clampedDist / maxRadius);
-      }
-    });
-
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
-        // If it was a very quick tap on the left side, allow it to fire a bullet instead of moving
-        const duration = pointer.upTime - pointer.downTime;
-        const distance = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.upX, pointer.upY);
-        
-        if (duration < 250 && distance < 15) {
-          this.fireBullet(pointer.worldX, pointer.worldY);
-        }
-
-        this.resetJoystick();
-      }
-    });
-    
-    // Catch fingers sliding off the screen edge
-    this.input.on('pointerout', (pointer: Phaser.Input.Pointer) => {
-      if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
-        this.resetJoystick();
-      }
-    });
+      this.resetJoystick();
+    }
+  }
+  
+  private handlePointerOut(pointer: Phaser.Input.Pointer) {
+    if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
+      this.resetJoystick();
+    }
   }
 
   private setupCollisions() {
@@ -1088,18 +1233,39 @@ export class DungeonGameScene extends Phaser.Scene {
       this.physics.add.collider(this.player, walls);
       // Allow spiders to bypass walls using a process callback filter
       this.physics.add.collider(this.enemies, walls, undefined, (obj1: any, obj2: any) => {
-        const enemy = obj1.getData && obj1.getData('type') ? obj1 : obj2;
-        return enemy.getData('type') !== 'spider';
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const wall = isWall1 ? obj1 : obj2;
+        const enemy = isWall1 ? obj2 : obj1;
+        
+        const type = ((enemy.getData && enemy.getData('type')) || enemy.type || (enemy.constructor && enemy.constructor.name) || '').toLowerCase();
+
+        if (type === 'spider' || type === 'babyspider') return false;
+        if ((type === 'bat' || type === 'chiroptera') && wall.getData && wall.getData('isBush')) return false;
+        
+        return true;
       });
-      this.physics.add.collider(this.bullets, walls, (bullet: any) => {
-        bullet.destroy(); // Bullets destroyed when hitting walls
-      }, (bullet: any) => {
-        return !bullet.getData('ignoreWalls');
+      this.physics.add.collider(this.bullets, walls, (obj1: any, obj2: any) => {
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const bullet = isWall1 ? obj2 : obj1;
+        if (bullet && typeof bullet.destroy === 'function' && bullet.active) bullet.destroy();
+      }, (obj1: any, obj2: any) => {
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const wall = isWall1 ? obj1 : obj2;
+        const bullet = isWall1 ? obj2 : obj1;
+        if (wall.getData && wall.getData('isBush')) return false; // Bullets ignore bushes & rocks
+        return !(bullet.getData && bullet.getData('ignoreWalls'));
       });
-      this.physics.add.collider(this.enemyBullets, walls, (bullet: any) => {
-        bullet.destroy(); // Enemy bullets destroyed when hitting walls
-      }, (bullet: any, wall: any) => {
-        return !bullet.getData('isSpiderWeb'); // Let spider webs pass through
+      this.physics.add.collider(this.enemyBullets, walls, (obj1: any, obj2: any) => {
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const bullet = isWall1 ? obj2 : obj1;
+        if (bullet && typeof bullet.destroy === 'function' && bullet.active) bullet.destroy();
+      }, (obj1: any, obj2: any) => {
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const wall = isWall1 ? obj1 : obj2;
+        const bullet = isWall1 ? obj2 : obj1;
+        if (wall.getData && wall.getData('isBush')) return false; // Bullets ignore bushes & rocks
+        if (bullet.getData && bullet.getData('isSpiderWeb')) return false;
+        return true;
       });
     }
     
@@ -1579,7 +1745,7 @@ export class DungeonGameScene extends Phaser.Scene {
           const offsetY = Phaser.Math.FloatBetween(-5, 5);
           const spark = this.add.star(bullet.x + offsetX, bullet.y + offsetY, 4, 4, 14, color);
           spark.setStrokeStyle(1, 0xb45309, 0.8);
-          spark.setDepth(49);
+          spark.setDepth(3001);
           this.tweens.add({
             targets: spark,
             alpha: 0,
