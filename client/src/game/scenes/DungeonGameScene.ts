@@ -638,6 +638,27 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
+  private getWallTextureKey(): string {
+    const r = Math.random();
+    if (this.currentDungeon === 1) {
+      if (r < 0.4) return 'cobbledsquare';
+      if (r < 0.8) return 'cobbledsquare2';
+      if (r < 0.9) return 'cobbledsquare3';
+      return 'cobbledsquare4';
+    } else if (this.currentDungeon === 2) {
+      if (r < 0.1) return 'cobbledsquare';
+      if (r < 0.5) return 'cobbledsquare2';
+      if (r < 0.9) return 'cobbledsquare3';
+      return 'cobbledsquare4';
+    } else if (this.currentDungeon === 3) {
+      return r < 0.5 ? 'cobbledsquare6' : 'cobbledsquare7';
+    } else if (this.currentDungeon === 4) {
+      return r < 0.5 ? 'cobbledsquare8' : 'cobbledsquare9';
+    } else {
+      return r < 0.95 ? 'cobbledsquare10' : 'cobbledsquare9';
+    }
+  }
+
   private createDungeonLayout() {
     const { width, height } = this.scale;
 
@@ -646,7 +667,6 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // Create walls group for collision
     const walls = this.physics.add.staticGroup();
-    const hasWallTex = this.textures.exists('wall_texture');
 
     // Helper to safely create wall tiles or fallback rectangles in segments for organic look
     const createWallSegments = (startX: number, startY: number, w: number, h: number) => {
@@ -661,9 +681,10 @@ export class DungeonGameScene extends Phaser.Scene {
           const offsetX = Phaser.Math.Between(-4, 4);
           const offsetY = Phaser.Math.Between(-4, 4);
           
+          const tex = this.getWallTextureKey();
           let segment;
-          if (hasWallTex) {
-            segment = this.add.tileSprite(x + offsetX, y + offsetY, currentW, currentH, 'wall_texture').setOrigin(0, 0).setDepth(0);
+          if (this.textures.exists(tex)) {
+            segment = this.add.tileSprite(x + offsetX, y + offsetY, currentW, currentH, tex).setOrigin(0, 0).setDepth(0);
           } else {
             segment = this.add.rectangle(x + offsetX, y + offsetY, currentW, currentH, 0x555555).setOrigin(0, 0).setDepth(0);
           }
@@ -756,8 +777,9 @@ export class DungeonGameScene extends Phaser.Scene {
           const blockX = startX + (block.x - minX) * blockSize + offsetX;
           const blockY = startY + (block.y - minY) * blockSize + offsetY;
           
-          if (this.textures.exists('wall_texture')) {
-            obstacle = this.add.tileSprite(blockX, blockY, blockSize, blockSize, 'wall_texture');
+          const tex = this.getWallTextureKey();
+          if (this.textures.exists(tex)) {
+            obstacle = this.add.tileSprite(blockX, blockY, blockSize, blockSize, tex);
           } else {
             obstacle = this.add.rectangle(blockX, blockY, blockSize, blockSize, 0x666666);
           }
@@ -1233,7 +1255,7 @@ export class DungeonGameScene extends Phaser.Scene {
       this.physics.add.collider(this.player, walls);
       // Allow spiders to bypass walls using a process callback filter
       this.physics.add.collider(this.enemies, walls, undefined, (obj1: any, obj2: any) => {
-        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key.startsWith('cobbledsquare') || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
         const wall = isWall1 ? obj1 : obj2;
         const enemy = isWall1 ? obj2 : obj1;
         
@@ -1245,22 +1267,22 @@ export class DungeonGameScene extends Phaser.Scene {
         return true;
       });
       this.physics.add.collider(this.bullets, walls, (obj1: any, obj2: any) => {
-        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key.startsWith('cobbledsquare') || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
         const bullet = isWall1 ? obj2 : obj1;
         if (bullet && typeof bullet.destroy === 'function' && bullet.active) bullet.destroy();
       }, (obj1: any, obj2: any) => {
-        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key.startsWith('cobbledsquare') || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
         const wall = isWall1 ? obj1 : obj2;
         const bullet = isWall1 ? obj2 : obj1;
         if (wall.getData && wall.getData('isBush')) return false; // Bullets ignore bushes & rocks
         return !(bullet.getData && bullet.getData('ignoreWalls'));
       });
       this.physics.add.collider(this.enemyBullets, walls, (obj1: any, obj2: any) => {
-        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key.startsWith('cobbledsquare') || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
         const bullet = isWall1 ? obj2 : obj1;
         if (bullet && typeof bullet.destroy === 'function' && bullet.active) bullet.destroy();
       }, (obj1: any, obj2: any) => {
-        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key === 'wall_texture' || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
+        const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key.startsWith('cobbledsquare') || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
         const wall = isWall1 ? obj1 : obj2;
         const bullet = isWall1 ? obj2 : obj1;
         if (wall.getData && wall.getData('isBush')) return false; // Bullets ignore bushes & rocks

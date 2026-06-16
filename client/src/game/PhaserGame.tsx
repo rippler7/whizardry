@@ -56,7 +56,15 @@ class PreloaderScene extends Phaser.Scene {
     this.load.spritesheet('spider', 'assets/sprites/spider2.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
     this.load.spritesheet('Boss', 'assets/sprites/orc.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('gate', 'assets/sprites/rpg_gate5.png', { frameWidth: 145, frameHeight: 96, endFrame: 15 });
-    this.load.image('wall_texture', 'textures/cobbledsquare.jpg');
+    this.load.image('cobbledsquare', 'textures/cobbledsquare.jpg');
+    this.load.image('cobbledsquare2', 'textures/cobbledsquare2.png');
+    this.load.image('cobbledsquare3', 'textures/cobbledsquare3.png');
+    this.load.image('cobbledsquare4', 'textures/cobbledsquare4.png');
+    this.load.image('cobbledsquare6', 'textures/cobbledsquare6.png');
+    this.load.image('cobbledsquare7', 'textures/cobbledsquare7.png');
+    this.load.image('cobbledsquare8', 'textures/cobbledsquare8.png');
+    this.load.image('cobbledsquare9', 'textures/cobbledsquare9.png');
+    this.load.image('cobbledsquare10', 'textures/cobbledsquare10.png');
     this.load.image('ground_easy', 'textures/mixgrass.jpg');
     this.load.image('ground_medium', 'textures/mixrock.jpg');
     this.load.image('ground_hard', 'textures/asphalt.png');
