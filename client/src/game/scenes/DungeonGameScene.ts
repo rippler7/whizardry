@@ -314,7 +314,13 @@ export class DungeonGameScene extends Phaser.Scene {
     this.player = this.physics.add.sprite(100, height / 2, 'player', 0);
     this.player.setCollideWorldBounds(true);
     this.player.setScale(1.125); // Increased by 25% from 0.9
-    this.player.setDepth(5);
+    
+    // Shrink the hitbox to the bottom half (the "feet") to create 3D depth
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    playerBody.setSize(20, 24);
+    playerBody.setOffset(6, 24);
+    
+    this.player.setDepth(this.player.y);
     
     // Give the player sprite standard RPG hook methods so Enemy.ts can call them natively
     (this.player as any).takeDamage = (amount: number) => {
@@ -501,35 +507,49 @@ export class DungeonGameScene extends Phaser.Scene {
     const walls = this.physics.add.staticGroup();
     const hasWallTex = this.textures.exists('wall_texture');
 
-    // Helper to safely create a wall tile or a fallback rectangle
-    const createWall = (x: number, y: number, w: number, h: number) => {
-      if (hasWallTex) {
-        return this.add.tileSprite(x, y, w, h, 'wall_texture').setOrigin(0, 0).setDepth(0);
+    // Helper to safely create wall tiles or fallback rectangles in segments for organic look
+    const createWallSegments = (startX: number, startY: number, w: number, h: number) => {
+      const segments: Phaser.GameObjects.GameObject[] = [];
+      const segmentSize = 32;
+      
+      for (let x = startX; x < startX + w; x += segmentSize) {
+        for (let y = startY; y < startY + h; y += segmentSize) {
+          const currentW = Math.min(segmentSize, startX + w - x);
+          const currentH = Math.min(segmentSize, startY + h - y);
+          
+          const offsetX = Phaser.Math.Between(-4, 4);
+          const offsetY = Phaser.Math.Between(-4, 4);
+          
+          let segment;
+          if (hasWallTex) {
+            segment = this.add.tileSprite(x + offsetX, y + offsetY, currentW, currentH, 'wall_texture').setOrigin(0, 0).setDepth(0);
+          } else {
+            segment = this.add.rectangle(x + offsetX, y + offsetY, currentW, currentH, 0x555555).setOrigin(0, 0).setDepth(0);
+          }
+          segments.push(segment);
+        }
       }
-      return this.add.rectangle(x, y, w, h, 0x555555).setOrigin(0, 0).setDepth(0);
+      return segments;
     };
 
     // Top wall 
-    const topWall = createWall(0, 0, width, wallThickness);
-    walls.add(topWall);
+    walls.addMultiple(createWallSegments(0, 0, width, wallThickness));
 
     // Bottom wall
-    const bottomWall = createWall(0, height - wallThickness, width, wallThickness);
-    walls.add(bottomWall);
+    walls.addMultiple(createWallSegments(0, height - wallThickness, width, wallThickness));
 
     // Left wall
-    const leftWall = createWall(0, 0, wallThickness, height);
-    walls.add(leftWall);
+    walls.addMultiple(createWallSegments(0, 0, wallThickness, height));
 
     // Right wall (with gap for door)
-    const rightWallTop = createWall(width - wallThickness, 0, wallThickness, height / 2 - 48);
-    const rightWallBottom = createWall(width - wallThickness, height / 2 + 48, wallThickness, height / 2 - 48);
-    walls.add(rightWallTop);
-    walls.add(rightWallBottom);
+    walls.addMultiple(createWallSegments(width - wallThickness, 0, wallThickness, height / 2 - 48));
+    walls.addMultiple(createWallSegments(width - wallThickness, height / 2 + 48, wallThickness, height / 2 - 48));
 
     // Ensure all static bodies are perfectly aligned with their new 0,0 origins
     walls.getChildren().forEach(wall => {
-      ((wall as Phaser.GameObjects.TileSprite).body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      if (wall.body) {
+        ((wall as Phaser.GameObjects.TileSprite).body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      }
     });
 
     // Store walls for collision detection
@@ -588,18 +608,42 @@ export class DungeonGameScene extends Phaser.Scene {
 
         shape.forEach(block => {
           let obstacle;
-          const blockX = startX + (block.x - minX) * blockSize;
-          const blockY = startY + (block.y - minY) * blockSize;
+          
+          // Add a slight random offset to give an organic, uneven look
+          const offsetX = Phaser.Math.Between(-4, 4);
+          const offsetY = Phaser.Math.Between(-4, 4);
+          const blockX = startX + (block.x - minX) * blockSize + offsetX;
+          const blockY = startY + (block.y - minY) * blockSize + offsetY;
           
           if (this.textures.exists('wall_texture')) {
-            obstacle = this.add.tileSprite(blockX, blockY, blockSize, blockSize, 'wall_texture').setDepth(0);
+            obstacle = this.add.tileSprite(blockX, blockY, blockSize, blockSize, 'wall_texture');
           } else {
-            obstacle = this.add.rectangle(blockX, blockY, blockSize, blockSize, 0x666666).setDepth(0);
+            obstacle = this.add.rectangle(blockX, blockY, blockSize, blockSize, 0x666666);
           }
+          
+          // Render dynamically based on y-position for 3D depth illusion
+          obstacle.setDepth(obstacle.y);
           
           walls.add(obstacle);
           if (obstacle.body) {
-            (obstacle.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+            const staticBody = obstacle.body as Phaser.Physics.Arcade.StaticBody;
+            staticBody.updateFromGameObject();
+            
+            // Determine if there's a block directly above this one in the shape definition
+            const hasBlockAbove = shape.some(b => b.x === block.x && b.y === block.y - 1);
+            
+            if (!hasBlockAbove) {
+              // Top-most block: shrink hitbox slightly so player can walk behind it
+              const depthOffset = 8; // Subtle reduction
+              staticBody.setSize(blockSize, blockSize - depthOffset);
+              staticBody.x = obstacle.x - blockSize / 2;
+              staticBody.y = obstacle.y - blockSize / 2 + depthOffset;
+            } else {
+              // Lower blocks: use full hitbox to remain completely solid and block gaps
+              staticBody.setSize(blockSize, blockSize);
+              staticBody.x = obstacle.x - blockSize / 2;
+              staticBody.y = obstacle.y - blockSize / 2;
+            }
           }
         });
       }
@@ -673,6 +717,81 @@ export class DungeonGameScene extends Phaser.Scene {
         }
     }
     return valid ? { x, y } : null;
+  }
+
+  private getNearestValidDropPosition(startX: number, startY: number, width: number, height: number): { x: number, y: number } {
+    const checkRect = new Phaser.Geom.Rectangle(0, 0, width, height);
+    const walls = this.registry.get('walls').getChildren();
+    const chests = this.chests.getChildren();
+    const obstacleBounds = [...walls, ...chests].map(obs => (obs as any).getBounds());
+    const doorBounds = this.door ? this.door.getBounds() : new Phaser.Geom.Rectangle(0, 0, 0, 0);
+
+    let radius = 0;
+    const step = 16;
+    const maxRadius = 300;
+
+    while (radius <= maxRadius) {
+      const points = radius === 0 ? 1 : Math.max(8, Math.floor((Math.PI * 2 * radius) / step));
+      for (let i = 0; i < points; i++) {
+        const currentAngle = (Math.PI * 2 * i) / points;
+        const testX = startX + Math.cos(currentAngle) * radius;
+        const testY = startY + Math.sin(currentAngle) * radius;
+
+        if (testX < width || testX > this.scale.width - width || testY < height || testY > this.scale.height - height) {
+          continue;
+        }
+
+        checkRect.setPosition(testX - width / 2, testY - height / 2);
+        let valid = true;
+
+        if (this.door && Phaser.Geom.Intersects.RectangleToRectangle(checkRect, doorBounds)) {
+          valid = false;
+        }
+
+        if (valid) {
+          for (const obsBound of obstacleBounds) {
+            if (Phaser.Geom.Intersects.RectangleToRectangle(checkRect, obsBound)) {
+              valid = false;
+              break;
+            }
+          }
+        }
+
+        if (valid) {
+          return { x: testX, y: testY };
+        }
+      }
+      radius += step;
+    }
+
+    return { x: startX, y: startY };
+  }
+
+  private spawnCrystal(type: string, x: number, y: number) {
+    const dropPos = this.getNearestValidDropPosition(x, y, 25, 25);
+    
+    // Start the crystal slightly higher in the air with a random rotation angle
+    const crystal = this.physics.add.sprite(dropPos.x, dropPos.y - 40, type);
+    crystal.anims.play(`spin-${type}`);
+    crystal.setScale(0.8);
+    crystal.setDepth(dropPos.y); // Set depth to its final resting place
+    crystal.setAngle(Phaser.Math.Between(-60, 60));
+    
+    this.droppedItems.add(crystal);
+
+    this.tweens.add({
+      targets: crystal,
+      y: dropPos.y,
+      duration: 800,
+      ease: 'Bounce.easeOut'
+    });
+
+    this.tweens.add({
+      targets: crystal,
+      angle: 0,
+      duration: 800,
+      ease: 'Cubic.easeOut'
+    });
   }
 
   private createEnemies() {
@@ -793,6 +912,12 @@ export class DungeonGameScene extends Phaser.Scene {
 
       const chest = this.physics.add.sprite(x, y, type, 0);
       chest.setScale(1.0); // Normal scale since chests are properly sized now
+      
+      // Chests are 32x64. Make the hitbox 32x32 at the base so player can walk behind them
+      const chestBody = chest.body as Phaser.Physics.Arcade.Body;
+      chestBody.setSize(32, 32);
+      chestBody.setOffset(0, 32);
+      
       chest.setData('questionIndex', index);
       chest.setData('opened', false);
       chest.setData('nextInteractionTime', 0);
@@ -801,7 +926,7 @@ export class DungeonGameScene extends Phaser.Scene {
       // Stop Phaser 3.50+ from allowing the player to push this immovable body
       if (typeof (chest as any).setPushable === 'function') { (chest as any).setPushable(false); }
       
-      chest.setDepth(2); // Render below active entities
+      chest.setDepth(chest.y); // Render dynamically based on y-position
       
       // Use pixelPerfect so the hitbox perfectly wraps the actual visible sprite pixels
       chest.setInteractive({ useHandCursor: true, pixelPerfect: true });
@@ -845,6 +970,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private createExitDoor() {
     this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 15);
     this.door.setScale(0.75); // Half of 1.5
+    this.door.setDepth(this.door.y);
     
     // Create gate animations using original specifications
     if (!this.anims.exists('openGate')) {
@@ -979,8 +1105,12 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // Enemies vs chests
     this.physics.add.collider(this.enemies, this.chests, undefined, (obj1: any, obj2: any) => {
-      const enemy = obj1.getData && obj1.getData('type') ? obj1 : obj2;
-      return enemy.getData('type') !== 'spider';
+      const isChest1 = (obj1.texture && obj1.texture.key && obj1.texture.key.toLowerCase().includes('chest'));
+      const enemy = isChest1 ? obj2 : obj1;
+      const type = ((enemy.getData && enemy.getData('type')) || enemy.type || (enemy.constructor && enemy.constructor.name) || '').toLowerCase();
+      
+      if (type === 'spider' || type === 'babyspider' || type === 'bat' || type === 'chiroptera') return false;
+      return true;
     });
     
     // Player vs enemies
@@ -1328,6 +1458,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.handleShooting();
     this.updateBullets(delta);
     
+    this.player.setDepth(this.player.y);
+    
     const currentTime = this.time.now;
     
     if (currentTime >= this.enemiesFrozenUntil) {
@@ -1341,9 +1473,11 @@ export class DungeonGameScene extends Phaser.Scene {
       // Enforce 0 velocity while frozen just in case physics collisions try to bump them
       this.enemies.getChildren().forEach((enemy: any) => {
         if (enemy.setVelocity) enemy.setVelocity(0, 0);
+        if (enemy.updateDepth) enemy.updateDepth();
       });
       if (this.boss && this.boss.setVelocity) {
         this.boss.setVelocity(0, 0);
+        if (this.boss.updateDepth) this.boss.updateDepth();
       }
     }
 
@@ -1426,6 +1560,11 @@ export class DungeonGameScene extends Phaser.Scene {
       // Apply velocity using delta time (corrected direction)
       bullet.body.setVelocityX(delta * speedX * 50);
       bullet.body.setVelocityY(delta * speedY * 50);
+      
+      if (bullet.setDepth) {
+        const depthOffset = bullet.getData('depthOffset') || 0;
+        bullet.setDepth(bullet.y + depthOffset);
+      }
       
       // Add particle trail for special bullets
       if (bullet.getData('isSpecial') && bullet.active) {
@@ -2133,22 +2272,14 @@ export class DungeonGameScene extends Phaser.Scene {
       }
 
       if (Math.random() < (1 / 3)) {
-        const crystal = this.physics.add.sprite(x, y, 'greencrystal');
-        crystal.anims.play('spin-greencrystal');
-        crystal.setScale(0.8);
-        crystal.setDepth(4);
-        this.droppedItems.add(crystal);
+        this.spawnCrystal('greencrystal', x, y);
       }
       return;
     }
 
     if (enemyType === 'skeleton' && this.currentDungeon >= 3 && this.currentDungeon <= 5) {
       if (Math.random() < 0.5) {
-        const crystal = this.physics.add.sprite(x, y, 'redcrystal');
-        crystal.anims.play('spin-redcrystal');
-        crystal.setScale(0.8);
-        crystal.setDepth(4);
-        this.droppedItems.add(crystal);
+        this.spawnCrystal('redcrystal', x, y);
       }
       return;
     }
@@ -2189,11 +2320,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
         if (isGuaranteed || Math.random() < (1 / 3)) {
           if (crystalToDrop) {
-            const crystal = this.physics.add.sprite(x, y, crystalToDrop);
-            crystal.anims.play(`spin-${crystalToDrop}`);
-            crystal.setScale(0.8);
-            crystal.setDepth(4);
-            this.droppedItems.add(crystal);
+            this.spawnCrystal(crystalToDrop, x, y);
           }
         }
         return;
@@ -2210,30 +2337,18 @@ export class DungeonGameScene extends Phaser.Scene {
 
     if (enemyType === 'zombie') {
       if (Math.random() < (1 / 3)) {
-        const crystal = this.physics.add.sprite(x, y, 'orangecrystal');
-        crystal.anims.play('spin-orangecrystal');
-        crystal.setScale(0.8);
-        crystal.setDepth(4);
-        this.droppedItems.add(crystal);
+        this.spawnCrystal('orangecrystal', x, y);
       }
     } else if (enemyType === 'zombie2' && (this.currentDungeon === 2 || this.currentDungeon === 3)) {
       const redDropChance = getAdjustedHealDropChance(0.20);
       if (Math.random() < redDropChance) {
-        const crystal = this.physics.add.sprite(x, y, 'redcrystal');
-        crystal.anims.play('spin-redcrystal');
-        crystal.setScale(0.8);
-        crystal.setDepth(4);
-        this.droppedItems.add(crystal);
+        this.spawnCrystal('redcrystal', x, y);
       }
     } else if (enemyType === 'spider' && this.currentDungeon === 3) {
       if (this.gameDifficulty === 'medium' || this.gameDifficulty === 'easy') {
         const redDropChance = getAdjustedHealDropChance(0.20);
         if (Math.random() < redDropChance) {
-          const crystal = this.physics.add.sprite(x, y, 'redcrystal');
-          crystal.anims.play('spin-redcrystal');
-          crystal.setScale(0.8);
-          crystal.setDepth(4);
-          this.droppedItems.add(crystal);
+          this.spawnCrystal('redcrystal', x, y);
         }
       }
     }

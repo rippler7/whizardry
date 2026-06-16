@@ -288,19 +288,23 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
       return true;
     }
     
+    const isBat = this.config.type === 'bat' || this.config.type === 'chiroptera';
+    const isSpider = this.config.type === 'spider' || this.config.type === 'babyspider';
+
     let collided: boolean | Phaser.Physics.Arcade.Sprite = false;
     if (this.walls) {
       this.walls.getChildren().forEach(wall => {
-        // Allow spiders to bypass wall collision checks
-        if (this.config.type !== 'spider' && Phaser.Geom.Intersects.RectangleToRectangle(bounds, (wall as Phaser.Physics.Arcade.Sprite).getBounds())) {
-          collided = wall as Phaser.Physics.Arcade.Sprite;
+        const w = wall as Phaser.Physics.Arcade.Sprite;
+        const isBush = w.getData && w.getData('isBush');
+        if (!isSpider && !(isBat && isBush) && Phaser.Geom.Intersects.RectangleToRectangle(bounds, w.getBounds())) {
+          collided = w;
         }
       });
     }
     
     if (!collided && this.chests) {
       this.chests.getChildren().forEach(chest => {
-        if (this.config.type !== 'spider' && Phaser.Geom.Intersects.RectangleToRectangle(bounds, (chest as Phaser.Physics.Arcade.Sprite).getBounds())) {
+        if (!isSpider && !isBat && Phaser.Geom.Intersects.RectangleToRectangle(bounds, (chest as Phaser.Physics.Arcade.Sprite).getBounds())) {
           collided = chest as Phaser.Physics.Arcade.Sprite;
         }
       });
@@ -336,7 +340,8 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected abstract performAttack(): void;
   
   protected updateDepth(): void {
-    this.setDepth(5);
+    const isBat = this.config.type === 'bat' || this.config.type === 'chiroptera';
+    this.setDepth(this.y + (isBat ? 2000 : 0));
     if (this.shadow) this.shadow.setPosition(this.x, this.y + this.shadowOffset);
   }
   
@@ -519,7 +524,7 @@ export class Skeleton extends Enemy {
     this.isAlive = true;
     this.setData('health', this.config.health);
     this.body.enable = true;
-    this.setDepth(5); // Render as active entity again
+    this.updateDepth(); // Render as active entity again
     if (this.shadow) this.shadow.setVisible(true);
     this.clearTint();
     this.state = 'patrol';
@@ -679,6 +684,8 @@ export class Bat extends Enemy {
     bullet.setAlpha(0.9);
     bullet.setDepth(50);
     bullet.setData('damage', this.config.damage);
+    bullet.setData('depthOffset', 2000);
+    bullet.setData('sourceType', this.config.type);
     
     // Sticky fluid particle trail
     const emitter = currentScene.add.particles(0, 0, 'bullet', {
