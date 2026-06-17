@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { GAME_CONFIG } from '../data/GameData';
 
-export class Player extends Phaser.Physics.Arcade.Sprite {
+export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   public health: number = 100;
   public maxHealth: number = 100;
   public level: number = 1;
@@ -11,12 +11,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public correctAnswers: number = 0;
   public enemiesKilled: number = 0;
   
-  private keys: any;
-  private lastFired: number = 0;
-  private fireRate: number = 250;
-  
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'player');
+  constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
+    super(scene, x, y, texture);
     
     // Add to scene
     scene.add.existing(this);
@@ -24,193 +20,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     
     // Configure physics
     this.setCollideWorldBounds(true);
-    this.setSize(24, 32);
-    this.setOffset(4, 16);
     
     // Set depth for layering
     this.setDepth(100);
-    
-    // Initialize input
-    this.setupInput();
-    
-    // Create animations
-    this.createAnimations();
   }
   
-  private setupInput(): void {
-    this.keys = this.scene.input.keyboard!.createCursorKeys();
-    
-    // Add WASD keys
-    this.keys.W = this.scene.input.keyboard!.addKey('W');
-    this.keys.A = this.scene.input.keyboard!.addKey('A');
-    this.keys.S = this.scene.input.keyboard!.addKey('S');
-    this.keys.D = this.scene.input.keyboard!.addKey('D');
-    this.keys.SPACE = this.scene.input.keyboard!.addKey('SPACE');
-  }
-  
-  private createAnimations(): void {
-    const anims = this.scene.anims;
-    
-    // Walking animations
-    if (!anims.exists('player_walk_down')) {
-      anims.create({
-        key: 'player_walk_down',
-        frames: anims.generateFrameNumbers('player', { start: 0, end: 3 }),
-        frameRate: 8,
-        repeat: -1
-      });
-    }
-    
-    if (!anims.exists('player_walk_left')) {
-      anims.create({
-        key: 'player_walk_left',
-        frames: anims.generateFrameNumbers('player', { start: 4, end: 7 }),
-        frameRate: 8,
-        repeat: -1
-      });
-    }
-    
-    if (!anims.exists('player_walk_right')) {
-      anims.create({
-        key: 'player_walk_right',
-        frames: anims.generateFrameNumbers('player', { start: 8, end: 11 }),
-        frameRate: 8,
-        repeat: -1
-      });
-    }
-    
-    if (!anims.exists('player_walk_up')) {
-      anims.create({
-        key: 'player_walk_up',
-        frames: anims.generateFrameNumbers('player', { start: 12, end: 15 }),
-        frameRate: 8,
-        repeat: -1
-      });
-    }
-    
-    // Idle animations
-    if (!anims.exists('player_idle_down')) {
-      anims.create({
-        key: 'player_idle_down',
-        frames: [{ key: 'player', frame: 0 }],
-        frameRate: 1
-      });
-    }
-    
-    if (!anims.exists('player_idle_left')) {
-      anims.create({
-        key: 'player_idle_left',
-        frames: [{ key: 'player', frame: 4 }],
-        frameRate: 1
-      });
-    }
-    
-    if (!anims.exists('player_idle_right')) {
-      anims.create({
-        key: 'player_idle_right',
-        frames: [{ key: 'player', frame: 8 }],
-        frameRate: 1
-      });
-    }
-    
-    if (!anims.exists('player_idle_up')) {
-      anims.create({
-        key: 'player_idle_up',
-        frames: [{ key: 'player', frame: 12 }],
-        frameRate: 1
-      });
-    }
-  }
-  
-  public update(): void {
-    this.handleMovement();
-    this.handleShooting();
-    this.updateDepth();
-  }
-  
-  private handleMovement(): void {
-    const speed = GAME_CONFIG.PLAYER_SPEED;
-    let velocityX = 0;
-    let velocityY = 0;
-    let isMoving = false;
-    let direction = 'down';
-    
-    // Handle input
-    if (this.keys.left.isDown || this.keys.A.isDown) {
-      velocityX = -speed;
-      direction = 'left';
-      isMoving = true;
-    } else if (this.keys.right.isDown || this.keys.D.isDown) {
-      velocityX = speed;
-      direction = 'right';
-      isMoving = true;
-    }
-    
-    if (this.keys.up.isDown || this.keys.W.isDown) {
-      velocityY = -speed;
-      direction = 'up';
-      isMoving = true;
-    } else if (this.keys.down.isDown || this.keys.S.isDown) {
-      velocityY = speed;
-      direction = 'down';
-      isMoving = true;
-    }
-    
-    // Set velocity
-    this.setVelocity(velocityX, velocityY);
-    
-    // Play appropriate animation
-    if (isMoving) {
-      this.anims.play(`player_walk_${direction}`, true);
-    } else {
-      this.anims.play(`player_idle_${direction}`, true);
-    }
-  }
-  
-  private handleShooting(): void {
-    if (this.keys.SPACE.isDown && this.scene.time.now > this.lastFired + this.fireRate) {
-      this.shoot();
-      this.lastFired = this.scene.time.now;
-    }
-  }
-  
-  private shoot(): void {
-    // Get mouse position or default direction
-    const pointer = this.scene.input.activePointer;
-    const targetX = pointer.worldX;
-    const targetY = pointer.worldY;
-    
-    // Calculate direction
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    
-    // Create bullet
-    const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
-    bullet.setScale(0.05);
-    bullet.setDepth(50);
-    
-    // Set bullet velocity
-    const bulletSpeed = GAME_CONFIG.BULLET_SPEED;
-    bullet.setVelocity(
-      Math.cos(angle) * bulletSpeed,
-      Math.sin(angle) * bulletSpeed
-    );
-    
-    // Destroy bullet after time
-    this.scene.time.delayedCall(4000, () => {
-      if (bullet.active) {
-        bullet.destroy();
-      }
-    });
-    
-    // Store bullet reference for collision detection
-    (this.scene as any).bullets = (this.scene as any).bullets || [];
-    (this.scene as any).bullets.push(bullet);
-    
-    // Play sound effect
-    this.scene.sound.play('fire', { volume: 0.3 });
-  }
-  
-  private updateDepth(): void {
+  public abstract update(): void;
+  protected abstract handleMovement(): void;
+  protected abstract handleShooting(): void;
+
+  protected updateDepth(): void {
     this.setDepth(this.y + 100);
   }
   
@@ -285,3 +104,115 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.questionsAnswered > 0 ? (this.correctAnswers / this.questionsAnswered) * 100 : 0;
   }
 }
+
+export class Mage extends Hero {
+  private keys: any;
+  private lastFired: number = 0;
+  private fireRate: number = 250;
+  
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, 'player');
+    
+    this.setSize(24, 32);
+    this.setOffset(4, 16);
+    
+    this.setupInput();
+    this.createAnimations();
+  }
+  
+  private setupInput(): void {
+    this.keys = this.scene.input.keyboard!.createCursorKeys();
+    
+    // Add WASD keys
+    this.keys.W = this.scene.input.keyboard!.addKey('W');
+    this.keys.A = this.scene.input.keyboard!.addKey('A');
+    this.keys.S = this.scene.input.keyboard!.addKey('S');
+    this.keys.D = this.scene.input.keyboard!.addKey('D');
+    this.keys.SPACE = this.scene.input.keyboard!.addKey('SPACE');
+  }
+  
+  private createAnimations(): void {
+    const anims = this.scene.anims;
+    
+    if (!anims.exists('player_walk_down')) {
+      anims.create({ key: 'player_walk_down', frames: anims.generateFrameNumbers('player', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_left', frames: anims.generateFrameNumbers('player', { start: 4, end: 7 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_right', frames: anims.generateFrameNumbers('player', { start: 8, end: 11 }), frame     Rate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_up', frames: anims.generateFrameNumbers('player', { start: 12, end: 15 }), frameRate: 8, repeat: -1 });
+    }
+    
+    if (!anims.exists('player_idle_down')) {
+      anims.create({ key: 'player_idle_down', frames: [{ key: 'player', frame: 0 }], frameRate: 1 });
+      anims.create({ key: 'player_idle_left', frames: [{ key: 'player', frame: 4 }], frameRate: 1 });
+      anims.create({ key: 'player_idle_right', frames: [{ key: 'player', frame: 8 }], frameRate: 1 });
+      anims.create({ key: 'player_idle_up', frames: [{ key: 'player', frame: 12 }], frameRate: 1 });
+    }
+  }
+  
+  public update(): void {
+    this.handleMovement();
+    this.handleShooting();
+    this.updateDepth();
+  }
+  
+  protected handleMovement(): void {
+    const speed = GAME_CONFIG.PLAYER_SPEED;
+    let velocityX = 0;
+    let velocityY = 0;
+    let isMoving = false;
+    let direction = 'down';
+    
+    if (this.keys.left.isDown || this.keys.A.isDown) {
+      velocityX = -speed;
+      direction = 'left';
+      isMoving = true;
+    } else if (this.keys.right.isDown || this.keys.D.isDown) {
+      velocityX = speed;
+      direction = 'right';
+      isMoving = true;
+    }
+    
+    if (this.keys.up.isDown || this.keys.W.isDown) {
+      velocityY = -speed;
+      direction = 'up';
+      isMoving = true;
+    } else if (this.keys.down.isDown || this.keys.S.isDown) {
+      velocityY = speed;
+      direction = 'down';
+      isMoving = true;
+    }
+    
+    this.setVelocity(velocityX, velocityY);
+    
+    if (isMoving) {
+      this.anims.play(`player_walk_${direction}`, true);
+    } else {
+      this.anims.play(`player_idle_${direction}`, true);
+    }
+  }
+  
+  protected handleShooting(): void {
+    if (this.keys.SPACE.isDown && this.scene.time.now > this.lastFired + this.fireRate) {
+      this.shoot();
+      this.lastFired = this.scene.time.now;
+    }
+  }
+  
+  private shoot(): void {
+    const pointer = this.scene.input.activePointer;
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
+    
+    const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
+    bullet.setScale(0.05);
+    bullet.setDepth(50);
+    bullet.setVelocity(Math.cos(angle) * GAME_CONFIG.BULLET_SPEED, Math.sin(angle) * GAME_CONFIG.BULLET_SPEED);
+    
+    this.scene.time.delayedCall(4000, () => { if (bullet.active) bullet.destroy(); });
+    
+    (this.scene as any).bullets = (this.scene as any).bullets || [];
+    (this.scene as any).bullets.push(bullet);
+    this.scene.sound.play('fire', { volume: 0.3 });
+  }
+}
+
+export { Mage as Player };
