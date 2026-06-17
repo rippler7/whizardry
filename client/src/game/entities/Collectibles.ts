@@ -154,6 +154,14 @@ export class Chest extends Collectible {
     this.scene.input.keyboard!.once('keydown-TWO', () => this.answerFromKey(1));
     this.scene.input.keyboard!.once('keydown-THREE', () => this.answerFromKey(2));
     this.scene.input.keyboard!.once('keydown-FOUR', () => this.answerFromKey(3));
+    
+    // Cleanup on scene shutdown
+    this.scene.events.once('shutdown', () => {
+      this.scene.input.keyboard?.off('keydown-ONE');
+      this.scene.input.keyboard?.off('keydown-TWO');
+      this.scene.input.keyboard?.off('keydown-THREE');
+      this.scene.input.keyboard?.off('keydown-FOUR');
+    });
   }
     
   private answerFromKey(index: number): void {

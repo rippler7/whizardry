@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { Hero } from './Player';
 
 export interface EnemyConfig {
   type: string;
@@ -22,7 +23,7 @@ export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected config: EnemyConfig;
-  protected player: any; // Using duck-typing to communicate with DungeonGameScene's player
+  protected player: Hero;
   protected lastAttack: number = 0;
   protected attackRate: number = 1000;
   protected isAlive: boolean = true;
@@ -38,7 +39,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected evasionDirection: { x: number; y: number } = { x: 0, y: 0 };
   protected isPatrollingToChest: boolean = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: any, hp: number, speed: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: Hero, hp: number, speed: number) {
     super(scene, x, y, texture);
     
     this.config = { ...ENEMY_CONFIGS[enemyType] };
@@ -412,7 +413,7 @@ export class Skeleton extends Enemy {
   private reviveTime: number = 0;
   private isReviving: boolean = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'skeleton', 'skeleton', player, hp, speed);
     this.setSize(32, 48);
     this.setOffset(16, 16);
@@ -535,7 +536,7 @@ export class Skeleton extends Enemy {
 
 // Zombie Enemy
 export class Zombie extends Enemy {
-  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'zombie', 'zombie', player, hp, speed);
     this.setSize(24, 24);
     this.setOffset(4, 8);
@@ -600,7 +601,7 @@ export class Zombie extends Enemy {
 
 // Zombie2 Enemy
 export class Zombie2 extends Enemy {
-  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'zombie', 'zombie2', player, hp, speed);
     this.setSize(24, 24);
     this.setOffset(4, 8);
@@ -642,7 +643,7 @@ export class Zombie2 extends Enemy {
 
 // Bat Enemy
 export class Bat extends Enemy {
-  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'bat', 'bat', player, hp, speed);
     this.setSize(48, 48);
     this.setOffset(8, 8);
@@ -747,7 +748,7 @@ export class Spider extends Enemy {
   private spiderActionTimer: number = 0;
   private isSmall: boolean = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number, isSmall: boolean = false) {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number, isSmall: boolean = false) {
     super(scene, x, y, 'spider', 'spider', player, hp, speed);
     this.setSize(32, 32);
     this.setOffset(16, 16);
@@ -1073,7 +1074,7 @@ export class Boss extends Enemy {
   private targetChest: Phaser.Physics.Arcade.Sprite | null = null;
   private isReturningToChest: boolean = false;
   
-  constructor(scene: Phaser.Scene, x: number, y: number, player: any, hp: number, speed: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'Boss', 'boss', player, hp, speed);
     this.setSize(40, 56);
     this.setOffset(12, 8);

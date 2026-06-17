@@ -10,6 +10,11 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   public questionsAnswered: number = 0;
   public correctAnswers: number = 0;
   public enemiesKilled: number = 0;
+  public isDead: boolean = false;
+  public isInvincible: boolean = false;
+  public isInvulnerable: boolean = false;
+  public hasFireball: boolean = false;
+  public joystickVector: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 0);
   
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
@@ -34,20 +39,35 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   }
   
   public takeDamage(amount: number): boolean {
+    if (this.isDead || this.isInvincible || this.isInvulnerable) return false;
+
     this.health = Math.max(0, this.health - amount);
     
     // Flash effect
+    this.isInvulnerable = true;
     this.setTint(0xff0000);
-    this.scene.time.delayedCall(200, () => {
-      this.clearTint();
+    this.scene.time.delayedCall(1000, () => {
+      if (this.active) {
+        this.isInvulnerable = false;
+        if (!this.isInvincible) {
+          this.clearTint();
+        }
+      }
     });
     
     // Play hurt sound
-    this.scene.sound.play('playerHurt', { volume: 0.4 });
+    this.scene.sound.play('hurt_male', { volume: 0.4 });
     
     // Emit health update event
     this.scene.events.emit('playerHealthChanged', this.health, this.maxHealth);
     
+    if (this.health <= 0) {
+      this.isDead = true;
+      this.body.enable = false;
+      this.anims.stop();
+      this.setTint(0xff0000);
+    }
+
     return this.health <= 0;
   }
   
@@ -113,8 +133,9 @@ export class Mage extends Hero {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player');
     
-    this.setSize(24, 32);
-    this.setOffset(4, 16);
+    this.setScale(1.125);
+    this.setSize(20, 24);
+    this.setOffset(6, 24);
     
     this.setupInput();
     this.createAnimations();
@@ -137,7 +158,7 @@ export class Mage extends Hero {
     if (!anims.exists('player_walk_down')) {
       anims.create({ key: 'player_walk_down', frames: anims.generateFrameNumbers('player', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
       anims.create({ key: 'player_walk_left', frames: anims.generateFrameNumbers('player', { start: 4, end: 7 }), frameRate: 8, repeat: -1 });
-      anims.create({ key: 'player_walk_right', frames: anims.generateFrameNumbers('player', { start: 8, end: 11 }), frame     Rate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_right', frames: anims.generateFrameNumbers('player', { start: 8, end: 11 }), frameRate: 8, repeat: -1 });
       anims.create({ key: 'player_walk_up', frames: anims.generateFrameNumbers('player', { start: 12, end: 15 }), frameRate: 8, repeat: -1 });
     }
     
@@ -150,6 +171,8 @@ export class Mage extends Hero {
   }
   
   public update(): void {
+    if (this.isDead) return;
+
     this.handleMovement();
     this.handleShooting();
     this.updateDepth();
@@ -162,7 +185,12 @@ export class Mage extends Hero {
     let isMoving = false;
     let direction = 'down';
     
-    if (this.keys.left.isDown || this.keys.A.isDown) {
+    if (this.joystickVector.x !== 0 || this.joystickVector.y !== 0) {
+      velocityX = this.joystickVector.x * speed;
+      velocityY = this.joystickVector.y * speed;
+      isMoving = true;
+      direction = Math.abs(velocityX) > Math.abs(velocityY) ? (velocityX < 0 ? 'left' : 'right') : (velocityY < 0 ? 'up' : 'down');
+    } else if (this.keys.left.isDown || this.keys.A.isDown) {
       velocityX = -speed;
       direction = 'left';
       isMoving = true;
@@ -194,24 +222,56 @@ export class Mage extends Hero {
   protected handleShooting(): void {
     if (this.keys.SPACE.isDown && this.scene.time.now > this.lastFired + this.fireRate) {
       this.shoot();
-      this.lastFired = this.scene.time.now;
     }
   }
   
-  private shoot(): void {
+  public shoot(targetX?: number, targetY?: number): void {
+    if (this.hasFireball && (this.scene as any).bullets && (this.scene as any).bullets.getChildren().length >= 1) {
+      return; // Only 1 instance at a time for special attack
+    }
+
+    this.lastFired = this.scene.time.now;
     const pointer = this.scene.input.activePointer;
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
+    const mouseX = targetX !== undefined ? targetX : pointer.worldX;
+    const mouseY = targetY !== undefined ? targetY : pointer.worldY;
     
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, mouseX, mouseY);
     const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
-    bullet.setScale(0.05);
+    
+    const isSpecial = this.hasFireball;
+    bullet.setScale(isSpecial ? 1.2 : 0.4);
+    bullet.setTint(isSpecial ? 0xf97316 : 0xfcd34d);
     bullet.setDepth(50);
-    bullet.setVelocity(Math.cos(angle) * GAME_CONFIG.BULLET_SPEED, Math.sin(angle) * GAME_CONFIG.BULLET_SPEED);
     
-    this.scene.time.delayedCall(4000, () => { if (bullet.active) bullet.destroy(); });
+    const deltaX = mouseX - this.x;
+    const deltaY = mouseY - this.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const baseSpeed = isSpecial ? 0.375 : 0.75;
     
-    (this.scene as any).bullets = (this.scene as any).bullets || [];
-    (this.scene as any).bullets.push(bullet);
-    this.scene.sound.play('fire', { volume: 0.3 });
+    if (distance > 0) {
+      bullet.setData('speedX', (deltaX / distance) * baseSpeed);
+      bullet.setData('speedY', (deltaY / distance) * baseSpeed);
+    } else {
+      bullet.setData('speedX', baseSpeed);
+      bullet.setData('speedY', 0);
+    }
+    
+    bullet.setData('born', 0);
+    bullet.setData('lifespan', isSpecial ? 738.28125 * 2 : 738.28125);
+    bullet.setData('damage', isSpecial ? 125 : 25);
+    bullet.setData('bossDamage', isSpecial ? 250 : 50);
+    bullet.setData('ignoreWalls', isSpecial);
+    bullet.setData('isSpecial', isSpecial);
+    if (isSpecial) {
+      bullet.setData('pierceCount', 2);
+      bullet.setData('hitEnemies', []);
+    }
+    
+    if ((this.scene as any).bullets) {
+      (this.scene as any).bullets.add(bullet);
+    }
+    
+    this.scene.sound.play(isSpecial ? 'fireball_shoot' : 'spit', { volume: isSpecial ? 0.5 : 0.3 });
   }
 }
 

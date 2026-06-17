@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { Enemy, Skeleton, Zombie, Zombie2, Bat, Spider, Boss } from '../entities/Enemy';
+import { Player } from '../entities/Player';
 import questionsData from '../entities/questions.json';
 
 interface Question {
@@ -73,7 +74,7 @@ const getValidQuestions = (rawData: any): Question[] => {
 
 export class DungeonGameScene extends Phaser.Scene {
   // Game objects
-  private player!: Phaser.Physics.Arcade.Sprite;
+  private player!: Player;
   private enemies!: Phaser.Physics.Arcade.Group;
   private chests!: Phaser.Physics.Arcade.Group;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -95,12 +96,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private moveVector: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 0);
 
   // Game state
-  private playerHealth: number = 100;
-  private playerMaxHealth: number = 100;
-  private playerScore: number = 0;
-  private questionsAnswered: number = 0;
-  private correctAnswers: number = 0;
-  private enemiesKilled: number = 0;
+  private initialPlayerStats: any = {};
   private levelCorrectAnswers: number = 0;
   private currentDungeon: number = 1;
   private maxDungeons: number = 5;
@@ -148,14 +144,17 @@ export class DungeonGameScene extends Phaser.Scene {
 
   init(data: any) {
     this.currentDungeon = data.dungeon || 1;
-    this.playerHealth = data.health || 100;
-    this.playerScore = data.score || 0;
-    this.questionsAnswered = data.questionsAnswered || 0;
-    this.correctAnswers = data.correctAnswers || 0;
-    this.enemiesKilled = data.enemiesKilled || 0;
     this.gameDifficulty = data.difficulty || 'easy';
     this.usedQuestionIds = data.usedQuestionIds || [];
     
+    this.initialPlayerStats = {
+      health: data.health || 100,
+      score: data.score || 0,
+      questionsAnswered: data.questionsAnswered || 0,
+      correctAnswers: data.correctAnswers || 0,
+      enemiesKilled: data.enemiesKilled || 0
+    };
+
     // Reset per-level state for when the scene restarts
     this.levelCorrectAnswers = 0;
     this.doorUnlocked = false;
@@ -185,6 +184,8 @@ export class DungeonGameScene extends Phaser.Scene {
     this.input.off('pointerout', this.handlePointerOut);
 
     // Also good practice to remove scene-specific listeners
+    this.events.off('playerHealthChanged', this.updateHealthBar, this);
+    this.events.off('playerScoreChanged', this.updateUI, this);
     this.events.off('enemyDefeated', this.handleEnemyDefeated, this);
     this.events.off('bossPhaseChange');
     this.events.off('bossDefeated');
@@ -329,30 +330,18 @@ export class DungeonGameScene extends Phaser.Scene {
     this.generateDungeonQuestions();
 
     // Create player with animated spritesheet
-    this.playerShadow = this.add.ellipse(100, height / 2 + 26, 28, 12, 0x000000, 0.4).setDepth(1);
-    this.player = this.physics.add.sprite(100, height / 2, 'player', 0);
-    this.player.setCollideWorldBounds(true);
-    this.player.setScale(1.125); // Increased by 25% from 0.9
-    
-    // Shrink the hitbox to the bottom half (the "feet") to create 3D depth
-    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
-    playerBody.setSize(20, 24);
-    playerBody.setOffset(6, 24);
-    
-    this.player.setDepth(this.player.y);
-    
-    // Give the player sprite standard RPG hook methods so Enemy.ts can call them natively
-    (this.player as any).takeDamage = (amount: number) => {
-      this.hitPlayer(this.player, null, amount);
-    };
-    (this.player as any).addScore = (amount: number) => {
-      this.playerScore += amount;
-      this.updateUI();
-    };
-    (this.player as any).gainExperience = (amount: number) => {};
-    
-    // Create player animations
-    this.createPlayerAnimations();
+    this.player = new Player(this, 100, height / 2);
+    this.player.health = this.initialPlayerStats.health;
+    this.player.score = this.initialPlayerStats.score;
+    this.player.questionsAnswered = this.initialPlayerStats.questionsAnswered;
+    this.player.correctAnswers = this.initialPlayerStats.correctAnswers;
+    this.player.enemiesKilled = this.initialPlayerStats.enemiesKilled;
+
+    this.playerShadow = this.add.ellipse(100, this.player.y + 26, 28, 12, 0x000000, 0.4).setDepth(1);
+
+    // Setup player events
+    this.events.on('playerHealthChanged', this.updateHealthBar, this);
+    this.events.on('playerScoreChanged', this.updateUI, this);
 
     // Create physics groups
     this.enemies = this.physics.add.group();
@@ -572,69 +561,6 @@ export class DungeonGameScene extends Phaser.Scene {
       staticBody.setSize(bodyWidth, bodyHeight);
       staticBody.x = decoration.x - bodyWidth / 2;
       staticBody.y = decoration.y + (decoration.displayHeight / 2) - bodyHeight;
-    }
-  }
-
-  private createPlayerAnimations() {
-    // Create walking animations for mage hero (16 frames total, 4 directions x 4 frames each)
-    // Check if animations already exist to avoid duplicates
-    if (!this.anims.exists('walk-down')) {
-      // Down (facing camera) - frames 0-3
-      this.anims.create({
-        key: 'walk-down',
-        frames: this.anims.generateFrameNumbers('player', { start: 0, end: 3 }),
-        frameRate: 8,
-        repeat: -1
-      });
-      
-      // Left - frames 4-7
-      this.anims.create({
-        key: 'walk-left',
-        frames: this.anims.generateFrameNumbers('player', { start: 4, end: 7 }),
-        frameRate: 8,
-        repeat: -1
-      });
-      
-      // Right - frames 8-11
-      this.anims.create({
-        key: 'walk-right',
-        frames: this.anims.generateFrameNumbers('player', { start: 8, end: 11 }),
-        frameRate: 8,
-        repeat: -1
-      });
-      
-      // Up (facing away) - frames 12-15
-      this.anims.create({
-        key: 'walk-up',
-        frames: this.anims.generateFrameNumbers('player', { start: 12, end: 15 }),
-        frameRate: 8,
-        repeat: -1
-      });
-      
-      // Idle animations
-      this.anims.create({
-        key: 'idle-down',
-        frames: [{ key: 'player', frame: 0 }],
-        frameRate: 1
-      });
-      
-      this.anims.create({
-        key: 'idle-left',
-        frames: [{ key: 'player', frame: 4 }],
-        frameRate: 1
-      });
-      
-      this.anims.create({
-        key: 'idle-right',
-        frames: [{ key: 'player', frame: 8 }],
-        frameRate: 1
-      });
-      
-      this.anims.create({
-        key: 'idle-up',
-        frames: [{ key: 'player', frame: 12 }],
-        frameRate: 1
-      });
     }
   }
 
@@ -1189,7 +1115,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) {
-    if (this.isModalOpen || this.player.getData('isDead')) return;
+    if (this.isModalOpen || this.player.isDead) return;
     if (currentlyOver && currentlyOver.length > 0) return; // Prevent shooting/moving when clicking UI or chests
 
     // Touch on the left half initiates the joystick
@@ -1201,12 +1127,12 @@ export class DungeonGameScene extends Phaser.Scene {
       this.moveVector.set(0, 0); // Explicitly reset vector
     } else {
       // Touch on the right half (or a 2nd finger) fires a bullet
-      this.fireBullet(pointer.worldX, pointer.worldY);
+      this.player.shoot(pointer.worldX, pointer.worldY);
     }
   }
 
   private handlePointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.isModalOpen || this.player.getData('isDead')) return;
+    if (this.isModalOpen || this.player.isDead) return;
 
     // Safely check pointer.id to guarantee multi-touch stability on mobile browsers
     if (this.joystickActive && this.movePointer && pointer.id === this.movePointer.id) {
@@ -1233,7 +1159,7 @@ export class DungeonGameScene extends Phaser.Scene {
       const distance = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.upX, pointer.upY);
       
       if (duration < 250 && distance < 15) {
-        this.fireBullet(pointer.worldX, pointer.worldY);
+        this.player.shoot(pointer.worldX, pointer.worldY);
       }
 
       this.resetJoystick();
@@ -1627,7 +1553,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.healthBar.fillRoundedRect(20, 29, 300, 30, 12);
     
     // Health fill
-    const healthPercent = this.playerHealth / this.playerMaxHealth;
+    const healthPercent = this.player.health / this.player.maxHealth;
     const color = healthPercent > 0.6 ? 0x166534 : healthPercent > 0.3 ? 0xb45309 : 0x991b1b;
     this.healthBar.fillStyle(color);
     if (healthPercent > 0) this.healthBar.fillRoundedRect(20, 29, 300 * healthPercent, 30, 12);
@@ -1642,11 +1568,10 @@ export class DungeonGameScene extends Phaser.Scene {
   update(time: number, delta: number) {
     if (this.isModalOpen) return;
 
-    this.handlePlayerMovement();
-    this.handleShooting();
+    this.player.joystickVector.copy(this.joystickActive ? this.moveVector : Phaser.Math.Vector2.ZERO);
+    this.player.update();
+
     this.updateBullets(delta);
-    
-    this.player.setDepth(this.player.y);
     
     const currentTime = this.time.now;
     
@@ -1670,9 +1595,9 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     // Dynamically manage Invincibility (Yellow Crystal)
-    if (this.player.getData('isInvincible')) {
+    if (this.player.isInvincible) {
       if (currentTime >= this.yellowEffectEndTime) {
-        this.player.setData('isInvincible', false);
+        this.player.isInvincible = false;
         this.player.clearTint();
       } else {
         const timeLeft = this.yellowEffectEndTime - currentTime;
@@ -1688,16 +1613,17 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     }
 
-    if (this.isOrangeCrystalActive && currentTime >= this.orangeEffectEndTime) {
+    if (this.player.hasFireball && currentTime >= this.orangeEffectEndTime) {
       this.isOrangeCrystalActive = false;
+      this.player.hasFireball = false;
     }
 
-    if (this.playerShadow && !this.player.getData('isDead')) {
+    if (this.playerShadow && !this.player.isDead) {
       this.playerShadow.setPosition(this.player.x, this.player.y + 26);
     }
 
     // Group and perfectly center all active effect countdowns
-    if (!this.player.getData('isDead')) {
+    if (!this.player.isDead) {
       this.activeEffects = this.activeEffects.filter(effect => {
         if (currentTime < effect.endTime) return true;
         effect.textObj.destroy();
@@ -1787,81 +1713,6 @@ export class DungeonGameScene extends Phaser.Scene {
         bullet.destroy();
       }
     });
-  }
-
-  private handlePlayerMovement() {
-    if (this.player.getData('isDead')) return;
-
-    const speed = 120; // Reduced from 160
-    let isMoving = false;
-    
-    if (this.joystickActive && (this.moveVector.x !== 0 || this.moveVector.y !== 0)) {
-      // Mobile joystick movement
-      this.player.setVelocityX(this.moveVector.x * speed);
-      this.player.setVelocityY(this.moveVector.y * speed);
-      isMoving = true;
-      
-      // Determine primary direction for animation
-      if (Math.abs(this.moveVector.x) > Math.abs(this.moveVector.y)) {
-        if (this.moveVector.x < 0) this.player.anims.play('walk-left', true);
-        else this.player.anims.play('walk-right', true);
-      } else {
-        if (this.moveVector.y < 0) this.player.anims.play('walk-up', true);
-        else this.player.anims.play('walk-down', true);
-      }
-    } else {
-      // Keyboard movement
-      if (this.cursors.left.isDown || this.wasd.A.isDown) {
-        this.player.setVelocityX(-speed);
-        this.player.anims.play('walk-left', true);
-        isMoving = true;
-      } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-        this.player.setVelocityX(speed);
-        this.player.anims.play('walk-right', true);
-        isMoving = true;
-      } else {
-        this.player.setVelocityX(0);
-      }
-      
-      if (this.cursors.up.isDown || this.wasd.W.isDown) {
-        this.player.setVelocityY(-speed);
-        if (!isMoving) this.player.anims.play('walk-up', true);
-        isMoving = true;
-      } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-        this.player.setVelocityY(speed);
-        if (!isMoving) this.player.anims.play('walk-down', true);
-        isMoving = true;
-      } else {
-        this.player.setVelocityY(0);
-      }
-    }
-    
-    // Play idle animation when not moving
-    if (!isMoving) {
-      // Get current animation to determine which idle to play
-      const currentAnim = this.player.anims.currentAnim;
-      if (currentAnim) {
-        if (currentAnim.key.includes('left')) {
-          this.player.anims.play('idle-left');
-        } else if (currentAnim.key.includes('right')) {
-          this.player.anims.play('idle-right');
-        } else if (currentAnim.key.includes('up')) {
-          this.player.anims.play('idle-up');
-        } else {
-          this.player.anims.play('idle-down');
-        }
-      } else {
-        this.player.anims.play('idle-down');
-      }
-    }
-  }
-
-  private handleShooting() {
-    if (this.player.getData('isDead')) return;
-
-    if (Phaser.Input.Keyboard.JustDown(this.shootKey)) {
-      this.fireBullet();
-    }
   }
 
   private fireBullet(targetX?: number, targetY?: number) {
@@ -2218,12 +2069,12 @@ export class DungeonGameScene extends Phaser.Scene {
       this.scene.start('GameOverScene', {
         victory: true,
         playerStats: {
-          score: this.playerScore,
-          health: this.playerHealth,
+        score: this.player.score,
+        health: this.player.health,
           level: this.currentDungeon,
-          questionsAnswered: this.questionsAnswered,
-          correctAnswers: this.correctAnswers,
-          enemiesKilled: this.enemiesKilled,
+        questionsAnswered: this.player.questionsAnswered,
+        correctAnswers: this.player.correctAnswers,
+        enemiesKilled: this.player.enemiesKilled,
           difficulty: this.gameDifficulty,
           usedQuestionIds: this.usedQuestionIds
         }
@@ -2233,11 +2084,11 @@ export class DungeonGameScene extends Phaser.Scene {
       this.sound.stopAll();
       this.scene.start('DungeonGameScene', {
         dungeon: this.currentDungeon + 1,
-        health: this.playerHealth,
-        score: this.playerScore,
-        questionsAnswered: this.questionsAnswered,
-        correctAnswers: this.correctAnswers,
-        enemiesKilled: this.enemiesKilled,
+        health: this.player.health,
+        score: this.player.score,
+        questionsAnswered: this.player.questionsAnswered,
+        correctAnswers: this.player.correctAnswers,
+        enemiesKilled: this.player.enemiesKilled,
         difficulty: this.gameDifficulty,
         usedQuestionIds: this.usedQuestionIds
       });
@@ -2245,9 +2096,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private hitPlayer(player: any, enemy: any, damage?: number) {
-    if (player.getData('isDead')) return;
-    if (player.getData('isInvincible')) return; // Check for yellow crystal invincibility
-    if (player.getData('isInvulnerable')) return;
+    if (this.player.isDead) return;
     if (enemy && enemy.isDead) return; // Prevent damage from a dead enemy that hasn't fully decayed/revived yet
     
     // Default to the provided damage, or extract it from the Enemy config, or fallback to 20
@@ -2256,19 +2105,7 @@ export class DungeonGameScene extends Phaser.Scene {
       actualDamage = (enemy && enemy.config && enemy.config.damage) ? enemy.config.damage : 20;
     }
     
-    player.setData('isInvulnerable', true);
-    player.setTint(0xff0000);
-    this.time.delayedCall(1000, () => {
-      if (player && player.active) {
-        player.setData('isInvulnerable', false);
-        if (!player.getData('isInvincible')) {
-          player.clearTint();
-        }
-      }
-    });
-
-    this.playerHealth -= actualDamage;
-    this.sound.play('hurt_male', { volume: 0.4 });
+    const wasKilled = this.player.takeDamage(actualDamage);
     
     // Only push player back if the physical enemy collision box exists
     if (enemy) {
@@ -2276,19 +2113,11 @@ export class DungeonGameScene extends Phaser.Scene {
       player.setVelocity(Math.cos(angle) * 100, Math.sin(angle) * 100); // Reduced pushback
     }
     
-    this.updateHealthBar();
-    
-    if (this.playerHealth <= 0) {
+    if (wasKilled) {
       if (this.playerShadow) this.playerShadow.destroy();
       this.activeEffects.forEach(e => e.textObj.destroy());
       this.activeEffects = [];
-      this.playerHealth = 0;
-      this.updateHealthBar();
       
-      player.setData('isDead', true);
-      player.body.enable = false;
-      player.anims.stop();
-      player.setTint(0xff0000);
       this.resetJoystick();
       
       this.tweens.add({
@@ -2377,12 +2206,12 @@ export class DungeonGameScene extends Phaser.Scene {
     this.scene.start('GameOverScene', {
       victory: false,
       playerStats: {
-        score: this.playerScore,
+        score: this.player.score,
         health: 0,
         level: this.currentDungeon,
-        questionsAnswered: this.questionsAnswered,
-        correctAnswers: this.correctAnswers,
-        enemiesKilled: this.enemiesKilled,
+        questionsAnswered: this.player.questionsAnswered,
+        correctAnswers: this.player.correctAnswers,
+        enemiesKilled: this.player.enemiesKilled,
         difficulty: this.gameDifficulty,
         usedQuestionIds: this.usedQuestionIds
       }
@@ -2390,7 +2219,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private updateUI() {
-    this.scoreText.setText(`${this.playerScore}`);
+    this.scoreText.setText(`${this.player.score}`);
     this.questionsText.setText(`Questions: ${this.levelCorrectAnswers}/4`);
     
     this.emitProgress();
@@ -2400,12 +2229,12 @@ export class DungeonGameScene extends Phaser.Scene {
     if (!this.game || !this.game.events) return;
     this.game.events.emit('playerStatsUpdate', {
       level: this.currentDungeon,
-      health: this.playerHealth,
-      maxHealth: this.playerMaxHealth,
-      score: this.playerScore,
-      questionsAnswered: this.questionsAnswered,
-      correctAnswers: this.correctAnswers,
-      enemiesKilled: this.enemiesKilled,
+      health: this.player.health,
+      maxHealth: this.player.maxHealth,
+      score: this.player.score,
+      questionsAnswered: this.player.questionsAnswered,
+      correctAnswers: this.player.correctAnswers,
+      enemiesKilled: this.player.enemiesKilled,
       difficulty: this.gameDifficulty,
       usedQuestionIds: this.usedQuestionIds
     });
@@ -2426,7 +2255,7 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private handleEnemyDefeated(enemyType: string, x: number, y: number, isBabySpider: boolean = false) {
-    this.enemiesKilled++;
+    this.player.enemiesKilled++;
 
     if (enemyType === 'spider' || enemyType === 'babyspider' || isBabySpider) {
       // Red blood burst effect
@@ -2538,7 +2367,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     // Legacy drops for dungeons 1-3
-    const healthRatio = this.playerHealth / this.playerMaxHealth;
+    const healthRatio = this.player.health / this.player.maxHealth;
     const getAdjustedHealDropChance = (baseChance: number) => {
       if (healthRatio <= 0.25) return 0.90; 
       if (healthRatio <= 0.40 && healthRatio > 0.25) return Math.min(1.0, baseChance * 1.5); 
@@ -2573,6 +2402,7 @@ export class DungeonGameScene extends Phaser.Scene {
     
     if (isOrangeCrystal) {
       this.isOrangeCrystalActive = true;
+      this.player.hasFireball = true;
       this.orangeEffectEndTime = this.time.now + 8000;
       
       this.sound.play('star', { volume: 0.5 });
@@ -2589,7 +2419,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     if (isYellowCrystal) {
-      this.player.setData('isInvincible', true);
+      this.player.isInvincible = true;
       this.player.setTint(0xffff33); // 80% yellow tint
       this.yellowEffectEndTime = this.time.now + 5000;
       
@@ -2632,11 +2462,10 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     if (isRedCrystal) {
-      this.playerHealth = this.playerMaxHealth;
+      this.player.heal(this.player.maxHealth);
     } else {
-      this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 10);
+      this.player.heal(10);
     }
-    this.updateHealthBar();
     
     this.sound.play('star', { volume: 0.5 });
     
