@@ -552,22 +552,24 @@ export class DungeonGameScene extends Phaser.Scene {
     decoration.setScale(scale);
     
     const displayHeight = decoration.height * scale;
-    
-    // Standardize depth crossover point based on the player's center-to-feet offset (24px)
-    // This ensures the player is fully rendered behind the decoration when walking above its base
-    decoration.setDepth(decoration.y + (displayHeight / 2) - 24);
 
     if (!ignoreCollision && decoration.body) {
       const staticBody = decoration.body as Phaser.Physics.Arcade.StaticBody;
-      if (typeof decoration.refreshBody === 'function') decoration.refreshBody();
       
-      // Dynamically size the hitbox relative to the texture's actual dimensions
-      const bodyWidth = decoration.width * scale * 0.7;
-      const bodyHeight = displayHeight * 0.4;
+      // Size and offset must be set in unscaled coordinates
+      const unscaledBodyWidth = decoration.width * 0.7;
+      const unscaledBodyHeight = decoration.height * 0.4;
       
-      staticBody.setSize(bodyWidth, bodyHeight);
-      staticBody.x = decoration.x - bodyWidth / 2;
-      staticBody.y = decoration.y + (displayHeight / 2) - bodyHeight;
+      staticBody.setSize(unscaledBodyWidth, unscaledBodyHeight);
+      staticBody.setOffset((decoration.width - unscaledBodyWidth) / 2, decoration.height - unscaledBodyHeight);
+      
+      // Use updateFromGameObject to recalculate scale positioning WITHOUT erasing our custom size and offset
+      staticBody.updateFromGameObject();
+      
+      // Perfect depth alignment: Set to the exact bottom Y-coordinate of the final hitbox!
+      decoration.setDepth(staticBody.bottom);
+    } else {
+      decoration.setDepth(decoration.y + (displayHeight / 2));
     }
   }
 
@@ -717,13 +719,9 @@ export class DungeonGameScene extends Phaser.Scene {
             obstacle = this.add.rectangle(blockX, blockY, blockSize, blockSize, 0x666666);
           }
           
-          // Render dynamically based on y-position for 3D depth illusion
-          obstacle.setDepth(obstacle.y);
-          
           walls.add(obstacle);
           if (obstacle.body) {
             const staticBody = obstacle.body as Phaser.Physics.Arcade.StaticBody;
-            staticBody.updateFromGameObject();
             
             // Determine if there's a block directly above this one in the shape definition
             const hasBlockAbove = shape.some(b => b.x === block.x && b.y === block.y - 1);
@@ -732,14 +730,18 @@ export class DungeonGameScene extends Phaser.Scene {
               // Top-most block: shrink hitbox slightly so player can walk behind it
               const depthOffset = 8; // Subtle reduction
               staticBody.setSize(blockSize, blockSize - depthOffset);
-              staticBody.x = obstacle.x - blockSize / 2;
-              staticBody.y = obstacle.y - blockSize / 2 + depthOffset;
+              staticBody.setOffset(0, depthOffset);
             } else {
               // Lower blocks: use full hitbox to remain completely solid and block gaps
               staticBody.setSize(blockSize, blockSize);
-              staticBody.x = obstacle.x - blockSize / 2;
-              staticBody.y = obstacle.y - blockSize / 2;
+              staticBody.setOffset(0, 0);
             }
+            
+            staticBody.updateFromGameObject();
+            
+            obstacle.setDepth(staticBody.bottom);
+          } else {
+            obstacle.setDepth(obstacle.y + blockSize / 2);
           }
         });
       }
@@ -870,7 +872,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const crystal = this.physics.add.sprite(dropPos.x, dropPos.y - 40, type);
     crystal.anims.play(`spin-${type}`);
     crystal.setScale(0.8);
-    crystal.setDepth(dropPos.y); // Set depth to its final resting place
+    crystal.setDepth(dropPos.y + 12); // Approximate bottom of the crystal
     crystal.setAngle(Phaser.Math.Between(-60, 60));
     
     // Small points for defeating an enemy that drops a crystal (8% of max health)
@@ -1025,7 +1027,7 @@ export class DungeonGameScene extends Phaser.Scene {
       // Stop Phaser 3.50+ from allowing the player to push this immovable body
       if (typeof (chest as any).setPushable === 'function') { (chest as any).setPushable(false); }
       
-      chest.setDepth(chest.y); // Render dynamically based on y-position
+      chest.setDepth(chest.y + 32); // Exact bottom of the chest hitbox
       
       // Use pixelPerfect so the hitbox perfectly wraps the actual visible sprite pixels
       chest.setInteractive({ useHandCursor: true, pixelPerfect: true });
@@ -1069,7 +1071,7 @@ export class DungeonGameScene extends Phaser.Scene {
   private createExitDoor() {
     this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 7);
     this.door.setScale(0.75); // Half of 1.5
-    this.door.setDepth(this.door.y);
+    this.door.setDepth(this.door.y + (this.door.displayHeight / 2));
     
     // Create gate animations using original specifications
     if (!this.anims.exists('openGate')) {
@@ -1690,7 +1692,8 @@ export class DungeonGameScene extends Phaser.Scene {
           bullet.setDepth(3000); // Fixed high depth to stay over everything
         } else {
           const depthOffset = bullet.getData('depthOffset') || 0;
-          bullet.setDepth(bullet.y + depthOffset);
+          const baseDepth = bullet.body ? bullet.body.bottom : bullet.y;
+          bullet.setDepth(baseDepth + depthOffset);
         }
       }
       

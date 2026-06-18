@@ -36,7 +36,7 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   protected abstract handleShooting(): void;
 
   protected updateDepth(): void {
-    this.setDepth(this.y);
+    this.setDepth(this.body ? this.body.bottom : this.y);
   }
   
   public takeDamage(amount: number): boolean {
