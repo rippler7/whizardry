@@ -140,6 +140,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.handlePointerMove = this.handlePointerMove.bind(this);
     this.handlePointerUp = this.handlePointerUp.bind(this);
     this.handlePointerOut = this.handlePointerOut.bind(this);
+    this.handleBushWiggle = this.handleBushWiggle.bind(this);
   }
 
   init(data: any) {
@@ -548,12 +549,9 @@ export class DungeonGameScene extends Phaser.Scene {
       ignoreCollision = !(textureKey.endsWith('1') || textureKey.endsWith('2') || textureKey.endsWith('3')) || isSmallImage;
     }
     
-    let decoration: any;
-    if (ignoreCollision) {
-      decoration = this.add.sprite(x, y, textureKey);
-    } else {
-      decoration = walls.create(x, y, textureKey);
-    }
+    // ALWAYS create as a physics object so they can be overlapped, but assign passable ones to a separate decorations group
+    const decorations = this.registry.get('decorations') as Phaser.Physics.Arcade.StaticGroup;
+    let decoration = (ignoreCollision ? decorations : walls).create(x, y, textureKey) as Phaser.Physics.Arcade.Sprite;
     
     // Retain 'isBush' flag so bullets, bats, and spiders continue to correctly ignore it!
     decoration.setData('isBush', true);
@@ -562,20 +560,21 @@ export class DungeonGameScene extends Phaser.Scene {
     const displayHeight = decoration.height * scale;
     const displayWidth = decoration.width * scale;
     
-    // ALWAYS sort depth by absolute visual bottom
-    decoration.setDepth(decoration.y + (displayHeight / 2));
-
-    if (!ignoreCollision && decoration.body) {
+    if (decoration.body) {
       const staticBody = decoration.body as Phaser.Physics.Arcade.StaticBody;
       
-      // DO NOT call updateFromGameObject after this, or it will reset the hitbox size!
-      const bodyWidth = displayWidth * 0.7;
-      const bodyHeight = displayHeight * 0.4;
+      // Use unscaled coordinates for size/offset so updateFromGameObject calculates scale natively
+      const unscaledBodyWidth = decoration.width * 0.7;
+      const unscaledBodyHeight = decoration.height * 0.4;
       
-      staticBody.setSize(bodyWidth, bodyHeight);
-      staticBody.x = decoration.x - bodyWidth / 2;
-      staticBody.y = decoration.y + (displayHeight / 2) - bodyHeight;
+      staticBody.setSize(unscaledBodyWidth, unscaledBodyHeight);
+      staticBody.setOffset((decoration.width - unscaledBodyWidth) / 2, decoration.height - unscaledBodyHeight);
+      
+      staticBody.updateFromGameObject();
     }
+    
+    // ALWAYS depth sort using the absolute visual bottom of the sprite!
+    decoration.setDepth(decoration.y + (displayHeight / 2));
   }
 
   private getWallTextureKey(): string {
@@ -656,6 +655,10 @@ export class DungeonGameScene extends Phaser.Scene {
 
     // Store walls for collision detection
     this.registry.set('walls', walls);
+    
+    // Create and store passable decorations for overlap detection
+    const decorations = this.physics.add.staticGroup();
+    this.registry.set('decorations', decorations);
   }
 
   private createRandomObstacles() {
@@ -735,15 +738,17 @@ export class DungeonGameScene extends Phaser.Scene {
               // Top-most block: shrink hitbox slightly so player can walk behind it
               const depthOffset = 8; // Subtle reduction
               staticBody.setSize(blockSize, blockSize - depthOffset);
-              staticBody.x = obstacle.x - blockSize / 2;
-              staticBody.y = obstacle.y - blockSize / 2 + depthOffset;
+              staticBody.setOffset(0, depthOffset);
             } else {
               // Lower blocks: use full hitbox to remain completely solid and block gaps
               staticBody.setSize(blockSize, blockSize);
-              staticBody.x = obstacle.x - blockSize / 2;
-              staticBody.y = obstacle.y - blockSize / 2;
+              staticBody.setOffset(0, 0);
             }
+            
+            staticBody.updateFromGameObject();
           }
+          
+          obstacle.setDepth(obstacle.y + (obstacle.displayHeight / 2));
         });
       }
     }
@@ -1185,15 +1190,62 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
+  private handleBushWiggle(obj1: any, obj2: any) {
+    const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && obj1.texture.key.startsWith('Bush_'));
+    const wall = isWall1 ? obj1 : obj2;
+    const entity = isWall1 ? obj2 : obj1;
+
+    if (wall.texture && wall.texture.key && wall.texture.key.startsWith('Bush_')) {
+      if (entity && entity.getData && entity.getData('type')) {
+        const type = entity.getData('type').toLowerCase();
+        if (type === 'bat' || type === 'chiroptera') return; // Bats don't trigger wiggles
+      }
+      
+      if (!wall.getData('isWiggling')) {
+        wall.setData('isWiggling', true);
+        
+        // Add a tiny burst of leaf particles for visual impact
+        const leafColors = [0x22c55e, 0x16a34a, 0x15803d];
+        for (let i = 0; i < 3; i++) {
+          const leaf = this.add.rectangle(wall.x + Phaser.Math.Between(-10, 10), wall.y - Phaser.Math.Between(10, 30), 4, 4, Phaser.Utils.Array.GetRandom(leafColors)).setDepth(wall.depth + 1);
+          this.tweens.add({
+            targets: leaf,
+            x: leaf.x + Phaser.Math.Between(-15, 15),
+            y: leaf.y + Phaser.Math.Between(10, 30),
+            angle: Phaser.Math.Between(90, 360),
+            alpha: 0,
+            duration: Phaser.Math.Between(600, 900),
+            ease: 'Quad.easeOut',
+            onComplete: () => leaf.destroy()
+          });
+        }
+        
+        // Leafy bushes get the back-and-forth tilt
+        this.tweens.add({
+          targets: wall,
+          angle: { from: -3, to: 3 },
+          ease: 'Power1',
+          duration: 80,
+          yoyo: true,
+          repeat: 3,
+          onComplete: () => { 
+            wall.angle = 0; 
+            wall.setData('isWiggling', false);
+          }
+        });
+      }
+    }
+  }
+
   private setupCollisions() {
     // Get walls from registry
     const walls = this.registry.get('walls');
     
     // Player vs walls
     if (walls) {
-      this.physics.add.collider(this.player, walls);
+      this.physics.add.collider(this.player, walls, this.handleBushWiggle, undefined, this);
       // Allow spiders to bypass walls using a process callback filter
-      this.physics.add.collider(this.enemies, walls, undefined, (obj1: any, obj2: any) => {
+      this.physics.add.collider(this.enemies, walls, this.handleBushWiggle, (obj1: any, obj2: any) => {
         const isWall1 = (obj1.getData && obj1.getData('isBush')) || (obj1.texture && obj1.texture.key && (obj1.texture.key.startsWith('cobbledsquare') || obj1.texture.key.startsWith('Bush_') || obj1.texture.key.startsWith('Rock')));
         const wall = isWall1 ? obj1 : obj2;
         const enemy = isWall1 ? obj2 : obj1;
@@ -1228,6 +1280,13 @@ export class DungeonGameScene extends Phaser.Scene {
         if (bullet.getData && bullet.getData('isSpiderWeb')) return false;
         return true;
       });
+    }
+    
+    // Establish overlap events for passable decorations so they trigger wiggles but don't block movement
+    const decorations = this.registry.get('decorations') as Phaser.Physics.Arcade.StaticGroup;
+    if (decorations) {
+      this.physics.add.overlap(this.player, decorations, this.handleBushWiggle, undefined, this);
+      this.physics.add.overlap(this.enemies, decorations, this.handleBushWiggle, undefined, this);
     }
     
     // Enemies vs chests
