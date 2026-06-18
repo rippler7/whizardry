@@ -1,6 +1,5 @@
 <?php
-// Replace with the exact URL where your game is hosted (e.g., https://my-game.netlify.app)
-header("Access-Control-Allow-Origin: https://jermsancog.com/dungeongame");
+header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
@@ -40,5 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         http_response_code(400);
         echo json_encode(["error" => "Invalid submission data"]);
     }
+} else {
+    http_response_code(405);
+    echo json_encode(["error" => "Method not allowed"]);
 }
 ?>
