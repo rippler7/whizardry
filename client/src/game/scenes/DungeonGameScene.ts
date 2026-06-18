@@ -186,6 +186,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // Also good practice to remove scene-specific listeners
     this.events.off('playerHealthChanged', this.updateHealthBar, this);
     this.events.off('playerScoreChanged', this.updateUI, this);
+    this.events.off('playerLevelUp', this.onPlayerLevelUp, this);
     this.events.off('enemyDefeated', this.handleEnemyDefeated, this);
     this.events.off('bossPhaseChange');
     this.events.off('bossDefeated');
@@ -342,6 +343,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // Setup player events
     this.events.on('playerHealthChanged', this.updateHealthBar, this);
     this.events.on('playerScoreChanged', this.updateUI, this);
+    this.events.on('playerLevelUp', this.onPlayerLevelUp, this);
 
     // Create physics groups
     this.enemies = this.physics.add.group();
@@ -548,7 +550,12 @@ export class DungeonGameScene extends Phaser.Scene {
     // Retain 'isBush' flag so bullets, bats, and spiders continue to correctly ignore it!
     decoration.setData('isBush', true);
     decoration.setScale(scale);
-    decoration.setDepth(decoration.y);
+    
+    const displayHeight = decoration.height * scale;
+    
+    // Standardize depth crossover point based on the player's center-to-feet offset (24px)
+    // This ensures the player is fully rendered behind the decoration when walking above its base
+    decoration.setDepth(decoration.y + (displayHeight / 2) - 24);
 
     if (!ignoreCollision && decoration.body) {
       const staticBody = decoration.body as Phaser.Physics.Arcade.StaticBody;
@@ -556,11 +563,11 @@ export class DungeonGameScene extends Phaser.Scene {
       
       // Dynamically size the hitbox relative to the texture's actual dimensions
       const bodyWidth = decoration.width * scale * 0.7;
-      const bodyHeight = decoration.height * scale * 0.4;
+      const bodyHeight = displayHeight * 0.4;
       
       staticBody.setSize(bodyWidth, bodyHeight);
       staticBody.x = decoration.x - bodyWidth / 2;
-      staticBody.y = decoration.y + (decoration.displayHeight / 2) - bodyHeight;
+      staticBody.y = decoration.y + (displayHeight / 2) - bodyHeight;
     }
   }
 
@@ -866,6 +873,9 @@ export class DungeonGameScene extends Phaser.Scene {
     crystal.setDepth(dropPos.y); // Set depth to its final resting place
     crystal.setAngle(Phaser.Math.Between(-60, 60));
     
+    // Small points for defeating an enemy that drops a crystal (8% of max health)
+    this.player.gainExperience(Math.floor(this.player.maxHealth * 0.08));
+
     this.droppedItems.add(crystal);
 
     this.tweens.add({
@@ -2172,6 +2182,7 @@ export class DungeonGameScene extends Phaser.Scene {
     if (boss.isDead) {
       this.boss = undefined;
       this.showMessage('Boss defeated! Proceed to exit!');
+      this.player.forceLevelUp(); // Guarantee level up
     }
   }
 
@@ -2236,6 +2247,34 @@ export class DungeonGameScene extends Phaser.Scene {
       enemiesKilled: this.player.enemiesKilled,
       difficulty: this.gameDifficulty,
       usedQuestionIds: this.usedQuestionIds
+    });
+  }
+
+  // Kept here for future implementation
+  public handleMiniBossDefeated(miniBoss: any) {
+    // Medium points for defeating a mini-boss (15% of max health)
+    this.player.gainExperience(Math.floor(this.player.maxHealth * 0.15));
+  }
+
+  private onPlayerLevelUp(level: number) {
+    this.sound.play('star', { volume: 0.6 });
+
+    const levelText = this.add.text(this.player.x, this.player.y - 30, 'LEVEL UP!', {
+      fontSize: '18px',
+      fill: '#fbbf24', // Gold
+      fontFamily: '"Georgia", "Times New Roman", serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(2000);
+    
+    this.tweens.add({
+      targets: levelText,
+      y: levelText.y - 40,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => levelText.destroy()
     });
   }
 

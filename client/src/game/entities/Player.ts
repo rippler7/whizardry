@@ -15,6 +15,7 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   public isInvulnerable: boolean = false;
   public hasFireball: boolean = false;
   public joystickVector: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 0);
+  public baseDamage: number = 25;
   
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
@@ -35,7 +36,7 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   protected abstract handleShooting(): void;
 
   protected updateDepth(): void {
-    this.setDepth(this.y + 100);
+    this.setDepth(this.y);
   }
   
   public takeDamage(amount: number): boolean {
@@ -91,11 +92,14 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   private levelUp(): void {
     this.level++;
     this.experience = 0;
-    this.maxHealth += 20;
-    this.health = this.maxHealth; // Full heal on level up
+    
+    const healthIncrease = Math.floor(this.maxHealth * 0.15);
+    this.maxHealth += healthIncrease;
+    this.health += healthIncrease;
+    this.baseDamage = Math.floor(this.baseDamage * 1.10);
     
     // Visual effect
-    this.setTint(0x00ff00);
+    this.setTint(0xffd700); // Gold tint instead of green to avoid confusion with healing
     this.scene.time.delayedCall(500, () => {
       this.clearTint();
     });
@@ -114,7 +118,8 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
     if (correct) {
       this.correctAnswers++;
       this.addScore(GAME_CONFIG.QUESTION_SCORE_BONUS);
-      this.gainExperience(20);
+      // Big points: 20% of current level max life points
+      this.gainExperience(Math.floor(this.maxHealth * 0.20));
     } else {
       this.addScore(GAME_CONFIG.WRONG_ANSWER_PENALTY);
     }
@@ -122,6 +127,10 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   
   public getAccuracy(): number {
     return this.questionsAnswered > 0 ? (this.correctAnswers / this.questionsAnswered) * 100 : 0;
+  }
+  
+  public forceLevelUp(): void {
+    this.levelUp();
   }
 }
 
@@ -258,8 +267,8 @@ export class Mage extends Hero {
     
     bullet.setData('born', 0);
     bullet.setData('lifespan', isSpecial ? 738.28125 * 2 : 738.28125);
-    bullet.setData('damage', isSpecial ? 125 : 25);
-    bullet.setData('bossDamage', isSpecial ? 250 : 50);
+    bullet.setData('damage', isSpecial ? this.baseDamage * 5 : this.baseDamage);
+    bullet.setData('bossDamage', isSpecial ? this.baseDamage * 10 : this.baseDamage * 2);
     bullet.setData('ignoreWalls', isSpecial);
     bullet.setData('isSpecial', isSpecial);
     if (isSpecial) {
