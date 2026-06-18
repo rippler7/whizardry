@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { Enemy, Skeleton, Zombie, Zombie2, Bat, Spider, Boss } from '../entities/Enemy';
 import { Player } from '../entities/Player';
 import questionsData from '../entities/questions.json';
+import { FlowField } from '../entities/FlowField';
+import * as easystarjs from 'easystarjs';
 
 interface Question {
   id: number;
@@ -82,6 +84,9 @@ export class DungeonGameScene extends Phaser.Scene {
   private droppedItems!: Phaser.Physics.Arcade.Group;
   private door!: Phaser.Physics.Arcade.Sprite;
   public boss?: Boss;
+  public flowField!: FlowField;
+  public easystar!: any;
+  public easystarFlying!: any;
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -199,6 +204,10 @@ export class DungeonGameScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
+    // Instantiate EasyStar engines
+    this.easystar = new easystarjs.js();
+    this.easystarFlying = new easystarjs.js();
 
     // Determine ground texture based on dungeon level
     let groundTexture = 'ground_easy';
@@ -425,6 +434,13 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create decorations
     this.createDecorations();
 
+    // Build EasyStar Navigation Grids
+    this.buildPathfindingGrids();
+
+    // Generate the Navigational Flow Field for the horde minions based on the static map geometry
+    this.flowField = new FlowField(this);
+    this.flowField.buildCostField(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup, this.chests);
+
     // Create enemies based on dungeon level
     this.createEnemies();
 
@@ -488,7 +504,7 @@ export class DungeonGameScene extends Phaser.Scene {
     if (decorationGroups.length === 0) return;
 
     const walls = this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup;
-    const numSpawns = Phaser.Math.Between(25, 45);
+    const numSpawns = this.currentDungeon === 5 ? Phaser.Math.Between(45, 75) : Phaser.Math.Between(25, 45);
 
     for (let i = 0; i < numSpawns; i++) {
       const group = Phaser.Utils.Array.GetRandom(decorationGroups);
@@ -515,7 +531,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     // Add sporadic scattering for smaller and medium decorations
-    const numSporadic = Phaser.Math.Between(60, 100);
+    const numSporadic = this.currentDungeon === 5 ? Phaser.Math.Between(100, 150) : Phaser.Math.Between(60, 100);
     for (let i = 0; i < numSporadic; i++) {
       const group = Phaser.Utils.Array.GetRandom(decorationGroups);
       // Select non-colliding variants to safely blanket the map without blocking paths
@@ -556,6 +572,15 @@ export class DungeonGameScene extends Phaser.Scene {
     // Retain 'isBush' flag so bullets, bats, and spiders continue to correctly ignore it!
     decoration.setData('isBush', true);
     decoration.setScale(scale);
+
+    // Apply purple tint to rocks based on dungeon level
+    if (textureKey.startsWith('Rock')) {
+      if (this.currentDungeon === 4) {
+        decoration.setTint(0xdfbfdf); // 25% purple tint
+      } else if (this.currentDungeon === 5) {
+        decoration.setTint(0x9f3f9f); // 75% purple tint
+      }
+    }
     
     const displayHeight = decoration.height * scale;
     const displayWidth = decoration.width * scale;
@@ -575,6 +600,47 @@ export class DungeonGameScene extends Phaser.Scene {
     
     // ALWAYS depth sort using the absolute visual bottom of the sprite!
     decoration.setDepth(decoration.y + (displayHeight / 2));
+  }
+
+  private buildPathfindingGrids() {
+    const grid: number[][] = [];
+    const flyingGrid: number[][] = [];
+    const cellSize = 32;
+    const cols = Math.ceil(this.scale.width / cellSize);
+    const rows = Math.ceil(this.scale.height / cellSize);
+
+    const walls = this.registry.get('walls').getChildren();
+    const chests = this.chests.getChildren();
+    const allObstacles = [...walls, ...chests];
+
+    for (let y = 0; y < rows; y++) {
+      grid[y] = new Array(cols).fill(0);
+      flyingGrid[y] = new Array(cols).fill(0);
+
+      for (let x = 0; x < cols; x++) {
+        const rect = new Phaser.Geom.Rectangle(x * cellSize, y * cellSize, cellSize, cellSize);
+        for (const obs of allObstacles) {
+          const body = (obs as any).body as Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody;
+          const bound = body ? new Phaser.Geom.Rectangle(body.x, body.y, body.width, body.height) : (obs as any).getBounds();
+
+          if (Phaser.Geom.Intersects.RectangleToRectangle(rect, bound)) {
+            grid[y][x] = 1;
+            const textureKey = (obs as any).texture ? (obs as any).texture.key : '';
+            if (!textureKey.startsWith('Bush_') && !textureKey.startsWith('Rock')) {
+              flyingGrid[y][x] = 1; // Flying units treat everything EXCEPT bushes and rocks as blocked
+            }
+          }
+        }
+      }
+    }
+
+    this.easystar.setGrid(grid);
+    this.easystar.setAcceptableTiles([0]);
+    this.easystar.enableDiagonals();
+
+    this.easystarFlying.setGrid(flyingGrid);
+    this.easystarFlying.setAcceptableTiles([0]);
+    this.easystarFlying.enableDiagonals();
   }
 
   private getWallTextureKey(): string {
@@ -1642,6 +1708,12 @@ export class DungeonGameScene extends Phaser.Scene {
 
     this.player.joystickVector.copy(this.joystickActive ? this.moveVector : Phaser.Math.Vector2.ZERO);
     this.player.update();
+
+    if (!this.player.isDead) {
+      this.flowField.updateTarget(this.player.x, this.player.y);
+    }
+    this.easystar.calculate();
+    this.easystarFlying.calculate();
 
     this.updateBullets(delta);
     

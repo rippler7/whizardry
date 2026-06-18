@@ -29,7 +29,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected isAlive: boolean = true;
   public get isDead(): boolean { return !this.isAlive; }
   protected stateTimer: number = 0;
-  protected state: 'idle' | 'patrol' | 'chase' | 'attack' | 'stunned' = 'patrol';
+  protected state: 'idle' | 'patrol' | 'chase' | 'attack' | 'stunned' | 'escaping' = 'patrol';
   protected patrolTarget: { x: number; y: number } = { x: 0, y: 0 };
   protected lastDirection: { x: number; y: number } = { x: 0, y: 0 };
   protected walls: Phaser.Physics.Arcade.StaticGroup | null = null;
@@ -38,6 +38,14 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   protected shadowOffset: number = 20;
   protected evasionDirection: { x: number; y: number } = { x: 0, y: 0 };
   protected isPatrollingToChest: boolean = false;
+  protected isReturningToChest: boolean = false;
+  protected isPotentiallyStuck: boolean = false;
+  protected stuckCheckTimestamp: number = 0;
+  protected lastCheckPosition: { x: number; y: number } | null = null;
+  protected currentPath: {x: number, y: number}[] | null = null;
+  protected currentPathIndex: number = 0;
+  protected pathUpdateTimer: number = 0;
+  protected isRequestingPath: boolean = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, enemyType: string, player: Hero, hp: number, speed: number) {
     super(scene, x, y, texture);
@@ -56,7 +64,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     
     // Configure physics
     this.setCollideWorldBounds(true);
-    this.setBounce(0.2);
+    this.setBounce(0); // Removed bounce to prevent jittering against walls and getting stuck on corners
     
     // Set initial patrol target
     this.setNewPatrolTarget();
@@ -87,6 +95,23 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   public update(): void {
     if (!this.isAlive) return;
     
+    // Universal stuck detection for all enemies
+    if (this.state !== 'escaping' && this.state !== 'stunned' && this.state !== 'idle') {
+      if (this.scene.time.now > this.stuckCheckTimestamp + 500) {
+        if (this.lastCheckPosition) {
+          const distanceMoved = Phaser.Math.Distance.Between(this.x, this.y, this.lastCheckPosition.x, this.lastCheckPosition.y);
+          if (distanceMoved < 10 && this.stuckCheckTimestamp !== 0) {
+            this.handleStuck();
+            this.stuckCheckTimestamp = this.scene.time.now;
+            this.lastCheckPosition = { x: this.x, y: this.y };
+            return; // Skip normal AI this frame to process the escape
+          }
+        }
+        this.stuckCheckTimestamp = this.scene.time.now;
+        this.lastCheckPosition = { x: this.x, y: this.y };
+      }
+    }
+
     this.updateAI();
     this.updateDepth();
   }
@@ -115,18 +140,20 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     );
     
     // State transitions
-    if (distanceToPlayer <= this.config.attackRange && this.canSeePlayer()) {
-      this.state = 'attack';
-    } else if (distanceToPlayer <= this.config.detectionRange && this.canSeePlayer()) {
-      this.state = 'chase';
-    } else if (this.state === 'chase' && distanceToPlayer > this.config.detectionRange * 1.5) {
-      this.state = 'patrol';
-      this.setNewPatrolTarget();
-    } else if (this.state === 'idle') {
-      this.stateTimer -= this.scene.game.loop.delta;
-      if (this.stateTimer <= 0) {
+    if (this.state !== 'escaping' && this.state !== 'stunned') {
+      if (distanceToPlayer <= this.config.attackRange && this.canSeePlayer()) {
+        this.state = 'attack';
+      } else if (distanceToPlayer <= this.config.detectionRange && this.canSeePlayer()) {
+        this.state = 'chase';
+      } else if (this.state === 'chase' && distanceToPlayer > this.config.detectionRange * 1.5) {
         this.state = 'patrol';
         this.setNewPatrolTarget();
+      } else if (this.state === 'idle') {
+        this.stateTimer -= this.scene.game.loop.delta;
+        if (this.stateTimer <= 0) {
+          this.state = 'patrol';
+          this.setNewPatrolTarget();
+        }
       }
     }
     
@@ -143,6 +170,9 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
         break;
       case 'stunned':
         this.handleStunned();
+        break;
+      case 'escaping':
+        this.handleEscaping();
         break;
     }
   }
@@ -163,12 +193,57 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
   
   protected handleChase(): void {
-    if (this.canSeePlayer()) {
-      this.moveTowardsTarget(this.player.x, this.player.y, this.config.speed);
-    } else {
-      // Lost sight of player, go to last known position
-      this.moveTowardsTarget(this.player.x, this.player.y, this.config.speed * 0.7);
+
+    let currentSpeed = this.config.speed;
+    const isFlying = this.config.type === 'bat' || this.config.type === 'chiroptera' || this.config.type === 'spider' || this.config.type === 'babyspider';
+    const isBoss = this.config.type === 'boss';
+
+    // Flying enemies and Bosses use direct flight or localized A* pathing
+    if (isFlying || isBoss) {
+      if (this.canSeePlayer()) {
+        this.moveTowardsTarget(this.player.x, this.player.y, currentSpeed);
+      } else {
+        this.moveTowardsTarget(this.player.x, this.player.y, currentSpeed * 0.7);
+      }
+      return;
     }
+
+    // Ground horde enemies use the newly implemented Vector Flow Field for intelligent maze flanking
+    const scene = this.scene as any;
+    if (scene.flowField) {
+      const dir = scene.flowField.getDirection(this.x, this.y);
+      if (dir && (dir.x !== 0 || dir.y !== 0)) {
+        let vx = dir.x * currentSpeed;
+        let vy = dir.y * currentSpeed;
+
+        // Anti-snag corner sliding: if pushing against a wall and not making progress, slide towards player's axis
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        if (body) {
+          const blockedX = (vx > 0 && (body.blocked.right || body.touching.right)) || (vx < 0 && (body.blocked.left || body.touching.left));
+          const blockedY = (vy > 0 && (body.blocked.down || body.touching.down)) || (vy < 0 && (body.blocked.up || body.touching.up));
+
+          if (blockedX && !blockedY && Math.abs(dir.y) < 0.5) {
+            vy = this.player.y > this.y ? currentSpeed : -currentSpeed;
+          } else if (blockedY && !blockedX && Math.abs(dir.x) < 0.5) {
+            vx = this.player.x > this.x ? currentSpeed : -currentSpeed;
+          }
+
+          if (vx !== 0 || vy !== 0) {
+            const mag = Math.sqrt(vx * vx + vy * vy);
+            vx = (vx / mag) * currentSpeed;
+            vy = (vy / mag) * currentSpeed;
+          }
+        }
+
+        this.setVelocity(vx, vy);
+        this.lastDirection = { x: vx, y: vy };
+        this.updateMovementAnimation(vx, vy);
+        return;
+      }
+    }
+
+    // Fallback in case of absolute grid failure
+    this.moveTowardsTarget(this.player.x, this.player.y, this.canSeePlayer() ? currentSpeed : currentSpeed * 0.7);
   }
   
   protected handleAttack(): void {
@@ -189,14 +264,93 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.setNewPatrolTarget();
     }
   }
+
+  protected requestPath(targetX: number, targetY: number, isFlying: boolean = false): void {
+    if (this.isRequestingPath) return;
+    const scene = this.scene as any;
+    const easystar = isFlying ? scene.easystarFlying : scene.easystar;
+    if (!easystar) return;
+
+    const startX = Math.floor(this.x / 32);
+    const startY = Math.floor(this.y / 32);
+    const endX = Math.floor(targetX / 32);
+    const endY = Math.floor(targetY / 32);
+
+    if (this.currentPath && this.currentPath.length > 0) {
+      const lastNode = this.currentPath[this.currentPath.length - 1];
+      if (lastNode.x === endX && lastNode.y === endY) return;
+    }
+
+    this.isRequestingPath = true;
+    easystar.findPath(startX, startY, endX, endY, (path: {x: number, y: number}[] | null) => {
+      this.isRequestingPath = false;
+      if (path && path.length > 0) {
+        this.currentPath = path;
+        this.currentPathIndex = 1; // Start heading to the first node instead of the base origin
+      } else {
+        this.currentPath = null;
+      }
+    });
+  }
+
+  protected followPath(targetX: number, targetY: number, speed: number): void {
+    if (this.currentPath && this.currentPathIndex < this.currentPath.length) {
+      const node = this.currentPath[this.currentPathIndex];
+      const nextX = node.x * 32 + 16;
+      const nextY = node.y * 32 + 16;
+      
+      const distanceToNext = Phaser.Math.Distance.Between(this.x, this.y, nextX, nextY);
+      if (distanceToNext < 16) { // Reduced to 16 to prevent cutting corners too early and snagging
+        this.currentPathIndex++;
+        this.followPath(targetX, targetY, speed); // Recursively call to head to next node
+      } else {
+        this.moveTowardsTarget(nextX, nextY, speed, true);
+      }
+    } else {
+      this.moveTowardsTarget(targetX, targetY, speed, false);
+    }
+  }
   
-  protected moveTowardsTarget(targetX: number, targetY: number, speed: number): void {
+  protected handleEscaping(): void {
+    // Maintain the escape velocity set in handleStuck
+    this.stateTimer -= this.scene.game.loop.delta;
+    if (this.stateTimer <= 0) {
+      this.state = 'chase';
+      this.stuckCheckTimestamp = this.scene.time.now; // Reset stuck check
+      this.lastCheckPosition = { x: this.x, y: this.y };
+    }
+  }
+
+  protected handleStuck(): void {
+    // Clear pathing to force a recalculation
+    this.currentPath = null;
+    this.pathUpdateTimer = 0;
+    
+    // Move away from the obstacle.
+    const angleToPlayer = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
+    
+    // Add some randomness to the escape angle so they don't just bounce perfectly back and forth
+    const escapeAngle = angleToPlayer + Math.PI + Phaser.Math.FloatBetween(-0.5, 0.5); 
+
+    const escapeSpeed = this.config.speed * 1.5; // Move slightly faster to escape
+    const vx = Math.cos(escapeAngle) * escapeSpeed;
+    const vy = Math.sin(escapeAngle) * escapeSpeed;
+    
+    this.setVelocity(vx, vy);
+    this.updateMovementAnimation(vx, vy);
+
+    // After a short burst, go back to normal behavior.
+    this.state = 'escaping';
+    this.stateTimer = 400; // Escape for 400ms
+  }
+  
+  protected moveTowardsTarget(targetX: number, targetY: number, speed: number, ignoreEvasion: boolean = false): void {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
     let velocityX = Math.cos(angle) * speed;
     let velocityY = Math.sin(angle) * speed;
     
     // Simple obstacle avoidance
-    if (this.walls) {
+    if (this.walls && !ignoreEvasion) {
       // Before making decision to change direction or continue, check for player proximity
       const distanceToTarget = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
       
@@ -214,7 +368,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
           canContinueEvasion = !this.checkWallCollision(this.x + this.evasionDirection.x * 0.3, this.y + this.evasionDirection.y * 0.3);
         }
 
-        if (this.state === 'patrol' && !this.isPatrollingToChest) {
+        if (this.state === 'patrol' && !this.isPatrollingToChest && !this.isReturningToChest) {
           this.setNewPatrolTarget();
           this.setVelocity(0, 0);
           this.evasionDirection = { x: 0, y: 0 };
@@ -236,7 +390,8 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
         let evY = 0;
 
         if (typeof directObstacle !== 'boolean') {
-          const wallBounds = directObstacle.getBounds();
+          const wallBody = directObstacle.body as Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody;
+          const wallBounds = new Phaser.Geom.Rectangle(wallBody.x, wallBody.y, wallBody.width, wallBody.height);
           const dxToPlayer = targetX - this.x;
           const dyToPlayer = targetY - this.y;
 
@@ -248,10 +403,14 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
           } else if (canSlideY && Math.abs(dyToPlayer) > 10) {
             evY = Math.sign(dyToPlayer) * speed;
           } else {
-            const distLeft = Math.abs(this.x - wallBounds.left);
-            const distRight = Math.abs(this.x - wallBounds.right);
-            const distTop = Math.abs(this.y - wallBounds.top);
-            const distBottom = Math.abs(this.y - wallBounds.bottom);
+            const body = this.body as Phaser.Physics.Arcade.Body;
+            const bodyCenterX = body.x + body.width / 2;
+            const bodyCenterY = body.y + body.height / 2;
+
+            const distLeft = Math.abs(bodyCenterX - wallBounds.left);
+            const distRight = Math.abs(bodyCenterX - wallBounds.right);
+            const distTop = Math.abs(bodyCenterY - wallBounds.top);
+            const distBottom = Math.abs(bodyCenterY - wallBounds.bottom);
 
             const minDistX = Math.min(distLeft, distRight);
             const minDistY = Math.min(distTop, distBottom);
@@ -289,15 +448,18 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.updateMovementAnimation(velocityX, velocityY);
   }
   
-  protected checkWallCollision(x: number, y: number): boolean | Phaser.Physics.Arcade.Sprite {
+  protected checkWallCollision(futureCenterX: number, futureCenterY: number): boolean | Phaser.Physics.Arcade.Sprite {
     if (!this.walls && !this.chests) return false;
     
-    // Use the exact physics body dimensions instead of the wildly scaling visual texture bounds
-    const bodyW = this.body ? this.body.width : this.width;
-    const bodyH = this.body ? this.body.height : this.height;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (!body) return false;
+
+    // Calculate future body x and y
+    const dx = futureCenterX - this.x;
+    const dy = futureCenterY - this.y;
     
     const bounds = new Phaser.Geom.Rectangle(
-      x - bodyW / 2, y - bodyH / 2, bodyW, bodyH
+      body.x + dx, body.y + dy, body.width, body.height
     );
     
     // Check world bounds
@@ -315,16 +477,25 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.walls.getChildren().forEach(wall => {
         const w = wall as Phaser.Physics.Arcade.Sprite;
         const isBush = w.getData && w.getData('isBush');
-        if (!isSpider && !(isBat && isBush) && Phaser.Geom.Intersects.RectangleToRectangle(bounds, w.getBounds())) {
-          collided = w;
+        if (!isSpider && !(isBat && isBush) && w.body) {
+          const wallBody = w.body as Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody;
+          const wallRect = new Phaser.Geom.Rectangle(wallBody.x, wallBody.y, wallBody.width, wallBody.height);
+          if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, wallRect)) {
+            collided = w;
+          }
         }
       });
     }
     
     if (!collided && this.chests) {
       this.chests.getChildren().forEach(chest => {
-        if (!isSpider && !isBat && Phaser.Geom.Intersects.RectangleToRectangle(bounds, (chest as Phaser.Physics.Arcade.Sprite).getBounds())) {
-          collided = chest as Phaser.Physics.Arcade.Sprite;
+        const c = chest as Phaser.Physics.Arcade.Sprite;
+        if (!isSpider && !isBat && c.body) {
+          const chestBody = c.body as Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody;
+          const chestRect = new Phaser.Geom.Rectangle(chestBody.x, chestBody.y, chestBody.width, chestBody.height);
+          if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, chestRect)) {
+            collided = c;
+          }
         }
       });
     }
@@ -708,7 +879,31 @@ export class Bat extends Enemy {
   protected updateMovementAnimation(velocityX: number, velocityY: number): void {
     this.anims.play(velocityX > 0 ? 'flyRight' : 'flyLeft', true);
   }
+
+  protected handlePatrol(): void {
+    const distanceToTarget = Phaser.Math.Distance.Between(this.x, this.y, this.patrolTarget.x, this.patrolTarget.y);
+    if (distanceToTarget < 32) {
+      this.state = 'idle';
+      this.stateTimer = Phaser.Math.Between(1000, 3000);
+      this.setVelocity(0, 0);
+      return;
+    }
+    if (this.scene.time.now > this.pathUpdateTimer) {
+      this.requestPath(this.patrolTarget.x, this.patrolTarget.y, true); // true = Use flying grid!
+      this.pathUpdateTimer = this.scene.time.now + 500;
+    }
+    this.followPath(this.patrolTarget.x, this.patrolTarget.y, this.config.speed * 0.5);
+  }
   
+  protected handleChase(): void {
+    const speed = this.canSeePlayer() ? this.config.speed : this.config.speed * 0.7;
+    if (this.scene.time.now > this.pathUpdateTimer) {
+      this.requestPath(this.player.x, this.player.y, true); // true = Use flying grid!
+      this.pathUpdateTimer = this.scene.time.now + 250;
+    }
+    this.followPath(this.player.x, this.player.y, speed);
+  }
+
   protected performAttack(): void {
     // Ranged projectile attack
     const currentScene = this.scene;
@@ -1114,7 +1309,6 @@ export class Boss extends Enemy {
   private maxPhases: number = 3;
   private phaseChangeHealth: number[];
   private targetChest: Phaser.Physics.Arcade.Sprite | null = null;
-  private isReturningToChest: boolean = false;
   
   constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'Boss', 'boss', player, hp, speed);
@@ -1122,6 +1316,7 @@ export class Boss extends Enemy {
     this.setOffset(12, 8);
     this.attackRate = 1500;
     this.createShadow(60, 24, 44);
+    this.setPushable(false);
     
     // Calculate phase change thresholds
     this.phaseChangeHealth = [];
@@ -1230,18 +1425,20 @@ export class Boss extends Enemy {
     }
 
     // State transitions
-    if (distanceToPlayer <= this.config.attackRange && this.canSeePlayer()) {
-      this.state = 'attack';
-    } else if (distanceToPlayer <= this.config.detectionRange && this.canSeePlayer()) {
-      this.state = 'chase';
-    } else if (this.state === 'chase' && distanceToPlayer > this.config.detectionRange * 1.5) {
-      this.state = 'patrol';
-      this.setNewPatrolTarget();
-    } else if (this.state === 'idle') {
-      this.stateTimer -= this.scene.game.loop.delta;
-      if (this.stateTimer <= 0) {
+    if (this.state !== 'escaping' && this.state !== 'stunned') {
+      if (distanceToPlayer <= this.config.attackRange && this.canSeePlayer()) {
+        this.state = 'attack';
+      } else if (distanceToPlayer <= this.config.detectionRange && this.canSeePlayer()) {
+        this.state = 'chase';
+      } else if (this.state === 'chase' && distanceToPlayer > this.config.detectionRange * 1.5) {
         this.state = 'patrol';
         this.setNewPatrolTarget();
+      } else if (this.state === 'idle') {
+        this.stateTimer -= this.scene.game.loop.delta;
+        if (this.stateTimer <= 0) {
+          this.state = 'patrol';
+          this.setNewPatrolTarget();
+        }
       }
     }
     
@@ -1258,6 +1455,9 @@ export class Boss extends Enemy {
         break;
       case 'stunned':
         this.handleStunned();
+        break;
+      case 'escaping':
+        this.handleEscaping();
         break;
     }
   }
@@ -1349,17 +1549,22 @@ export class Boss extends Enemy {
       currentSpeed = 96; // 80% of player walking speed when going straight to a chest
     }
     
-    this.moveTowardsTarget(this.patrolTarget.x, this.patrolTarget.y, currentSpeed);
+    if (this.scene.time.now > this.pathUpdateTimer) {
+      this.requestPath(this.patrolTarget.x, this.patrolTarget.y, false);
+      this.pathUpdateTimer = this.scene.time.now + 500;
+    }
+    this.followPath(this.patrolTarget.x, this.patrolTarget.y, currentSpeed);
   }
 
   protected handleChase(): void {
     let currentSpeed = this.config.speed;
-    
-    if (this.canSeePlayer()) {
-      this.moveTowardsTarget(this.player.x, this.player.y, currentSpeed);
-    } else {
-      this.moveTowardsTarget(this.player.x, this.player.y, currentSpeed * 0.7);
+    if (!this.canSeePlayer()) currentSpeed *= 0.7;
+
+    if (this.scene.time.now > this.pathUpdateTimer) {
+      this.requestPath(this.player.x, this.player.y, false);
+      this.pathUpdateTimer = this.scene.time.now + 250;
     }
+    this.followPath(this.player.x, this.player.y, currentSpeed);
   }
 
   private checkPhaseChange(): void {
@@ -1394,6 +1599,26 @@ export class Boss extends Enemy {
     } else {
       this.anims.stop();
     }
+  }
+
+  public takeDamage(amount: number): boolean {
+    if (!this.isAlive) return false;
+    
+    const newHealth = Math.max(0, this.getData('health') - amount);
+    this.setData('health', newHealth);
+    
+    // Flash effect
+    this.setTint(0xff0000);
+    this.scene.time.delayedCall(150, () => {
+      if (this.isAlive && this.active) this.clearTint();
+    });
+    
+    if (newHealth <= 0) {
+      this.die();
+      return true;
+    }
+    
+    return false;
   }
   
   protected performAttack(): void {
