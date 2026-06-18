@@ -149,6 +149,10 @@ export class DungeonGameScene extends Phaser.Scene {
     
     this.initialPlayerStats = {
       health: data.health || 100,
+      maxHealth: data.maxHealth || 100,
+      level: data.level || 1,
+      experience: data.experience || 0,
+      baseDamage: data.baseDamage || 25,
       score: data.score || 0,
       questionsAnswered: data.questionsAnswered || 0,
       correctAnswers: data.correctAnswers || 0,
@@ -333,6 +337,10 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create player with animated spritesheet
     this.player = new Player(this, 100, height / 2);
     this.player.health = this.initialPlayerStats.health;
+    this.player.maxHealth = this.initialPlayerStats.maxHealth;
+    this.player.level = this.initialPlayerStats.level;
+    this.player.experience = this.initialPlayerStats.experience;
+    this.player.baseDamage = this.initialPlayerStats.baseDamage;
     this.player.score = this.initialPlayerStats.score;
     this.player.questionsAnswered = this.initialPlayerStats.questionsAnswered;
     this.player.correctAnswers = this.initialPlayerStats.correctAnswers;
@@ -552,24 +560,21 @@ export class DungeonGameScene extends Phaser.Scene {
     decoration.setScale(scale);
     
     const displayHeight = decoration.height * scale;
+    const displayWidth = decoration.width * scale;
+    
+    // ALWAYS sort depth by absolute visual bottom
+    decoration.setDepth(decoration.y + (displayHeight / 2));
 
     if (!ignoreCollision && decoration.body) {
       const staticBody = decoration.body as Phaser.Physics.Arcade.StaticBody;
       
-      // Size and offset must be set in unscaled coordinates
-      const unscaledBodyWidth = decoration.width * 0.7;
-      const unscaledBodyHeight = decoration.height * 0.4;
+      // DO NOT call updateFromGameObject after this, or it will reset the hitbox size!
+      const bodyWidth = displayWidth * 0.7;
+      const bodyHeight = displayHeight * 0.4;
       
-      staticBody.setSize(unscaledBodyWidth, unscaledBodyHeight);
-      staticBody.setOffset((decoration.width - unscaledBodyWidth) / 2, decoration.height - unscaledBodyHeight);
-      
-      // Use updateFromGameObject to recalculate scale positioning WITHOUT erasing our custom size and offset
-      staticBody.updateFromGameObject();
-      
-      // Perfect depth alignment: Set to the exact bottom Y-coordinate of the final hitbox!
-      decoration.setDepth(staticBody.bottom);
-    } else {
-      decoration.setDepth(decoration.y + (displayHeight / 2));
+      staticBody.setSize(bodyWidth, bodyHeight);
+      staticBody.x = decoration.x - bodyWidth / 2;
+      staticBody.y = decoration.y + (displayHeight / 2) - bodyHeight;
     }
   }
 
@@ -730,18 +735,14 @@ export class DungeonGameScene extends Phaser.Scene {
               // Top-most block: shrink hitbox slightly so player can walk behind it
               const depthOffset = 8; // Subtle reduction
               staticBody.setSize(blockSize, blockSize - depthOffset);
-              staticBody.setOffset(0, depthOffset);
+              staticBody.x = obstacle.x - blockSize / 2;
+              staticBody.y = obstacle.y - blockSize / 2 + depthOffset;
             } else {
               // Lower blocks: use full hitbox to remain completely solid and block gaps
               staticBody.setSize(blockSize, blockSize);
-              staticBody.setOffset(0, 0);
+              staticBody.x = obstacle.x - blockSize / 2;
+              staticBody.y = obstacle.y - blockSize / 2;
             }
-            
-            staticBody.updateFromGameObject();
-            
-            obstacle.setDepth(staticBody.bottom);
-          } else {
-            obstacle.setDepth(obstacle.y + blockSize / 2);
           }
         });
       }
@@ -1692,7 +1693,7 @@ export class DungeonGameScene extends Phaser.Scene {
           bullet.setDepth(3000); // Fixed high depth to stay over everything
         } else {
           const depthOffset = bullet.getData('depthOffset') || 0;
-          const baseDepth = bullet.body ? bullet.body.bottom : bullet.y;
+          const baseDepth = bullet.y + (bullet.displayHeight / 2);
           bullet.setDepth(baseDepth + depthOffset);
         }
       }
@@ -2097,6 +2098,10 @@ export class DungeonGameScene extends Phaser.Scene {
       this.scene.start('DungeonGameScene', {
         dungeon: this.currentDungeon + 1,
         health: this.player.health,
+        maxHealth: this.player.maxHealth,
+        level: this.player.level,
+        experience: this.player.experience,
+        baseDamage: this.player.baseDamage,
         score: this.player.score,
         questionsAnswered: this.player.questionsAnswered,
         correctAnswers: this.player.correctAnswers,
@@ -2241,7 +2246,10 @@ export class DungeonGameScene extends Phaser.Scene {
   private emitProgress() {
     if (!this.game || !this.game.events) return;
     this.game.events.emit('playerStatsUpdate', {
-      level: this.currentDungeon,
+        dungeon: this.currentDungeon,
+        level: this.player.level,
+        experience: this.player.experience,
+        baseDamage: this.player.baseDamage,
       health: this.player.health,
       maxHealth: this.player.maxHealth,
       score: this.player.score,
@@ -2264,7 +2272,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
     const levelText = this.add.text(this.player.x, this.player.y - 30, 'LEVEL UP!', {
       fontSize: '18px',
-      fill: '#fbbf24', // Gold
+      fill: '#ffffff', // Gold
       fontFamily: '"Georgia", "Times New Roman", serif',
       fontStyle: 'bold',
       stroke: '#000000',

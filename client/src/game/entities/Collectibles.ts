@@ -12,7 +12,7 @@ export abstract class Collectible extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     
     this.setImmovable(true);
-    this.setDepth(this.y);
+    this.setDepth(this.y + (this.displayHeight / 2));
   }
   
   public abstract onCollect(player: Player): void;

@@ -360,7 +360,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   
   protected updateDepth(): void {
     const isBat = this.config.type === 'bat' || this.config.type === 'chiroptera';
-    const baseDepth = this.body ? this.body.bottom : this.y;
+    const baseDepth = this.y + (this.displayHeight / 2);
     this.setDepth(baseDepth + (isBat ? 2000 : 0));
     if (this.shadow) this.shadow.setPosition(this.x, this.y + this.shadowOffset);
   }
