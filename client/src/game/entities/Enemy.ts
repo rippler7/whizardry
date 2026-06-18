@@ -92,6 +92,24 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
   
   protected updateAI(): void {
+    if (this.player.isDead) {
+      if (this.state === 'chase' || this.state === 'attack') {
+        this.state = 'idle';
+        this.setVelocity(0, 0);
+        this.stateTimer = Phaser.Math.Between(1000, 3000);
+      }
+      if (this.state === 'idle') {
+        this.stateTimer -= this.scene.game.loop.delta;
+        if (this.stateTimer <= 0) {
+          this.state = 'patrol';
+          this.setNewPatrolTarget();
+        }
+      } else if (this.state === 'patrol') {
+        this.handlePatrol();
+      }
+      return;
+    }
+
     const distanceToPlayer = Phaser.Math.Distance.Between(
       this.x, this.y, this.player.x, this.player.y
     );
@@ -476,7 +494,12 @@ export class Skeleton extends Enemy {
     );
     
     if (distance <= this.config.attackRange) {
-      this.player.takeDamage(this.config.damage);
+      const scene = this.scene as any;
+      if (scene.hitPlayer) {
+        scene.hitPlayer(this.player, this, this.config.damage);
+      } else {
+        this.player.takeDamage(this.config.damage);
+      }
     }
   }
 
@@ -594,7 +617,12 @@ export class Zombie extends Enemy {
   protected performAttack(): void {
     const distance = Phaser.Math.Distance.Between(this.x, this.y, this.player.x, this.player.y);
     if (distance <= this.config.attackRange) {
-      this.player.takeDamage(this.config.damage);
+      const scene = this.scene as any;
+      if (scene.hitPlayer) {
+        scene.hitPlayer(this.player, this, this.config.damage);
+      } else {
+        this.player.takeDamage(this.config.damage);
+      }
     }
   }
 }
@@ -636,7 +664,12 @@ export class Zombie2 extends Enemy {
     );
     
     if (distance <= this.config.attackRange) {
-      this.player.takeDamage(this.config.damage);
+      const scene = this.scene as any;
+      if (scene.hitPlayer) {
+        scene.hitPlayer(this.player, this, this.config.damage);
+      } else {
+        this.player.takeDamage(this.config.damage);
+      }
     }
   }
 }
@@ -712,8 +745,12 @@ export class Bat extends Enemy {
       scene.enemyBullets.add(bullet);
     } else {
       currentScene.physics.add.overlap(bullet, this.player, () => {
-        this.player.takeDamage(this.config.damage);
-        bullet.destroy();
+        if (scene.hitPlayerWithBullet) {
+          scene.hitPlayerWithBullet(this.player, bullet);
+        } else {
+          this.player.takeDamage(this.config.damage);
+          bullet.destroy();
+        }
       });
     }
     
@@ -916,8 +953,12 @@ export class Spider extends Enemy {
         scene.enemyBullets.add(bullet);
       } else {
         currentScene.physics.add.overlap(bullet, this.player, () => {
-          this.player.takeDamage(this.config.damage);
-          bullet.destroy();
+          if (scene.hitPlayerWithBullet) {
+            scene.hitPlayerWithBullet(this.player, bullet);
+          } else {
+            this.player.takeDamage(this.config.damage);
+            bullet.destroy();
+          }
         });
       }
 
@@ -1140,6 +1181,24 @@ export class Boss extends Enemy {
   protected updateAI(): void {
     if (!this.isAlive) return;
     
+    if (this.player.isDead) {
+      if (this.state === 'chase' || this.state === 'attack') {
+        this.state = 'idle';
+        this.setVelocity(0, 0);
+        this.stateTimer = Phaser.Math.Between(1000, 3000);
+      }
+      if (this.state === 'idle') {
+        this.stateTimer -= this.scene.game.loop.delta;
+        if (this.stateTimer <= 0) {
+          this.state = 'patrol';
+          this.setNewPatrolTarget();
+        }
+      } else if (this.state === 'patrol') {
+        this.handlePatrol();
+      }
+      return;
+    }
+    
     const distanceToPlayer = Phaser.Math.Distance.Between(
       this.x, this.y, this.player.x, this.player.y
     );
@@ -1349,7 +1408,12 @@ export class Boss extends Enemy {
       );
       
       if (distance <= this.config.attackRange) {
-        this.player.takeDamage(this.config.damage);
+        const scene = this.scene as any;
+        if (scene.hitPlayer) {
+          scene.hitPlayer(this.player, this, this.config.damage);
+        } else {
+          this.player.takeDamage(this.config.damage);
+        }
       }
     }
   }
@@ -1361,7 +1425,12 @@ export class Boss extends Enemy {
     );
     
     if (distance <= this.config.attackRange) {
-      this.player.takeDamage(this.config.damage);
+      const scene = this.scene as any;
+      if (scene.hitPlayer) {
+        scene.hitPlayer(this.player, this, this.config.damage);
+      } else {
+        this.player.takeDamage(this.config.damage);
+      }
     }
     
     // Also shoot projectiles in phase 3
@@ -1387,8 +1456,12 @@ export class Boss extends Enemy {
       scene.enemyBullets.add(bullet);
     } else {
       this.scene.physics.add.overlap(bullet, this.player, () => {
-        this.player.takeDamage(this.config.damage * 0.7);
-        bullet.destroy();
+        if (scene.hitPlayerWithBullet) {
+          scene.hitPlayerWithBullet(this.player, bullet);
+        } else {
+          this.player.takeDamage(this.config.damage * 0.7);
+          bullet.destroy();
+        }
       });
     }
     

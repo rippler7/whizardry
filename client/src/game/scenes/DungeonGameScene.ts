@@ -1270,7 +1270,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.updateHealthBar();
 
     // Score and progress
-    this.scoreText = this.add.text(335, 44, `${this.playerScore}`, {
+    this.scoreText = this.add.text(335, 44, `${this.player.score}`, {
       fontSize: '27px',
       fill: '#fde68a',
       fontFamily: '"Georgia", "Times New Roman", serif'
@@ -1823,8 +1823,7 @@ export class DungeonGameScene extends Phaser.Scene {
         }
         
         this.levelCorrectAnswers++;
-        this.correctAnswers++;
-        this.playerScore += 100;
+        this.player.answerQuestion(true);
         
         this.sound.play('chest_sparkle', { volume: 0.6 });
         
@@ -1844,12 +1843,12 @@ export class DungeonGameScene extends Phaser.Scene {
         });
         
         if (this.gameDifficulty === 'hard') {
-          this.player.setData('isInvulnerable', false); // Bypass i-frames to guarantee penalty
+          this.player.isInvulnerable = false; // Bypass i-frames to guarantee penalty
           this.hitPlayer(this.player, null, 10);
         }
+        this.player.answerQuestion(false);
       }
       
-      this.questionsAnswered++;
       this.updateUI();
     });
   }
