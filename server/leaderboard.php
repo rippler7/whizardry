@@ -1,5 +1,6 @@
 <?php
-header("Access-Control-Allow-Origin: *");
+// Replace with the exact URL where your game is hosted (e.g., https://my-game.netlify.app)
+header("Access-Control-Allow-Origin: https://jermsancog.com/dungeongame");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
@@ -27,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Validate input
     if (!empty($data->playerName) && isset($data->score)) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO leaderboard (player_name, score, level, questions_answered, correct_answers, enemies_killed) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$data->playerName, $data->score, $data->level ?? 1, $data->questionsAnswered ?? 0, $data->correctAnswers ?? 0, $data->enemiesKilled ?? 0]);
+            $stmt = $pdo->prepare("INSERT INTO leaderboard (player_name, score, level, questions_answered, correct_answers, enemies_killed, difficulty) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$data->playerName, $data->score, $data->level ?? 1, $data->questionsAnswered ?? 0, $data->correctAnswers ?? 0, $data->enemiesKilled ?? 0, $data->difficulty ?? 'easy']);
             http_response_code(201);
             echo json_encode(["message" => "Score saved successfully"]);
         } catch (Exception $e) {

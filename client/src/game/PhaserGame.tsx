@@ -308,6 +308,86 @@ class MainMenuScene extends Phaser.Scene {
     createButton(-20, 'EASY', 0x92400e, 0xb45309, 'easy'); // amber-800
     createButton(40, 'MEDIUM', 0x78350f, 0x92400e, 'medium'); // amber-900
     createButton(100, 'HARD', 0x451a03, 0x78350f, 'hard'); // orange-950
+
+    // --- Leaderboard Button & Modal ---
+    const lbBtnBg = this.add.rectangle(width / 2, height / 2 + 170, 220, 50, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12).setInteractive({ useHandCursor: true });
+    const lbBtnText = this.add.text(width / 2, height / 2 + 170, 'LEADERBOARD', { fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
+    
+    lbBtnBg.on('pointerover', () => { lbBtnBg.setScale(1.05); lbBtnText.setScale(1.05); lbBtnBg.setFillStyle(0x6b3619); });
+    lbBtnBg.on('pointerout', () => { lbBtnBg.setScale(1.0); lbBtnText.setScale(1.0); lbBtnBg.setFillStyle(0x4a2511); });
+
+    const leaderboardModal = this.add.container(0, 0).setDepth(2000).setVisible(false);
+    const lbOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8).setInteractive();
+    const lbBox = this.add.rectangle(width / 2, height / 2, Math.min(width * 0.9, 700), 550, 0x1c1917, 0.95).setStrokeStyle(2, 0xb45309).setRounded(16);
+    const lbTitle = this.add.text(width / 2, height / 2 - 230, 'Top Wizards', { fontSize: '32px', fill: '#fbbf24', fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif', fontStyle: 'bold' }).setOrigin(0.5);
+    
+    const lbCloseBtn = this.add.rectangle(width / 2, height / 2 + 220, 180, 50, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12).setInteractive({ useHandCursor: true });
+    const lbCloseText = this.add.text(width / 2, height / 2 + 220, 'CLOSE', { fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
+    
+    lbCloseBtn.on('pointerover', () => { lbCloseBtn.setScale(1.05); lbCloseText.setScale(1.05); lbCloseBtn.setFillStyle(0x6b3619); });
+    lbCloseBtn.on('pointerout', () => { lbCloseBtn.setScale(1.0); lbCloseText.setScale(1.0); lbCloseBtn.setFillStyle(0x4a2511); });
+    lbCloseBtn.on('pointerdown', () => leaderboardModal.setVisible(false));
+
+    const lbContent = this.add.container(0, 0);
+    leaderboardModal.add([lbOverlay, lbBox, lbTitle, lbCloseBtn, lbCloseText, lbContent]);
+
+    lbBtnBg.on('pointerdown', () => {
+      leaderboardModal.setVisible(true);
+      lbContent.removeAll(true); // Clear previous entries
+
+      const loadingText = this.add.text(width / 2, height / 2, 'Summoning scores...', { fontSize: '24px', fill: '#94a3b8', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'italic' }).setOrigin(0.5);
+      lbContent.add(loadingText);
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      fetch(`${apiUrl}/leaderboard.php`)
+        .then(res => res.json())
+        .then(data => {
+          loadingText.destroy();
+          if (data.error) {
+            lbContent.add(this.add.text(width / 2, height / 2, 'Failed to read the ancient scrolls.', { fontSize: '24px', fill: '#ef4444', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5));
+            return;
+          }
+
+          const headerY = height / 2 - 160;
+          const colRank = width / 2 - 280;
+          const colName = width / 2 - 180;
+          const colScore = width / 2 + 30;
+          const colLevel = width / 2 + 140;
+          const colDiff = width / 2 + 230;
+
+          const headerStyle = { fontSize: '20px', fill: '#94a3b8', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold' };
+          lbContent.add([
+            this.add.text(colRank, headerY, 'Rank', headerStyle),
+            this.add.text(colName, headerY, 'Wizard Name', headerStyle),
+            this.add.text(colScore, headerY, 'Score', headerStyle),
+            this.add.text(colLevel, headerY, 'Dungeon', headerStyle),
+            this.add.text(colDiff, headerY, 'Mode', headerStyle)
+          ]);
+
+          data.forEach((entry: any, index: number) => {
+            const rowY = headerY + 40 + (index * 30);
+            const rowStyle = { fontSize: '20px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif' };
+            const rankColor = index === 0 ? '#fbbf24' : index === 1 ? '#cbd5e1' : index === 2 ? '#b45309' : '#fef3c7'; // Gold, Silver, Bronze
+            
+            const diffText = (entry.difficulty || 'easy').toUpperCase();
+            let diffColor = '#fef3c7';
+            if (diffText === 'MEDIUM') diffColor = '#f59e0b';
+            if (diffText === 'HARD') diffColor = '#ef4444';
+
+            lbContent.add([
+              this.add.text(colRank, rowY, `#${index + 1}`, { ...rowStyle, fill: rankColor }),
+              this.add.text(colName, rowY, (entry.player_name || 'Unknown').substring(0, 15), rowStyle),
+              this.add.text(colScore, rowY, entry.score.toString(), { ...rowStyle, fill: '#fbbf24', fontStyle: 'bold' }),
+              this.add.text(colLevel, rowY, `Lvl ${entry.level}`, rowStyle),
+              this.add.text(colDiff, rowY, diffText, { ...rowStyle, fill: diffColor })
+            ]);
+          });
+        })
+        .catch(err => {
+          loadingText.destroy();
+          lbContent.add(this.add.text(width / 2, height / 2, 'The server connection was lost.', { fontSize: '24px', fill: '#ef4444', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5));
+        });
+    });
     
     // --- Help Modal ---
     helpModal = this.add.container(0, 0).setDepth(2000).setVisible(false);
@@ -414,7 +494,8 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
           level: stats.level || 1,
           questionsAnswered: stats.questionsAnswered || 0,
           correctAnswers: stats.correctAnswers || 0,
-          enemiesKilled: stats.enemiesKilled || 0
+          enemiesKilled: stats.enemiesKilled || 0,
+          difficulty: stats.difficulty || 'easy'
         })
       }).catch(err => console.warn('Failed to submit score to leaderboard.', err));
     });
