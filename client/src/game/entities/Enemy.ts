@@ -96,11 +96,15 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (!this.isAlive) return;
     
     // Universal stuck detection for all enemies
-    if (this.state !== 'escaping' && this.state !== 'stunned' && this.state !== 'idle') {
+    if (this.state !== 'escaping' && this.state !== 'stunned' && this.state !== 'idle' && this.state !== 'attack') {
       if (this.scene.time.now > this.stuckCheckTimestamp + 500) {
         if (this.lastCheckPosition) {
           const distanceMoved = Phaser.Math.Distance.Between(this.x, this.y, this.lastCheckPosition.x, this.lastCheckPosition.y);
-          if (distanceMoved < 10 && this.stuckCheckTimestamp !== 0) {
+          
+          const body = this.body as Phaser.Physics.Arcade.Body;
+          const isObstructed = body && (!body.blocked.none || !body.touching.none);
+          
+          if (isObstructed && distanceMoved < 10 && this.stuckCheckTimestamp !== 0) {
             this.handleStuck();
             this.stuckCheckTimestamp = this.scene.time.now;
             this.lastCheckPosition = { x: this.x, y: this.y };
@@ -271,10 +275,13 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     const easystar = isFlying ? scene.easystarFlying : scene.easystar;
     if (!easystar) return;
 
-    const startX = Math.floor(this.x / 32);
-    const startY = Math.floor(this.y / 32);
-    const endX = Math.floor(targetX / 32);
-    const endY = Math.floor(targetY / 32);
+    const cols = Math.ceil(this.scene.scale.width / 32);
+    const rows = Math.ceil(this.scene.scale.height / 32);
+
+    const startX = Phaser.Math.Clamp(Math.floor(this.x / 32), 0, cols - 1);
+    const startY = Phaser.Math.Clamp(Math.floor(this.y / 32), 0, rows - 1);
+    const endX = Phaser.Math.Clamp(Math.floor(targetX / 32), 0, cols - 1);
+    const endY = Phaser.Math.Clamp(Math.floor(targetY / 32), 0, rows - 1);
 
     if (this.currentPath && this.currentPath.length > 0) {
       const lastNode = this.currentPath[this.currentPath.length - 1];
@@ -1004,7 +1011,7 @@ export class Spider extends Enemy {
       anims.create({ key: 'walkSpider', frames: anims.generateFrameNumbers('spider', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
       anims.create({ key: 'idleSpider', frames: anims.generateFrameNumbers('spider', { start: 0, end: 3 }), frameRate: 4, repeat: -1 });
       anims.create({ key: 'attackSpider', frames: anims.generateFrameNumbers('spider', { start: 13, end: 16 }), frameRate: 8, repeat: -1 });
-      anims.create({ key: 'spiderDie', frames: anims.generateFrameNumbers('spider', { start: 51, end: 54 }), frameRate: 8, repeat: 0 });
+      anims.create({ key: 'spiderDie', frames: anims.generateFrameNumbers('spider', { start: 51, end: 53 }), frameRate: 8, repeat: 0 });
     }
     this.anims.play('walkSpider');
   }

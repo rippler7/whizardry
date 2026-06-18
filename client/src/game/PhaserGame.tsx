@@ -381,6 +381,19 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
 
     gameRef.current = new Phaser.Game(config);
 
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+    // Fetch questions from API and store in registry, falling back to local JSON if it fails
+    fetch(`${apiUrl}/questions.php`)
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(data => {
+        if (gameRef.current && Array.isArray(data)) gameRef.current.registry.set('apiQuestions', data);
+      })
+      .catch(err => console.warn('API unreachable, falling back to local questions.json'));
+
     if (playerName) {
       gameRef.current.registry.set('playerName', playerName);
     }
@@ -388,6 +401,22 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
     // Listen for global game events to pass up to React
     gameRef.current.events.on('gameComplete', (data: any) => {
       onGameEvent('gameComplete', data);
+      
+      const stats = data?.playerStats || data || {};
+
+      // Securely post the score to our new Leaderboard API
+      fetch(`${apiUrl}/leaderboard.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerName: playerName || 'Anonymous',
+          score: stats.score || 0,
+          level: stats.level || 1,
+          questionsAnswered: stats.questionsAnswered || 0,
+          correctAnswers: stats.correctAnswers || 0,
+          enemiesKilled: stats.enemiesKilled || 0
+        })
+      }).catch(err => console.warn('Failed to submit score to leaderboard.', err));
     });
     gameRef.current.events.on('dungeonComplete', (data: any) => {
       onGameEvent('dungeonComplete', data);

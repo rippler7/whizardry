@@ -38,27 +38,38 @@ const isCorrectAnswer = (selectedAnswer: unknown, correctAnswer: unknown): boole
 // Helper to safely parse imported questions regardless of formatting
 const getValidQuestions = (rawData: any): Question[] => {
   let questionsArray = rawData;
-  if (!Array.isArray(rawData)) {
+  
+  if (rawData && rawData.error) {
+    questionsArray = [];
+  } else if (!Array.isArray(rawData)) {
     if (rawData && typeof rawData === 'object') {
       questionsArray = Object.values(rawData);
+      if (questionsArray.length > 0 && typeof questionsArray[0] === 'string') {
+        questionsArray = [];
+      }
     } else {
-      return DEFAULT_QUESTIONS;
+      questionsArray = [];
     }
   }
   
-  if (questionsArray.length === 0) {
+  if (!questionsArray || questionsArray.length === 0) {
     return DEFAULT_QUESTIONS;
   }
   
   return questionsArray.map((q: any, i: number) => {
     let options = ["Option 1", "Option 2", "Option 3", "Option 4"];
+    
+    if (typeof q.options === 'string') {
+      try { q.options = JSON.parse(q.options); } catch (e) {}
+    }
+    
     if (Array.isArray(q.options)) options = q.options;
     else if (Array.isArray(q.choices)) options = q.choices;
     else if (Array.isArray(q.answers)) options = q.answers;
     else if (Array.isArray(q.a)) options = q.a;
 
     const normalizedOptions = options.map((option: unknown) => String(option ?? '').trim());
-    const rawCorrectAnswer = q.correctAnswer ?? q.correct ?? q.answer ?? q.answerText ?? normalizedOptions[0];
+    const rawCorrectAnswer = q.correct_answer ?? q.correctAnswer ?? q.correct ?? q.answer ?? q.answerText ?? normalizedOptions[0];
     const correctedAnswer = typeof rawCorrectAnswer === 'number' && Number.isInteger(rawCorrectAnswer)
       ? normalizedOptions[rawCorrectAnswer] ?? normalizedOptions[0]
       : String(rawCorrectAnswer ?? normalizedOptions[0] ?? '');
@@ -1029,7 +1040,8 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private generateDungeonQuestions(): void {
-    const validQuestions = getValidQuestions(questionsData);
+    const apiQuestions = this.registry.get('apiQuestions');
+    const validQuestions = getValidQuestions(apiQuestions || questionsData);
     const pool = validQuestions.filter((question) => {
       if (this.gameDifficulty === 'hard') {
         return question.difficulty >= 4;
@@ -1927,7 +1939,8 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     const questionIndex = Number(chest.getData('questionIndex')) || 0;
-    const validQuestions = getValidQuestions(questionsData);
+    const apiQuestions = this.registry.get('apiQuestions');
+    const validQuestions = getValidQuestions(apiQuestions || questionsData);
     const question = this.dungeonQuestions[questionIndex] || validQuestions[questionIndex % validQuestions.length];
 
     if (!question || !Array.isArray(question.options) || question.options.length === 0) {
