@@ -1,4 +1,4 @@
-import { ANIMATIONS } from '../config/Constants.js';
+import { ANIMATIONS, CONSTANTS } from '../config/Constants.js';
 
 export class Door extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
@@ -79,13 +79,7 @@ export class Door extends Phaser.Physics.Arcade.Sprite {
         const questionText = this.scene.add.text(
             centerX, centerY - 120, 
             this.questionData.question, 
-            {
-                fontSize: '18px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center',
-                wordWrap: { width: 550 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '18px', wordWrap: { width: 550 } }
         );
         questionText.setOrigin(0.5);
         questionText.setDepth(5001);
@@ -112,12 +106,7 @@ export class Door extends Phaser.Physics.Arcade.Sprite {
             const buttonText = this.scene.add.text(
                 centerX, buttonY,
                 `${letter}. ${choices[i]}`,
-                {
-                    fontSize: '16px',
-                    fill: '#ffffff',
-                    fontFamily: 'Arial',
-                    align: 'center'
-                }
+                { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px' }
             );
             buttonText.setOrigin(0.5);
             buttonText.setDepth(5002);
@@ -194,14 +183,7 @@ export class Door extends Phaser.Physics.Arcade.Sprite {
         const feedbackText = this.scene.add.text(
             centerX, centerY,
             `Incorrect! You chose: ${selectedChoice}\nCorrect answer: ${correctAnswer}`,
-            {
-                fontSize: '16px',
-                fill: '#ff4444',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 10 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px', fill: '#ff4444', backgroundColor: '#000000', padding: { x: 20, y: 10 } }
         );
         feedbackText.setOrigin(0.5);
         feedbackText.setDepth(5000);
@@ -228,14 +210,7 @@ export class Door extends Phaser.Physics.Arcade.Sprite {
         const successText = this.scene.add.text(
             camera.centerX, camera.centerY,
             'Correct! Door unlocked!',
-            {
-                fontSize: '18px',
-                fill: '#44ff44',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 10 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '18px', fill: '#44ff44', backgroundColor: '#000000', padding: { x: 20, y: 10 } }
         );
         successText.setOrigin(0.5);
         successText.setDepth(5000);

@@ -4,6 +4,29 @@ export const CONSTANTS = {
     PLAYER_SPEED: 160,
     BULLET_SPEED: 400,
     MAX_FRAME_RATE: 10,
+
+    // Font Styles
+    FONT_STYLES: {
+        TITLE: {
+            fontFamily: 'Sherwood',
+            fontSize: '48px',
+            fill: '#FFFFFF',
+            stroke: '#000000',
+            strokeThickness: 4
+        },
+        SUBTITLE: {
+            fontFamily: 'Sherwood',
+            fontSize: '32px',
+            fill: '#FFFFFF',
+            stroke: '#000000',
+            strokeThickness: 3
+        },
+        DEFAULT: {
+            fontFamily: 'Sherwood',
+            fontSize: '24px',
+            fill: '#FFFFFF'
+        }
+    },
     
     // Player Settings
     PLAYER_LIFE: 100,

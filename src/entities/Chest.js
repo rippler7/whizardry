@@ -36,10 +36,7 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
         this.lockIcon = this.scene.add.text(
             this.x, this.y - 40,
             '🔒',
-            {
-                fontSize: '16px',
-                align: 'center'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px' }
         );
         this.lockIcon.setOrigin(0.5);
         this.lockIcon.setDepth(this.depth + 1);
@@ -109,12 +106,7 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
         const titleText = this.scene.add.text(
             centerX, centerY - 180,
             `Unlock the ${this.chestType.toUpperCase()} Chest`,
-            {
-                fontSize: '24px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }
+            { ...CONSTANTS.FONT_STYLES.SUBTITLE, fontSize: '24px' }
         );
         titleText.setOrigin(0.5);
         titleText.setDepth(5001);
@@ -125,13 +117,7 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
         const questionText = this.scene.add.text(
             centerX, centerY - 100,
             questionLines.join('\n'),
-            {
-                fontSize: '16px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center',
-                wordWrap: { width: 580 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px', wordWrap: { width: 580 } }
         );
         questionText.setOrigin(0.5);
         questionText.setDepth(5001);
@@ -166,13 +152,7 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
             const buttonText = this.scene.add.text(
                 centerX, buttonY,
                 `${letter}. ${choices[i]}`,
-                {
-                    fontSize: '14px',
-                    fill: '#ffffff',
-                    fontFamily: 'Arial',
-                    align: 'center',
-                    wordWrap: { width: 520 }
-                }
+                { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '14px', wordWrap: { width: 520 } }
             );
             buttonText.setOrigin(0.5);
             buttonText.setDepth(5002);
@@ -251,14 +231,7 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
         const feedbackText = this.scene.add.text(
             centerX, centerY,
             `Incorrect Answer!\nYou chose: ${selectedChoice}\nCorrect answer: ${correctAnswer}`,
-            {
-                fontSize: '16px',
-                fill: '#ff4444',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 15 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px', fill: '#ff4444', backgroundColor: '#000000', padding: { x: 20, y: 15 } }
         );
         feedbackText.setOrigin(0.5);
         feedbackText.setDepth(5000);
@@ -305,14 +278,7 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
         const successText = this.scene.add.text(
             centerX, centerY,
             `Correct! ${this.chestType.toUpperCase()} Chest Unlocked!\n+300 Points`,
-            {
-                fontSize: '20px',
-                fill: '#44ff44',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 15 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '20px', fill: '#44ff44', backgroundColor: '#000000', padding: { x: 20, y: 15 } }
         );
         successText.setOrigin(0.5);
         successText.setDepth(5000);
@@ -531,14 +497,7 @@ export class Chest extends Phaser.Physics.Arcade.Sprite {
         const rewardText = this.scene.add.text(
             this.x, this.y - 60,
             text,
-            {
-                fontSize: '14px',
-                fill: '#ffff00',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 10, y: 5 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '14px', fill: '#ffff00', backgroundColor: '#000000', padding: { x: 10, y: 5 } }
         );
         rewardText.setOrigin(0.5);
         rewardText.setDepth(this.depth + 3);

@@ -1,3 +1,5 @@
+import { CONSTANTS } from '../config/Constants.js';
+
 export class LoadingScreen {
     constructor(scene) {
         this.scene = scene;
@@ -20,12 +22,7 @@ export class LoadingScreen {
         this.elements.title = this.scene.add.text(
             centerX, centerY - 150,
             'Educational RPG Game',
-            {
-                fontSize: '32px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }
+            CONSTANTS.FONT_STYLES.TITLE
         );
         this.elements.title.setOrigin(0.5);
         this.elements.title.setDepth(10001);
@@ -34,12 +31,7 @@ export class LoadingScreen {
         this.elements.subtitle = this.scene.add.text(
             centerX, centerY - 100,
             'Answer questions, defeat enemies, and unlock treasures!',
-            {
-                fontSize: '16px',
-                fill: '#bdc3c7',
-                fontFamily: 'Arial',
-                align: 'center'
-            }
+            CONSTANTS.FONT_STYLES.SUBTITLE
         );
         this.elements.subtitle.setOrigin(0.5);
         this.elements.subtitle.setDepth(10001);
@@ -67,12 +59,7 @@ export class LoadingScreen {
         this.elements.loadingText = this.scene.add.text(
             centerX, centerY - 50,
             'Loading...',
-            {
-                fontSize: '20px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }
+            CONSTANTS.FONT_STYLES.DEFAULT
         );
         this.elements.loadingText.setOrigin(0.5);
         this.elements.loadingText.setDepth(10003);
@@ -81,12 +68,7 @@ export class LoadingScreen {
         this.elements.percentText = this.scene.add.text(
             centerX, centerY - 25,
             '0%',
-            {
-                fontSize: '14px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '14px' }
         );
         this.elements.percentText.setOrigin(0.5);
         this.elements.percentText.setDepth(10004);
@@ -115,12 +97,7 @@ export class LoadingScreen {
         this.elements.tipsLabel = this.scene.add.text(
             x, y,
             'Tip:',
-            {
-                fontSize: '14px',
-                fill: '#f39c12',
-                fontFamily: 'Arial',
-                align: 'center'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '14px', fill: '#f39c12' }
         );
         this.elements.tipsLabel.setOrigin(0.5);
         this.elements.tipsLabel.setDepth(10001);
@@ -128,13 +105,7 @@ export class LoadingScreen {
         this.elements.tipText = this.scene.add.text(
             x, y + 25,
             tips[0],
-            {
-                fontSize: '12px',
-                fill: '#ecf0f1',
-                fontFamily: 'Arial',
-                align: 'center',
-                wordWrap: { width: 400 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '12px', fill: '#ecf0f1', wordWrap: { width: 400 } }
         );
         this.elements.tipText.setOrigin(0.5);
         this.elements.tipText.setDepth(10001);
@@ -236,14 +207,7 @@ export class LoadingScreen {
             this.scene.cameras.main.centerX,
             this.scene.cameras.main.centerY + 150,
             'Click anywhere or press any key to start!',
-            {
-                fontSize: '18px',
-                fill: '#e74c3c',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 15, y: 8 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '18px', fill: '#e74c3c', backgroundColor: '#000000', padding: { x: 15, y: 8 } }
         );
         readyText.setOrigin(0.5);
         readyText.setDepth(10003);
@@ -326,14 +290,7 @@ export class LoadingScreen {
             this.scene.cameras.main.centerX,
             this.scene.cameras.main.centerY,
             `Loading Error:\n${errorMessage}\n\nPlease refresh the page to try again.`,
-            {
-                fontSize: '16px',
-                fill: '#e74c3c',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 15 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px', fill: '#e74c3c', backgroundColor: '#000000', padding: { x: 20, y: 15 } }
         );
         errorText.setOrigin(0.5);
         errorText.setDepth(10005);

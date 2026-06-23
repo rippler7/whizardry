@@ -47,12 +47,7 @@ export class HUD {
         this.elements.healthText = this.scene.add.text(
             x + width / 2, y + height / 2,
             '100/100',
-            {
-                fontSize: '12px',
-                fill: '#ffffff',
-                fontFamily: 'Arial',
-                align: 'center'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '12px' }
         );
         this.elements.healthText.setOrigin(0.5);
         this.elements.healthText.setScrollFactor(0);
@@ -62,11 +57,7 @@ export class HUD {
         this.elements.healthLabel = this.scene.add.text(
             x, y - 5,
             'HEALTH',
-            {
-                fontSize: '10px',
-                fill: '#ffffff',
-                fontFamily: 'Arial'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '10px' }
         );
         this.elements.healthLabel.setOrigin(0, 1);
         this.elements.healthLabel.setScrollFactor(0);
@@ -80,11 +71,7 @@ export class HUD {
         this.elements.scoreLabel = this.scene.add.text(
             x, y,
             'SCORE',
-            {
-                fontSize: '12px',
-                fill: '#ffffff',
-                fontFamily: 'Arial'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '12px' }
         );
         this.elements.scoreLabel.setOrigin(1, 0);
         this.elements.scoreLabel.setScrollFactor(0);
@@ -93,11 +80,7 @@ export class HUD {
         this.elements.scoreValue = this.scene.add.text(
             x, y + 20,
             '0',
-            {
-                fontSize: '18px',
-                fill: '#ffff00',
-                fontFamily: 'Arial'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '18px', fill: '#ffff00' }
         );
         this.elements.scoreValue.setOrigin(1, 0);
         this.elements.scoreValue.setScrollFactor(0);
@@ -111,11 +94,7 @@ export class HUD {
         this.elements.timeLabel = this.scene.add.text(
             x, y,
             'TIME',
-            {
-                fontSize: '12px',
-                fill: '#ffffff',
-                fontFamily: 'Arial'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '12px' }
         );
         this.elements.timeLabel.setOrigin(1, 0);
         this.elements.timeLabel.setScrollFactor(0);
@@ -124,11 +103,7 @@ export class HUD {
         this.elements.timeValue = this.scene.add.text(
             x, y + 20,
             '00:00:00',
-            {
-                fontSize: '16px',
-                fill: '#00ffff',
-                fontFamily: 'Arial'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px', fill: '#00ffff' }
         );
         this.elements.timeValue.setOrigin(1, 0);
         this.elements.timeValue.setScrollFactor(0);
@@ -145,11 +120,7 @@ export class HUD {
         this.elements.progressLabel = this.scene.add.text(
             x, y - 5,
             'PROGRESS',
-            {
-                fontSize: '10px',
-                fill: '#ffffff',
-                fontFamily: 'Arial'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '10px' }
         );
         this.elements.progressLabel.setOrigin(0, 1);
         this.elements.progressLabel.setScrollFactor(0);
@@ -177,11 +148,7 @@ export class HUD {
         this.elements.progressText = this.scene.add.text(
             x + width + 10, y + height / 2,
             '0%',
-            {
-                fontSize: '12px',
-                fill: '#ffffff',
-                fontFamily: 'Arial'
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '12px' }
         );
         this.elements.progressText.setOrigin(0, 0.5);
         this.elements.progressText.setScrollFactor(0);
@@ -201,11 +168,7 @@ export class HUD {
             const element = this.scene.add.text(
                 20, y + (index * 16),
                 text,
-                {
-                    fontSize: '11px',
-                    fill: '#cccccc',
-                    fontFamily: 'Arial'
-                }
+                { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '11px', fill: '#cccccc' }
             );
             element.setScrollFactor(0);
             element.setDepth(CONSTANTS.UI_DEPTH);
@@ -321,14 +284,7 @@ export class HUD {
             this.scene.cameras.main.centerX,
             this.scene.cameras.main.centerY - 100,
             message,
-            {
-                fontSize: '24px',
-                fill: color,
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 20, y: 10 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '24px', fill: color, backgroundColor: '#000000', padding: { x: 20, y: 10 } }
         );
         messageText.setOrigin(0.5);
         messageText.setScrollFactor(0);
@@ -369,14 +325,7 @@ export class HUD {
             this.scene.cameras.main.centerX,
             this.scene.cameras.main.height - 150,
             text,
-            {
-                fontSize: '16px',
-                fill: '#ffff00',
-                fontFamily: 'Arial',
-                align: 'center',
-                backgroundColor: '#000000',
-                padding: { x: 15, y: 8 }
-            }
+            { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '16px', fill: '#ffff00', backgroundColor: '#000000', padding: { x: 15, y: 8 } }
         );
         this.elements.interactionPrompt.setOrigin(0.5);
         this.elements.interactionPrompt.setScrollFactor(0);

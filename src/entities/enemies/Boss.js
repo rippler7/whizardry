@@ -62,11 +62,8 @@ export class Boss extends Enemy {
         this.scene.cameras.main.shake(500, 0.02);
         this.scene.audioManager.playSound('bossTheme');
         
-        this.scene.add.text(this.scene.cameras.main.centerX, 100, 'BOSS PHASE 2!', {
-            fontSize: '32px',
-            fill: '#ff0000',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(3000);
+        this.scene.add.text(this.scene.cameras.main.centerX, 100, 'BOSS PHASE 2!', { ...CONSTANTS.FONT_STYLES.TITLE, fill: '#ff0000' })
+            .setOrigin(0.5).setDepth(3000);
     }
 
     enterPhase3() {
@@ -80,11 +77,8 @@ export class Boss extends Enemy {
         // Screen shake and sound effect
         this.scene.cameras.main.shake(800, 0.03);
         
-        this.scene.add.text(this.scene.cameras.main.centerX, 100, 'BOSS ENRAGED!', {
-            fontSize: '32px',
-            fill: '#ff0000',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(3000);
+        this.scene.add.text(this.scene.cameras.main.centerX, 100, 'BOSS ENRAGED!', { ...CONSTANTS.FONT_STYLES.TITLE, fill: '#ff0000' })
+            .setOrigin(0.5).setDepth(3000);
     }
 
     updateSpecialAttacks() {

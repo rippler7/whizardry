@@ -501,14 +501,7 @@ export class GameScene extends Phaser.Scene {
                 this.cameras.main.centerX,
                 this.cameras.main.centerY + 50,
                 'Press R to restart or ESC for main menu',
-                {
-                    fontSize: '18px',
-                    fill: '#ffffff',
-                    fontFamily: 'Arial',
-                    align: 'center',
-                    backgroundColor: '#000000',
-                    padding: { x: 15, y: 8 }
-                }
+                { ...CONSTANTS.FONT_STYLES.DEFAULT, fontSize: '18px', backgroundColor: '#000000', padding: { x: 15, y: 8 } }
             );
             restartText.setOrigin(0.5);
             restartText.setScrollFactor(0);
