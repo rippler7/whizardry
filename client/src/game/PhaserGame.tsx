@@ -461,19 +461,6 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
 
     gameRef.current = new Phaser.Game(config);
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-    // Fetch questions from API and store in registry, falling back to local JSON if it fails
-    fetch(`${apiUrl}/questions.php`)
-      .then(res => {
-        if (!res.ok) throw new Error('Network response was not ok');
-        return res.json();
-      })
-      .then(data => {
-        if (gameRef.current && Array.isArray(data)) gameRef.current.registry.set('apiQuestions', data);
-      })
-      .catch(err => console.warn('API unreachable, falling back to local questions.json'));
-
     if (playerName) {
       gameRef.current.registry.set('playerName', playerName);
     }
@@ -484,6 +471,7 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
       
       const stats = data?.playerStats || data || {};
 
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       // Securely post the score to our new Leaderboard API
       fetch(`${apiUrl}/leaderboard.php`, {
         method: 'POST',
