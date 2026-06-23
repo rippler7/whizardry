@@ -14,20 +14,26 @@ require 'db.php';
 
 // Map difficulty strings to integer values for the database
 $difficultyMap = [
-    'easy' => 1,
-    'medium' => 2,
-    'hard' => 3,
+    'easy' => [1, 2],
+    'medium' => [3, 4],
+    'hard' => [5],
 ];
 
-$difficulty = null;
+$difficulty_values = null;
 if (isset($_GET['difficulty']) && isset($difficultyMap[$_GET['difficulty']])) {
-    $difficulty = $difficultyMap[$_GET['difficulty']];
+    $difficulty_values = $difficultyMap[$_GET['difficulty']];
 }
 
 try {
-    if ($difficulty !== null) {
-        $stmt = $pdo->prepare("SELECT * FROM questions WHERE difficulty = ?");
-        $stmt->execute([$difficulty]);
+    if ($difficulty_values !== null) {
+        // Create a string of placeholders (?, ?, ?) for the IN clause
+        $placeholders = implode(',', array_fill(0, count($difficulty_values), '?'));
+        
+        // Prepare the statement with the dynamic number of placeholders
+        $stmt = $pdo->prepare("SELECT * FROM questions WHERE difficulty IN ($placeholders)");
+        
+        // Execute with the array of difficulty values
+        $stmt->execute($difficulty_values);
     } else {
         // Fallback to fetching all questions if no valid difficulty is provided
         $stmt = $pdo->query("SELECT * FROM questions");
