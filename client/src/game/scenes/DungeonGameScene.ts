@@ -386,6 +386,11 @@ export class DungeonGameScene extends Phaser.Scene {
     this.player.correctAnswers = this.initialPlayerStats.correctAnswers;
     this.player.enemiesKilled = this.initialPlayerStats.enemiesKilled;
 
+    // Ensure joystickVector exists on player, even if Player class doesn't initialize it
+    if (!this.player.joystickVector) {
+      this.player.joystickVector = new Phaser.Math.Vector2(0, 0);
+    }
+
     this.playerShadow = this.add.ellipse(100, this.player.y + 26, 28, 12, 0x000000, 0.4).setDepth(1);
 
     // Setup player events
