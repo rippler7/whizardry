@@ -148,6 +148,9 @@ export class Mage extends Hero {
     
     this.setupInput();
     this.createAnimations();
+
+    // Explicitly bind the update method to this instance
+    this.update = this.update.bind(this);
   }
   
   private setupInput(): void {
