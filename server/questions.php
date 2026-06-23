@@ -30,13 +30,13 @@ try {
         $placeholders = implode(',', array_fill(0, count($difficulty_values), '?'));
         
         // Prepare the statement with the dynamic number of placeholders
-        $stmt = $pdo->prepare("SELECT * FROM questions WHERE difficulty IN ($placeholders) ORDER BY RAND()");
+        $stmt = $pdo->prepare("SELECT * FROM questions WHERE difficulty IN ($placeholders) ORDER BY RAND() LIMIT 40");
         
         // Execute with the array of difficulty values
         $stmt->execute($difficulty_values);
     } else {
         // Fallback to fetching all questions if no valid difficulty is provided
-        $stmt = $pdo->query("SELECT * FROM questions ORDER BY RAND()");
+        $stmt = $pdo->query("SELECT * FROM questions ORDER BY RAND() LIMIT 40");
     }
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode($questions, JSON_NUMERIC_CHECK);
