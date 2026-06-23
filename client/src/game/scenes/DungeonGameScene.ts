@@ -1728,7 +1728,10 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
-    if (this.isModalOpen) return;
+    // Guard against updates running before create() has finished or when modal is open
+    if (!this.player || this.isModalOpen) {
+      return;
+    }
 
     this.player.joystickVector.copy(this.joystickActive ? this.moveVector : Phaser.Math.Vector2.ZERO);
     this.player.update();
