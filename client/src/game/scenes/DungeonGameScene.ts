@@ -2138,21 +2138,30 @@ export class DungeonGameScene extends Phaser.Scene {
 
     const modalElements: Phaser.GameObjects.GameObject[] = [modalBg, title, questionText, closeHint];
 
-    question.options.forEach((option, index) => {
-      const btnBg = this.add.rectangle(
-        this.scale.width / 2,
-        this.scale.height / 2 - 40 + index * 60,
-        400, 45, 0x78350f
-      ).setOrigin(0.5).setScrollFactor(0).setDepth(3001).setInteractive({ useHandCursor: true }).setRounded(8);
+    let currentY = this.scale.height / 2 - 40;
 
+    question.options.forEach((option, index) => {
       const btnText = this.add.text(
         this.scale.width / 2,
-        this.scale.height / 2 - 40 + index * 60,
+        currentY,
         `${index + 1}. ${option}`,
         {
-          fontSize: '18px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif'
+          fontSize: '18px',
+          fill: '#fef3c7',
+          fontFamily: '"Georgia", "Times New Roman", serif',
+          wordWrap: { width: 380, useAdvancedWrap: true },
+          align: 'center'
         }
       ).setOrigin(0.5).setScrollFactor(0).setDepth(3002);
+
+      const textHeight = btnText.getBounds().height;
+      const bgHeight = textHeight + 20;
+
+      const btnBg = this.add.rectangle(
+        this.scale.width / 2,
+        currentY,
+        400, bgHeight, 0x78350f
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(3001).setInteractive({ useHandCursor: true }).setRounded(8);
 
       btnBg.on('pointerover', () => { btnBg.setFillStyle(0x92400e); btnText.setFill('#fbbf24'); });
       btnBg.on('pointerout', () => { btnBg.setFillStyle(0x78350f); btnText.setFill('#fef3c7'); });
@@ -2163,6 +2172,8 @@ export class DungeonGameScene extends Phaser.Scene {
       });
 
       modalElements.push(btnBg, btnText);
+
+      currentY += bgHeight + 15;
     });
 
     this.input.keyboard!.once('keydown-ONE', () => this.answerFromKey(0, question, callback, modalElements));
