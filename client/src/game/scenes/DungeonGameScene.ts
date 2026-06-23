@@ -1059,19 +1059,16 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private generateDungeonQuestions(): void {
-    // The server now provides a pre-filtered, randomized pool of questions.
-    // We just need to grab them from the registry.
-    const allQuestionsForDifficulty = this.registry.get('questions') || [];
-    const validQuestions = getValidQuestions(allQuestionsForDifficulty);
+    const allQuestions = this.registry.get('questions') || [];
+    const validQuestions = getValidQuestions(allQuestions);
 
     let availablePool = validQuestions.filter(q => !this.usedQuestionIds.includes(q.id));
 
     if (availablePool.length < 4) {
-      // Not enough unique questions left in this session's pool.
-      // Reset the used questions list and use the full pool again.
+      // Not enough unique questions. Reset all used questions and start over.
       console.warn("Not enough unique questions, resetting used question pool for this session.");
       this.usedQuestionIds = [];
-      availablePool = validQuestions;
+      availablePool = validQuestions.filter(q => !this.usedQuestionIds.includes(q.id));
     }
 
     // If after reset we still don't have enough, it's a critical error.
@@ -1082,10 +1079,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     this.dungeonQuestions = availablePool.slice(0, 4);
-
-    this.dungeonQuestions.forEach(q => {
-      this.usedQuestionIds.push(q.id);
-    });
+    this.dungeonQuestions.forEach(q => this.usedQuestionIds.push(q.id));
   }
 
   private createQuestionChests() {
