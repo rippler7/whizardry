@@ -216,9 +216,9 @@ export class DungeonGameScene extends Phaser.Scene {
   async create() {
     // Fetch questions from the API on the first dungeon level only
     if (this.currentDungeon === 1) {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://jermsancog.com/dungeongame';
       try {
-        const response = await fetch(`${apiUrl}/questions.php?difficulty=${this.gameDifficulty}`);
+        const response = await fetch(`${apiUrl}/server/questions.php?difficulty=${this.gameDifficulty}`);
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.statusText}`);
         }
