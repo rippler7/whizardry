@@ -213,7 +213,26 @@ export class DungeonGameScene extends Phaser.Scene {
     this.events.off('bossDefeated');
   }
 
-  create() {
+  async create() {
+    // Fetch questions from the API on the first dungeon level only
+    if (this.currentDungeon === 1) {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      try {
+        const response = await fetch(`${apiUrl}/questions.php?difficulty=${this.gameDifficulty}`);
+        if (!response.ok) {
+          throw new Error(`Network response was not ok: ${response.statusText}`);
+        }
+        const apiQuestions = await response.json();
+        this.registry.set('questions', apiQuestions);
+        console.log(`Fetched ${apiQuestions.length} questions for ${this.gameDifficulty} mode.`);
+      } catch (error) {
+        console.error('Failed to fetch questions from API, falling back to local questions.json.', error);
+        // Fallback to local questions if API fails
+        const localQuestions = getValidQuestions(questionsData);
+        this.registry.set('questions', localQuestions);
+      }
+    }
+
     const { width, height } = this.scale;
 
     // Instantiate EasyStar engines
@@ -1040,42 +1059,29 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private generateDungeonQuestions(): void {
-    const apiQuestions = this.registry.get('apiQuestions');
-    const allQuestions = getValidQuestions(apiQuestions || questionsData);
+    // The server now provides a pre-filtered, randomized pool of questions.
+    // We just need to grab them from the registry.
+    const allQuestionsForDifficulty = this.registry.get('questions') || [];
+    const validQuestions = getValidQuestions(allQuestionsForDifficulty);
 
-    let pool = allQuestions.filter((question) => {
-      if (this.gameDifficulty === 'hard') {
-        return question.difficulty === 5;
-      } else if (this.gameDifficulty === 'medium') {
-        return question.difficulty >= 3 && question.difficulty <= 4;
-      } else {
-        return question.difficulty >= 1 && question.difficulty <= 2;
-      }
-    });
-
-    // Fallback if pool is empty
-    if (pool.length === 0) {
-      if (this.gameDifficulty === 'hard') {
-        pool = allQuestions.filter(q => q.difficulty >= 3);
-      }
-      if (pool.length === 0) {
-        pool = allQuestions;
-      }
-    }
-    
-    pool = [...new Map(pool.map(item => [item.id, item])).values()];
-
-    const questionRNG = new Phaser.Math.RandomDataGenerator([(new Date()).getTime().toString()]);
-    let availablePool = pool.filter(q => !this.usedQuestionIds.includes(q.id));
+    let availablePool = validQuestions.filter(q => !this.usedQuestionIds.includes(q.id));
 
     if (availablePool.length < 4) {
-      // Not enough unique questions. Reset all used questions and start over.
+      // Not enough unique questions left in this session's pool.
+      // Reset the used questions list and use the full pool again.
+      console.warn("Not enough unique questions, resetting used question pool for this session.");
       this.usedQuestionIds = [];
-      availablePool = pool;
+      availablePool = validQuestions;
     }
 
-    const shuffled = questionRNG.shuffle(availablePool);
-    this.dungeonQuestions = shuffled.slice(0, 4);
+    // If after reset we still don't have enough, it's a critical error.
+    if (availablePool.length < 4) {
+      console.error("CRITICAL: Not enough questions available to create a dungeon. Using default questions.");
+      this.dungeonQuestions = DEFAULT_QUESTIONS.slice(0, 4);
+      return;
+    }
+
+    this.dungeonQuestions = availablePool.slice(0, 4);
 
     this.dungeonQuestions.forEach(q => {
       this.usedQuestionIds.push(q.id);
