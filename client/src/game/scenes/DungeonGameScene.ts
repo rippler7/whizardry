@@ -1044,7 +1044,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const validQuestions = getValidQuestions(apiQuestions || questionsData);
     const pool = validQuestions.filter((question) => {
       if (this.gameDifficulty === 'hard') {
-        return question.difficulty >= 4;
+        return question.difficulty === 5;
       } else if (this.gameDifficulty === 'medium') {
         return question.difficulty >= 3 && question.difficulty <= 4;
       } else {
@@ -1055,8 +1055,11 @@ export class DungeonGameScene extends Phaser.Scene {
     // Filter out questions we've already seen in previous levels
     let availablePool = pool.filter(q => !this.usedQuestionIds.includes(q.id));
 
-    // If we run out of unique questions for this difficulty, fallback to the full difficulty pool
+    // If we run out of unique questions for this difficulty, we must start recycling.
+    // We'll reset the used questions for this difficulty level and pick again.
     if (availablePool.length < 4) {
+      const usedInThisDifficulty = pool.filter(q => this.usedQuestionIds.includes(q.id));
+      this.usedQuestionIds = this.usedQuestionIds.filter(id => !usedInThisDifficulty.some(q => q.id === id));
       availablePool = pool;
     }
 
