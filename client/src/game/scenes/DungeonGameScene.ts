@@ -74,10 +74,21 @@ const getValidQuestions = (rawData: any): Question[] => {
       ? normalizedOptions[rawCorrectAnswer] ?? normalizedOptions[0]
       : String(rawCorrectAnswer ?? normalizedOptions[0] ?? '');
 
+    // --- Shuffle the options array ---
+    const shuffledOptions = [...normalizedOptions];
+    for (let i = shuffledOptions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+    }
+    // Ensure the correct answer is still present in the shuffled array. If not, something is wrong.
+    if (!shuffledOptions.some(opt => normalizeAnswerText(opt) === normalizeAnswerText(correctedAnswer))) {
+      shuffledOptions[0] = correctedAnswer; // Failsafe
+    }
+
     return {
       id: q.id || i,
       question: q.question || q.q || "Missing Question?",
-      options: normalizedOptions,
+      options: shuffledOptions,
       correctAnswer: correctedAnswer,
       category: q.category || "General",
       difficulty: parseInt(q.difficulty, 10) || 1
