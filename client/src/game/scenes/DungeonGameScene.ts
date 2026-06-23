@@ -1041,8 +1041,9 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private generateDungeonQuestions(): void {
     const apiQuestions = this.registry.get('apiQuestions');
-    const validQuestions = getValidQuestions(apiQuestions || questionsData);
-    const pool = validQuestions.filter((question) => {
+    const allQuestions = getValidQuestions(apiQuestions || questionsData);
+
+    let pool = allQuestions.filter((question) => {
       if (this.gameDifficulty === 'hard') {
         return question.difficulty === 5;
       } else if (this.gameDifficulty === 'medium') {
@@ -1052,29 +1053,32 @@ export class DungeonGameScene extends Phaser.Scene {
       }
     });
 
-    // Filter out questions we've already seen in previous levels
+    // Fallback if pool is empty
+    if (pool.length === 0) {
+      if (this.gameDifficulty === 'hard') {
+        pool = allQuestions.filter(q => q.difficulty >= 3);
+      }
+      if (pool.length === 0) {
+        pool = allQuestions;
+      }
+    }
+    
+    pool = [...new Map(pool.map(item => [item.id, item])).values()];
+
+    const questionRNG = new Phaser.Math.RandomDataGenerator([(new Date()).getTime().toString()]);
     let availablePool = pool.filter(q => !this.usedQuestionIds.includes(q.id));
 
-    // If we run out of unique questions for this difficulty, we must start recycling.
-    // We'll reset the used questions for this difficulty level and pick again.
     if (availablePool.length < 4) {
-      const usedInThisDifficulty = pool.filter(q => this.usedQuestionIds.includes(q.id));
-      this.usedQuestionIds = this.usedQuestionIds.filter(id => !usedInThisDifficulty.some(q => q.id === id));
+      // Not enough unique questions. Reset all used questions and start over.
+      this.usedQuestionIds = [];
       availablePool = pool;
     }
 
-    // Use a new, time-seeded RNG to shuffle questions. This ensures that each new game
-    // gets a different random set of questions, bypassing any global deterministic seeding
-    // that might be affecting Math.random() or Phaser's default RNG.
-    const questionRNG = new Phaser.Math.RandomDataGenerator([(new Date()).getTime().toString()]);
-    const shuffled = questionRNG.shuffle([...availablePool]);
+    const shuffled = questionRNG.shuffle(availablePool);
     this.dungeonQuestions = shuffled.slice(0, 4);
 
-    // Mark these selected questions as used for future levels
     this.dungeonQuestions.forEach(q => {
-      if (!this.usedQuestionIds.includes(q.id)) {
-        this.usedQuestionIds.push(q.id);
-      }
+      this.usedQuestionIds.push(q.id);
     });
   }
 
