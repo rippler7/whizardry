@@ -80,7 +80,7 @@ const getValidQuestions = (rawData: any): Question[] => {
       options: normalizedOptions,
       correctAnswer: correctedAnswer,
       category: q.category || "General",
-      difficulty: q.difficulty || 1
+      difficulty: parseInt(q.difficulty, 10) || 1
     };
   });
 };
