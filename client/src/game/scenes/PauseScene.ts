@@ -93,19 +93,19 @@ export class PauseScene extends Phaser.Scene {
   }
   
   private resumeGame(): void {
+    const gameScene = this.scene.manager.getScenes(false).find(s => s.sys.isPaused());
     this.scene.stop();
-    this.scene.resume('GameScene');
-    
-    // Notify the game scene it's resumed
-    const gameScene = this.scene.get('GameScene') as any;
-    if (gameScene && gameScene.resume) {
-      gameScene.resume();
+    if (gameScene) {
+      this.scene.resume(gameScene.scene.key);
     }
   }
   
   private goToMainMenu(): void {
+    const gameScene = this.scene.manager.getScenes(false).find(s => s.sys.isPaused());
+    if (gameScene) {
+      this.scene.stop(gameScene.scene.key);
+    }
     this.scene.stop();
-    this.scene.stop('GameScene');
     this.scene.start('MainMenuScene');
   }
   

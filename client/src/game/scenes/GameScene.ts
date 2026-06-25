@@ -195,10 +195,6 @@ export class GameScene extends Phaser.Scene {
     }
     
     // Setup player events
-    this.events.off('playerHealthChanged', this.updateHealthBar, this);
-    this.events.off('playerScoreChanged', this.updateScore, this);
-    this.events.off('playerLevelUp', this.onPlayerLevelUp, this);
-    this.events.off('enemyDefeated', this.onEnemyDefeated, this);
     this.events.on('playerHealthChanged', this.updateHealthBar, this);
     this.events.on('playerScoreChanged', this.updateScore, this);
     this.events.on('playerLevelUp', this.onPlayerLevelUp, this);
@@ -545,5 +541,32 @@ export class GameScene extends Phaser.Scene {
   // Called when resuming from pause
   resume(): void {
     this.isPaused = false;
+  }
+
+  shutdown(): void {
+    // Remove event listeners to prevent memory leaks from persisting across scene restarts
+    this.events.off('playerHealthChanged', this.updateHealthBar, this);
+    this.events.off('playerScoreChanged', this.updateScore, this);
+    this.events.off('playerLevelUp', this.onPlayerLevelUp, this);
+    this.events.off('enemyDefeated', this.onEnemyDefeated, this);
+    this.input.keyboard!.off('keydown-ESC');
+    if (process.env.NODE_ENV === 'development') {
+      this.input.keyboard!.off('keydown-K');
+    }
+
+    // Nullify all properties to prevent "zombie" objects on scene restart
+    // This is the most critical part of the fix.
+    this.player = undefined!;
+    this.enemies = undefined!;
+    this.bullets = undefined!;
+    this.collectibles = undefined!;
+    this.walls = undefined!;
+    this.tilemap = undefined!;
+    this.baseTiles = undefined!;
+    this.wallTiles = undefined!;
+    this.restorePlayerStats = undefined;
+
+    // Stop all sounds from this scene
+    this.sound.stopAll();
   }
 }

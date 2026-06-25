@@ -222,6 +222,28 @@ export class DungeonGameScene extends Phaser.Scene {
     this.events.off('enemyDefeated', this.handleEnemyDefeated, this);
     this.events.off('bossPhaseChange');
     this.events.off('bossDefeated');
+
+    this.player = undefined!;
+    this.enemies = undefined!;
+    this.bullets = undefined!;
+
+    // Nullify all scene-specific properties to prevent "zombie" objects
+    this.chests = undefined!;
+    this.enemyBullets = undefined!;
+    this.droppedItems = undefined!;
+    this.door = undefined!;
+    this.boss = undefined;
+    this.flowField = undefined!;
+    this.easystar = undefined;
+    this.easystarFlying = undefined;
+    this.playerShadow = undefined!;
+    this.activeEffects = [];
+
+    this.registry.get('walls')?.destroy(true);
+    this.registry.get('decorations')?.destroy(true);
+
+    // IMPORTANT: Call the parent's shutdown method to clean up its properties
+    super.shutdown();
   }
 
   async create() {
@@ -1739,8 +1761,11 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
-    // Guard against updates running before create() has finished or when modal is open
-    if (!this.player || this.isModalOpen) {
+    // On scene restart, properties can be "zombie" objects (exist but are destroyed).
+    // We must check for a property that is destroyed on shutdown, like `children` on a group
+    // or `body` on a sprite, to ensure they are fully instantiated before use.
+    // This makes the update loop "wait" as you suggested.
+    if (!this.player?.body || !this.bullets?.children || !this.enemies?.children || !this.chests?.children || !this.flowField || this.isModalOpen) {
       return;
     }
 
@@ -1841,8 +1866,8 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private updateBullets(delta: number) {
     const allBullets = [
-      ...(this.bullets ? this.bullets.children.entries : []),
-      ...(this.enemyBullets ? this.enemyBullets.children.entries : [])
+      ...(this.bullets && this.bullets.children ? this.bullets.children.entries : []),
+      ...(this.enemyBullets && this.enemyBullets.children ? this.enemyBullets.children.entries : [])
     ];
 
     allBullets.forEach((bullet: any) => {

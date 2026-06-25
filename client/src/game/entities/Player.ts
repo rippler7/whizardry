@@ -148,9 +148,6 @@ export class Mage extends Hero {
     
     this.setupInput();
     this.createAnimations();
-
-    // Explicitly bind the update method to this instance
-    this.update = this.update.bind(this);
   }
   
   private setupInput(): void {
@@ -183,7 +180,7 @@ export class Mage extends Hero {
   }
   
   public update(): void {
-    if (this.isDead) return;
+    if (this.isDead || !this.body) return;
 
     this.handleMovement();
     this.handleShooting();
