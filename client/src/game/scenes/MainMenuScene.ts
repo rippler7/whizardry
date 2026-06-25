@@ -2,7 +2,6 @@ import * as Phaser from 'phaser';
 
 export class MainMenuScene extends Phaser.Scene {
   private startButton?: Phaser.GameObjects.Text;
-  private titleText?: Phaser.GameObjects.Text;
   private instructionsText?: Phaser.GameObjects.Text;
 
   constructor() {
@@ -17,20 +16,17 @@ export class MainMenuScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
     
-    // Add background color
-    this.cameras.main.setBackgroundColor('#1c1917');
+    // Add background
+    const bg = this.add.tileSprite(0, 0, width, height, 'cobbledsquare');
+    bg.setOrigin(0, 0);
     
-    // Title
-    this.titleText = this.add.text(width / 2, height / 4, 'DUNGEON QUEST', {
-      fontSize: '56px',
-      fill: '#fbbf24',
-      fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
-      stroke: '#78350f',
-      strokeThickness: 4
-    }).setOrigin(0.5);
+    // Logo
+    const logo = this.add.image(width / 2, height / 4, 'logo');
+    logo.setOrigin(0.5);
+    logo.setScale(0.8); // Adjust scale as needed
     
     // Subtitle
-    this.add.text(width / 2, height / 4 + 80, 'Educational RPG Adventure', {
+    this.add.text(width / 2, height / 4 + 100, 'Educational RPG Adventure', { // Adjusted position
       fontSize: '22px',
       fill: '#fde68a',
       fontFamily: '"Georgia", "Times New Roman", serif',
@@ -104,9 +100,9 @@ export class MainMenuScene extends Phaser.Scene {
     // Start background music
     this.playBackgroundMusic();
     
-    // Title animation
+    // Logo animation
     this.tweens.add({
-      targets: this.titleText,
+      targets: logo,
       scaleX: 1.1,
       scaleY: 1.1,
       duration: 2000,

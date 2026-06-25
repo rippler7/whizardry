@@ -175,7 +175,8 @@ class MainMenuScene extends Phaser.Scene {
     this.add.rectangle(width / 2, height / 2, width, height, 0x1c1917);
     
     // Logo
-    this.add.image(width / 2, height / 3, 'logo').setOrigin(0.5);
+    const bg = this.add.image(width / 2, height / 2, 'logo').setOrigin(0.5);
+    bg.setDisplaySize(width, height);
     
     // Audio Controls
     const audioY = 50;
