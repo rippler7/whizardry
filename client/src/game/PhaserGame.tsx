@@ -339,7 +339,7 @@ class MainMenuScene extends Phaser.Scene {
       const loadingText = this.add.text(width / 2, height / 2, 'Summoning scores...', { fontSize: '24px', fill: '#94a3b8', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'italic' }).setOrigin(0.5);
       lbContent.add(loadingText);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://jermsancog.com/dungeongame';
       fetch(`${apiUrl}/leaderboard.php`)
         .then(res => res.json())
         .then(data => {
@@ -472,7 +472,7 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
       
       const stats = data?.playerStats || data || {};
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://jermsancog.com/dungeongame';
       // Securely post the score to our new Leaderboard API
       fetch(`${apiUrl}/leaderboard.php`, {
         method: 'POST',
