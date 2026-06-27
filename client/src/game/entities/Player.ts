@@ -138,11 +138,12 @@ export class Mage extends Hero {
   private keys: any;
   private lastFired: number = 0;
   private fireRate: number = 250;
+  private lastDirection: string = 'down';
   
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player');
     
-    this.setScale(1.125);
+    this.setScale(1.6875); // 1.5x of original 1.125
     this.setSize(20, 24);
     this.setOffset(6, 24);
     
@@ -165,17 +166,17 @@ export class Mage extends Hero {
     const anims = this.scene.anims;
     
     if (!anims.exists('player_walk_down')) {
-      anims.create({ key: 'player_walk_down', frames: anims.generateFrameNumbers('player', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
-      anims.create({ key: 'player_walk_left', frames: anims.generateFrameNumbers('player', { start: 4, end: 7 }), frameRate: 8, repeat: -1 });
-      anims.create({ key: 'player_walk_right', frames: anims.generateFrameNumbers('player', { start: 8, end: 11 }), frameRate: 8, repeat: -1 });
-      anims.create({ key: 'player_walk_up', frames: anims.generateFrameNumbers('player', { start: 12, end: 15 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_down', frames: anims.generateFrameNumbers('player', { start: 0, end: 7 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_left', frames: anims.generateFrameNumbers('player', { start: 8, end: 15 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_right', frames: anims.generateFrameNumbers('player', { start: 16, end: 23 }), frameRate: 8, repeat: -1 });
+      anims.create({ key: 'player_walk_up', frames: anims.generateFrameNumbers('player', { start: 24, end: 31 }), frameRate: 8, repeat: -1 });
     }
     
     if (!anims.exists('player_idle_down')) {
       anims.create({ key: 'player_idle_down', frames: [{ key: 'player', frame: 0 }], frameRate: 1 });
-      anims.create({ key: 'player_idle_left', frames: [{ key: 'player', frame: 4 }], frameRate: 1 });
-      anims.create({ key: 'player_idle_right', frames: [{ key: 'player', frame: 8 }], frameRate: 1 });
-      anims.create({ key: 'player_idle_up', frames: [{ key: 'player', frame: 12 }], frameRate: 1 });
+      anims.create({ key: 'player_idle_left', frames: [{ key: 'player', frame: 8 }], frameRate: 1 });
+      anims.create({ key: 'player_idle_right', frames: [{ key: 'player', frame: 16 }], frameRate: 1 });
+      anims.create({ key: 'player_idle_up', frames: [{ key: 'player', frame: 24 }], frameRate: 1 });
     }
   }
   
@@ -188,43 +189,47 @@ export class Mage extends Hero {
   }
   
   protected handleMovement(): void {
-    const speed = GAME_CONFIG.PLAYER_SPEED;
-    let velocityX = 0;
-    let velocityY = 0;
-    let isMoving = false;
-    let direction = 'down';
-    
+    const speed = GAME_CONFIG.PLAYER_SPEED * 1.5;
+    const moveVector = new Phaser.Math.Vector2(0, 0);
+
+    // Determine velocity from input
     if (this.joystickVector.x !== 0 || this.joystickVector.y !== 0) {
-      velocityX = this.joystickVector.x * speed;
-      velocityY = this.joystickVector.y * speed;
-      isMoving = true;
-      direction = Math.abs(velocityX) > Math.abs(velocityY) ? (velocityX < 0 ? 'left' : 'right') : (velocityY < 0 ? 'up' : 'down');
-    } else if (this.keys.left.isDown || this.keys.A.isDown) {
-      velocityX = -speed;
-      direction = 'left';
-      isMoving = true;
-    } else if (this.keys.right.isDown || this.keys.D.isDown) {
-      velocityX = speed;
-      direction = 'right';
-      isMoving = true;
-    }
-    
-    if (this.keys.up.isDown || this.keys.W.isDown) {
-      velocityY = -speed;
-      direction = 'up';
-      isMoving = true;
-    } else if (this.keys.down.isDown || this.keys.S.isDown) {
-      velocityY = speed;
-      direction = 'down';
-      isMoving = true;
-    }
-    
-    this.setVelocity(velocityX, velocityY);
-    
-    if (isMoving) {
-      this.anims.play(`player_walk_${direction}`, true);
+      moveVector.x = this.joystickVector.x;
+      moveVector.y = this.joystickVector.y;
     } else {
-      this.anims.play(`player_idle_${direction}`, true);
+      if (this.keys.left.isDown || this.keys.A.isDown) {
+        moveVector.x = -1;
+      } else if (this.keys.right.isDown || this.keys.D.isDown) {
+        moveVector.x = 1;
+      }
+
+      if (this.keys.up.isDown || this.keys.W.isDown) {
+        moveVector.y = -1;
+      } else if (this.keys.down.isDown || this.keys.S.isDown) {
+        moveVector.y = 1;
+      }
+    }
+    
+    // Normalize the movement vector to prevent faster diagonal speed, then apply speed
+    moveVector.normalize();
+    this.setVelocity(moveVector.x * speed, moveVector.y * speed);
+    
+    // Determine animation based on velocity
+    if (moveVector.y < 0) {
+      this.anims.play('player_walk_up', true);
+      this.lastDirection = 'up';
+    } else if (moveVector.y > 0) {
+      this.anims.play('player_walk_down', true);
+      this.lastDirection = 'down';
+    } else if (moveVector.x < 0) {
+      this.anims.play('player_walk_left', true);
+      this.lastDirection = 'left';
+    } else if (moveVector.x > 0) {
+      this.anims.play('player_walk_right', true);
+      this.lastDirection = 'right';
+    } else {
+      // Not moving, stop the current animation and show the idle frame for the last direction
+      this.anims.play(`player_idle_${this.lastDirection}`, true);
     }
   }
   
@@ -248,14 +253,14 @@ export class Mage extends Hero {
     const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
     
     const isSpecial = this.hasFireball;
-    bullet.setScale(isSpecial ? 1.2 : 0.4);
+    bullet.setScale(isSpecial ? 1.8 : 0.6); // 1.5x of original 1.2 and 0.4
     bullet.setTint(isSpecial ? 0xf97316 : 0xfcd34d);
     bullet.setDepth(50);
     
     const deltaX = mouseX - this.x;
     const deltaY = mouseY - this.y;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const baseSpeed = isSpecial ? 0.375 : 0.75;
+    const baseSpeed = isSpecial ? 0.5625 : 1.125;
     
     if (distance > 0) {
       bullet.setData('speedX', (deltaX / distance) * baseSpeed);

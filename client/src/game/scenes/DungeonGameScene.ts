@@ -268,6 +268,13 @@ export class DungeonGameScene extends Phaser.Scene {
 
     const { width, height } = this.scale;
 
+    // Define the new, larger map dimensions
+    const mapWidth = width * 2;
+    const mapHeight = height * 2;
+
+    // Set the physics world bounds to our new larger size
+    this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
+
     // Instantiate EasyStar engines
     this.easystar = new easystarjs.js();
     this.easystarFlying = new easystarjs.js();
@@ -315,18 +322,18 @@ export class DungeonGameScene extends Phaser.Scene {
       // Draw a base layer for mixed terrain
       if (isMixedTerrain) {
         if (this.currentDungeon === 2 && this.textures.exists('ground_medium')) {
-          const bg = this.add.tileSprite(0, 0, width, height, 'ground_medium').setOrigin(0, 0).setDepth(-11);
+          const bg = this.add.tileSprite(0, 0, mapWidth, mapHeight, 'ground_medium').setOrigin(0, 0).setDepth(-11);
           applyTint(bg, getTileTint());
         } else if (this.currentDungeon === 4 && this.textures.exists('ground_hard')) {
-          const bg = this.add.tileSprite(0, 0, width, height, 'ground_hard').setOrigin(0, 0).setDepth(-11);
+          const bg = this.add.tileSprite(0, 0, mapWidth, mapHeight, 'ground_hard').setOrigin(0, 0).setDepth(-11);
           applyTint(bg, getTileTint(0xd8c8e8));
         }
       }
 
       // Cellular Automata to generate organically clumped textures
       const tileSize = isMixedTerrain ? 32 : 64; // Finer clumps for mixed terrain
-      const cols = Math.ceil(width / tileSize);
-      const rows = Math.ceil(height / tileSize);
+      const cols = Math.ceil(mapWidth / tileSize);
+      const rows = Math.ceil(mapHeight / tileSize);
       const grid: number[][] = [];
       const fillPercent = isMixedTerrain ? 0.42 : Phaser.Math.FloatBetween(0.25, 0.80); // Fixed 42% initial noise for ~30% final clumps
 
@@ -396,19 +403,19 @@ export class DungeonGameScene extends Phaser.Scene {
         }
       }
     } else if (this.textures.exists(groundTexture)) {
-      const ground = this.add.tileSprite(0, 0, width, height, groundTexture).setOrigin(0, 0).setDepth(-10);
+      const ground = this.add.tileSprite(0, 0, mapWidth, mapHeight, groundTexture).setOrigin(0, 0).setDepth(-10);
       applyTint(ground, getTileTint());
     } else {
       // Safe fallback if image is missing
       const fallbackColors: { [key: number]: number } = { 1: 0x292524, 2: 0x3d3730, 3: 0x44403c, 4: 0x3d334d, 5: 0x1c1917 };
       const color = fallbackColors[this.currentDungeon] || 0x292524;
-      this.add.rectangle(0, 0, width, height, getTileTint(color)).setOrigin(0, 0).setDepth(-10);
+      this.add.rectangle(0, 0, mapWidth, mapHeight, getTileTint(color)).setOrigin(0, 0).setDepth(-10);
     }
 
     this.generateDungeonQuestions();
 
     // Create player with animated spritesheet
-    this.player = new Player(this, 100, height / 2);
+    this.player = new Player(this, 100, mapHeight / 2);
     this.player.health = this.initialPlayerStats.health;
     this.player.maxHealth = this.initialPlayerStats.maxHealth;
     this.player.level = this.initialPlayerStats.level;
@@ -424,7 +431,7 @@ export class DungeonGameScene extends Phaser.Scene {
       this.player.joystickVector = new Phaser.Math.Vector2(0, 0);
     }
 
-    this.playerShadow = this.add.ellipse(100, this.player.y + 26, 28, 12, 0x000000, 0.4).setDepth(1);
+    this.playerShadow = this.add.ellipse(100, this.player.y + 39, 42, 18, 0x000000, 0.4).setDepth(1);
 
     // Setup player events
     this.events.on('playerHealthChanged', this.updateHealthBar, this);
@@ -527,6 +534,10 @@ export class DungeonGameScene extends Phaser.Scene {
     // Create UI
     this.createUI();
 
+    // Make the main camera follow the player
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+
     // Start background music
     this.sound.stopAll();
     if (this.currentDungeon === this.maxDungeons) {
@@ -580,18 +591,18 @@ export class DungeonGameScene extends Phaser.Scene {
 
       if (isClump) {
         // Reserve a larger area for the clump to ensure pathway is clear and prevent individual bushes from rejecting each other
-        const clumpPos = this.getValidSpawnPosition(110, 110, true);
+        const clumpPos = this.getValidSpawnPosition(165, 165, true);
         if (!clumpPos) continue;
 
         const clumpSize = Phaser.Math.Between(4, 10);
         for (let j = 0; j < clumpSize; j++) {
           // Compact offsets within the reserved area
-          const offsetX = Phaser.Math.FloatBetween(-35, 35);
-          const offsetY = Phaser.Math.FloatBetween(-35, 35);
+          const offsetX = Phaser.Math.FloatBetween(-52, 52);
+          const offsetY = Phaser.Math.FloatBetween(-52, 52);
           this.spawnDecoration(clumpPos.x + offsetX, clumpPos.y + offsetY, Phaser.Utils.Array.GetRandom(group), walls);
         }
       } else {
-        const basePos = this.getValidSpawnPosition(48, 48, true);
+        const basePos = this.getValidSpawnPosition(72, 72, true);
         if (basePos) {
           this.spawnDecoration(basePos.x, basePos.y, Phaser.Utils.Array.GetRandom(group), walls);
         }
@@ -611,7 +622,7 @@ export class DungeonGameScene extends Phaser.Scene {
 
       const key = nonCollidingKeys.length > 0 ? Phaser.Utils.Array.GetRandom(nonCollidingKeys) : Phaser.Utils.Array.GetRandom(group);
       
-      const pos = this.getValidSpawnPosition(32, 32, false, undefined, true); 
+      const pos = this.getValidSpawnPosition(48, 48, false, undefined, true); 
       if (pos) {
         const scaleOverride = Phaser.Math.FloatBetween(0.5, 1.1);
         this.spawnDecoration(pos.x, pos.y, key, walls, scaleOverride);
@@ -620,11 +631,11 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private spawnDecoration(x: number, y: number, textureKey: string, walls: Phaser.Physics.Arcade.StaticGroup, scaleOverride?: number) {
-    const scale = scaleOverride ?? (Phaser.Math.FloatBetween(0.8, 1.2) * 1.5); // Use random scale or override
+    const scale = scaleOverride ?? (Phaser.Math.FloatBetween(0.8, 1.2) * 2.25); // Use random scale or override (1.5x of original 1.5)
 
     // Check the actual image dimensions to prevent small visual decorations from acting as obstacles
     const frame = this.textures.get(textureKey).get();
-    const isSmallImage = frame && (frame.width < 40 || frame.height < 40);
+    const isSmallImage = frame && (frame.width < 60 || frame.height < 60); // 1.5x of original 40
 
     let ignoreCollision = false;
     if (textureKey.startsWith('Bush')) {
@@ -674,8 +685,9 @@ export class DungeonGameScene extends Phaser.Scene {
     const grid: number[][] = [];
     const flyingGrid: number[][] = [];
     const cellSize = 32;
-    const cols = Math.ceil(this.scale.width / cellSize);
-    const rows = Math.ceil(this.scale.height / cellSize);
+    const worldBounds = this.physics.world.bounds;
+    const cols = Math.ceil(worldBounds.width / cellSize);
+    const rows = Math.ceil(worldBounds.height / cellSize);
 
     const walls = this.registry.get('walls').getChildren();
     const chests = this.chests.getChildren();
@@ -733,10 +745,10 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createDungeonLayout() {
-    const { width, height } = this.scale;
+    const { width, height } = this.physics.world.bounds;
 
     // Create walls around the dungeon with physics bodies
-    const wallThickness = 32;
+    const wallThickness = 48; // 1.5x of original 32
 
     // Create walls group for collision
     const walls = this.physics.add.staticGroup();
@@ -744,7 +756,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // Helper to safely create wall tiles or fallback rectangles in segments for organic look
     const createWallSegments = (startX: number, startY: number, w: number, h: number) => {
       const segments: Phaser.GameObjects.GameObject[] = [];
-      const segmentSize = 32;
+      const segmentSize = 48; // 1.5x of original 32
       
       for (let x = startX; x < startX + w; x += segmentSize) {
         for (let y = startY; y < startY + h; y += segmentSize) {
@@ -757,7 +769,10 @@ export class DungeonGameScene extends Phaser.Scene {
           const tex = this.getWallTextureKey();
           let segment;
           if (this.textures.exists(tex)) {
-            segment = this.add.tileSprite(x + offsetX, y + offsetY, currentW, currentH, tex).setOrigin(0, 0).setDepth(0);
+            segment = this.add.tileSprite(x + offsetX, y + offsetY, currentW, currentH, tex)
+              .setOrigin(0, 0)
+              .setDepth(0)
+              .setTileScale(1.5, 1.5);
           } else {
             segment = this.add.rectangle(x + offsetX, y + offsetY, currentW, currentH, 0x555555).setOrigin(0, 0).setDepth(0);
           }
@@ -777,8 +792,8 @@ export class DungeonGameScene extends Phaser.Scene {
     walls.addMultiple(createWallSegments(0, 0, wallThickness, height));
 
     // Right wall (with gap for door)
-    walls.addMultiple(createWallSegments(width - wallThickness, 0, wallThickness, height / 2 - 48));
-    walls.addMultiple(createWallSegments(width - wallThickness, height / 2 + 48, wallThickness, height / 2 - 48));
+    walls.addMultiple(createWallSegments(width - wallThickness, 0, wallThickness, (height / 2) - 54));
+    walls.addMultiple(createWallSegments(width - wallThickness, (height / 2) + 54, wallThickness, (height / 2) - 54));
 
     // Ensure all static bodies are perfectly aligned with their new 0,0 origins
     walls.getChildren().forEach(wall => {
@@ -805,7 +820,7 @@ export class DungeonGameScene extends Phaser.Scene {
       numObstacles = Phaser.Math.Between(60, 80); // Spawn significantly more obstacles on the boss level
     }
     
-    const blockSize = 64; // 2x scale (enlarged from 32px to 64px base size)
+    const blockSize = 96; // 1.5x scale (enlarged from 64px base size)
 
     // Define Tetris-like shapes using grid coordinates (each block is 64x64)
     const shapes = [
@@ -857,6 +872,7 @@ export class DungeonGameScene extends Phaser.Scene {
           const tex = this.getWallTextureKey();
           if (this.textures.exists(tex)) {
             obstacle = this.add.tileSprite(blockX, blockY, blockSize, blockSize, tex);
+            obstacle.setTileScale(1.5, 1.5);
           } else {
             obstacle = this.add.rectangle(blockX, blockY, blockSize, blockSize, 0x666666);
           }
@@ -870,7 +886,7 @@ export class DungeonGameScene extends Phaser.Scene {
             
             if (!hasBlockAbove) {
               // Top-most block: shrink hitbox slightly so player can walk behind it
-              const depthOffset = 8; // Subtle reduction
+              const depthOffset = 24; // Allow player to walk behind the top quarter of the block
               staticBody.setSize(blockSize, blockSize - depthOffset);
               staticBody.setOffset(0, depthOffset);
             } else {
@@ -902,12 +918,13 @@ export class DungeonGameScene extends Phaser.Scene {
     const requiredGap = this.currentDungeon === this.maxDungeons ? 100 : playerHeight;
     
     // Give player some breathing room so they aren't trapped on spawn
-    Phaser.Geom.Rectangle.Inflate(playerBounds, 64, 64);
+    Phaser.Geom.Rectangle.Inflate(playerBounds, 96, 96);
     
     const padding = isObstacle ? requiredGap * 2 : 16;
     const checkRect = new Phaser.Geom.Rectangle(0, 0, w + padding, h + padding);
     const doorBounds = this.door ? this.door.getBounds() : new Phaser.Geom.Rectangle(0, 0, 0, 0);
-    const bossBounds = new Phaser.Geom.Rectangle(this.scale.width / 2 - 80, this.scale.height / 2 - 80, 160, 160);
+    const worldBounds = this.physics.world.bounds;
+    const bossBounds = new Phaser.Geom.Rectangle(worldBounds.width / 2 - 120, worldBounds.height / 2 - 120, 240, 240);
 
     // OPTIMIZATION: Cache the obstacle bounds before the loop so we don't recalculate 
     // them thousands of times per placement attempt!
@@ -919,9 +936,9 @@ export class DungeonGameScene extends Phaser.Scene {
     while (!valid && attempts < maxAttempts) {
         attempts++;
         const minX = bounds ? bounds.minX : 100;
-        const maxX = bounds ? bounds.maxX : this.scale.width - 100;
+        const maxX = bounds ? bounds.maxX : worldBounds.width - 100;
         const minY = bounds ? bounds.minY : 100;
-        const maxY = bounds ? bounds.maxY : this.scale.height - 100;
+        const maxY = bounds ? bounds.maxY : worldBounds.height - 100;
         
         x = Phaser.Math.Between(minX, maxX);
         y = Phaser.Math.Between(minY, maxY);
@@ -934,7 +951,7 @@ export class DungeonGameScene extends Phaser.Scene {
             continue;
         }
         // Ensure non-obstacle entities (enemies/chests) don't spawn too close to the player
-        if (!isObstacle && !allowNearPlayer && Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 350) {
+        if (!isObstacle && !allowNearPlayer && Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 525) {
             valid = false;
             continue;
         }
@@ -962,11 +979,12 @@ export class DungeonGameScene extends Phaser.Scene {
     const walls = this.registry.get('walls').getChildren();
     const chests = this.chests.getChildren();
     const obstacleBounds = [...walls, ...chests].map(obs => (obs as any).getBounds());
+    const worldBounds = this.physics.world.bounds;
     const doorBounds = this.door ? this.door.getBounds() : new Phaser.Geom.Rectangle(0, 0, 0, 0);
 
     let radius = 0;
     const step = 16;
-    const maxRadius = 300;
+    const maxRadius = 450;
 
     while (radius <= maxRadius) {
       const points = radius === 0 ? 1 : Math.max(8, Math.floor((Math.PI * 2 * radius) / step));
@@ -975,7 +993,7 @@ export class DungeonGameScene extends Phaser.Scene {
         const testX = startX + Math.cos(currentAngle) * radius;
         const testY = startY + Math.sin(currentAngle) * radius;
 
-        if (testX < width || testX > this.scale.width - width || testY < height || testY > this.scale.height - height) {
+        if (testX < width || testX > worldBounds.width - width || testY < height || testY > worldBounds.height - height) {
           continue;
         }
 
@@ -1011,7 +1029,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // Start the crystal slightly higher in the air with a random rotation angle
     const crystal = this.physics.add.sprite(dropPos.x, dropPos.y - 40, type);
     crystal.anims.play(`spin-${type}`);
-    crystal.setScale(0.8);
+    crystal.setScale(1.2); // 1.5x of original 0.8
     crystal.setDepth(dropPos.y + 12); // Approximate bottom of the crystal
     crystal.setAngle(Phaser.Math.Between(-60, 60));
     
@@ -1074,7 +1092,7 @@ export class DungeonGameScene extends Phaser.Scene {
       const { x, y } = pos;
       
       let hp = 50 + this.currentDungeon * 10;
-      let baseSpeed = (25 + this.currentDungeon * 5) * 1.75;
+      let baseSpeed = (25 + this.currentDungeon * 5) * 2.625; // 1.75 * 1.5
       
       let enemy: Enemy;
       if (enemyType === 'zombie') {
@@ -1121,15 +1139,15 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createQuestionChests() {
-    const { width, height } = this.scale;
+    const { width, height } = this.physics.world.bounds;
     const chestTypes = ['chestBlue', 'chestGreen', 'chestRed', 'chestYellow'];
     
     // Define 4 quadrants to keep chests relatively equidistant from each other
     const quadrants = [
-      { minX: 100, maxX: width / 2 - 50, minY: 100, maxY: height / 2 - 50 },
-      { minX: width / 2 + 50, maxX: width - 100, minY: 100, maxY: height / 2 - 50 },
-      { minX: 100, maxX: width / 2 - 50, minY: height / 2 + 50, maxY: height - 100 },
-      { minX: width / 2 + 50, maxX: width - 100, minY: height / 2 + 50, maxY: height - 100 }
+      { minX: 100, maxX: (width / 2) - 50, minY: 100, maxY: (height / 2) - 50 },
+      { minX: (width / 2) + 50, maxX: width - 100, minY: 100, maxY: (height / 2) - 50 },
+      { minX: 100, maxX: (width / 2) - 50, minY: (height / 2) + 50, maxY: height - 100 },
+      { minX: (width / 2) + 50, maxX: width - 100, minY: (height / 2) + 50, maxY: height - 100 }
     ];
 
     chestTypes.forEach((type, index) => {
@@ -1141,7 +1159,7 @@ export class DungeonGameScene extends Phaser.Scene {
       const y = pos ? pos.y : quadrants[index].minY + 50;
 
       const chest = this.physics.add.sprite(x, y, type, 0);
-      chest.setScale(1.0); // Normal scale since chests are properly sized now
+      chest.setScale(1.5); // 1.5x of original 1.0
       
       // Chests are 32x64. Make the hitbox 32x32 at the base so player can walk behind them
       const chestBody = chest.body as Phaser.Physics.Arcade.Body;
@@ -1198,8 +1216,9 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createExitDoor() {
-    this.door = this.physics.add.sprite(this.scale.width - 50, this.scale.height / 2, 'gate', 7);
-    this.door.setScale(0.75); // Half of 1.5
+    const worldBounds = this.physics.world.bounds;
+    this.door = this.physics.add.sprite(worldBounds.width - 50, worldBounds.height / 2, 'gate', 7);
+    this.door.setScale(1.125); // 1.5x of original 0.75
     this.door.setDepth(this.door.y + (this.door.displayHeight / 2));
     
     // Create gate animations using original specifications
@@ -1225,11 +1244,12 @@ export class DungeonGameScene extends Phaser.Scene {
   private createBoss() {
     if (this.currentDungeon === this.maxDungeons) {
       const bossHp = 15 * (50 + this.currentDungeon * 10);
-      const baseSpeed = (55 + this.currentDungeon * 5) * 1.4; // Reduced to 80% of 1.75
-      this.boss = new Boss(this, this.scale.width / 2, this.scale.height / 2, this.player, bossHp, baseSpeed);
+      const baseSpeed = (55 + this.currentDungeon * 5) * 2.1; // 1.4 * 1.5
+      const worldBounds = this.physics.world.bounds;
+      this.boss = new Boss(this, worldBounds.width / 2, worldBounds.height / 2, this.player, bossHp, baseSpeed);
       this.boss.setWallsGroup(this.registry.get('walls') as Phaser.Physics.Arcade.StaticGroup);
       this.boss.setChestsGroup(this.chests);
-      this.boss.setScale(1.5); // Proper scale for boss
+      this.boss.setScale(2.25); // 1.5x of original 1.5
       this.boss.setTint(0xf59e0b); // Golden amber tint when invulnerable instead of pure green
     }
   }
@@ -1451,17 +1471,19 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private createUI() {
+    const UI_DEPTH = 10000;
+
     // Determine background color based on difficulty for the stats panel
     this.statsBgColor = 0x1c1917; // stone-900
     if (this.gameDifficulty === 'medium') this.statsBgColor = 0x292524; // stone-800
     else if (this.gameDifficulty === 'hard') this.statsBgColor = 0x44403c; // stone-700
 
     // Dynamic expanding background
-    this.statsBg = this.add.graphics().setScrollFactor(0).setDepth(1000);
+    this.statsBg = this.add.graphics().setScrollFactor(0).setDepth(UI_DEPTH);
     this.drawStatsBg();
 
     // Health bar
-    this.healthBar = this.add.graphics().setScrollFactor(0).setDepth(1001);
+    this.healthBar = this.add.graphics().setScrollFactor(0).setDepth(UI_DEPTH + 1);
     this.updateHealthBar();
 
     // Score and progress
@@ -1469,13 +1491,13 @@ export class DungeonGameScene extends Phaser.Scene {
       fontSize: '27px',
       fill: '#fde68a',
       fontFamily: '"Georgia", "Times New Roman", serif'
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1);
 
     // Arrow Indicator
     this.statsArrow = this.add.text(435, 44, '►', {
       fontSize: '36px',
       fill: '#fbbf24'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1).setInteractive({ useHandCursor: true });
 
     this.statsArrow.on('pointerover', () => this.statsArrow.setTint(0xffffff));
     this.statsArrow.on('pointerout', () => this.statsArrow.clearTint());
@@ -1525,13 +1547,13 @@ export class DungeonGameScene extends Phaser.Scene {
       fontSize: '24px',
       fill: '#fbbf24',
       fontFamily: '"Georgia", "Times New Roman", serif'
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001).setAlpha(0).setVisible(false);
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1).setAlpha(0).setVisible(false);
 
     this.dungeonText = this.add.text(680, 44, `Dungeon: ${this.currentDungeon}/${this.maxDungeons}`, {
       fontSize: '24px',
       fill: '#fcd34d',
       fontFamily: '"Georgia", "Times New Roman", serif'
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001).setAlpha(0).setVisible(false);
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1).setAlpha(0).setVisible(false);
 
     if (this.currentDungeon === this.maxDungeons) {
       this.add.text(this.scale.width / 2, 115, 'Boss is invulnerable until all questions answered!', {
@@ -1542,7 +1564,7 @@ export class DungeonGameScene extends Phaser.Scene {
         strokeThickness: 2,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         padding: { x: 8, y: 4 }
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1);
     }
 
     // Exit to Menu Button (Top Right)
@@ -1555,7 +1577,7 @@ export class DungeonGameScene extends Phaser.Scene {
       .setStrokeStyle(3, 0xd4af37) // Gold border for RPG theme
       .setInteractive({ useHandCursor: true })
       .setScrollFactor(0)
-      .setDepth(1000)
+      .setDepth(UI_DEPTH)
       .setRounded(12);
 
     const exitBtnText = this.add.text(exitBtnX, exitBtnY, 'Exit to Menu', {
@@ -1563,7 +1585,7 @@ export class DungeonGameScene extends Phaser.Scene {
       fill: '#f4d03f', // Gold-ish text
       fontFamily: '"Georgia", "Times New Roman", serif',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1);
 
     exitBtnBg.on('pointerover', () => {
       exitBtnBg.setFillStyle(0x6b3619); // Brighter wood color on hover
@@ -1594,7 +1616,7 @@ export class DungeonGameScene extends Phaser.Scene {
     let helpModal: Phaser.GameObjects.Container;
 
     // --- Help Button ---
-    const helpBtn = this.add.container(helpX, audioY).setScrollFactor(0).setDepth(1001);
+    const helpBtn = this.add.container(helpX, audioY).setScrollFactor(0).setDepth(UI_DEPTH + 1);
     const helpBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
     const helpIcon = this.add.text(0, 0, '?', { fontSize: '36px', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', fill: '#fde68a' }).setOrigin(0.5);
     helpBtn.add([helpBg, helpIcon]);
@@ -1611,7 +1633,7 @@ export class DungeonGameScene extends Phaser.Scene {
     });
 
     // --- Fullscreen Button ---
-    const fsBtn = this.add.container(fsX, audioY).setScrollFactor(0).setDepth(1001);
+    const fsBtn = this.add.container(fsX, audioY).setScrollFactor(0).setDepth(UI_DEPTH + 1);
     const fsBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
     const fsIcon = this.add.text(0, 0, this.scale.isFullscreen ? '⤡' : '⤢', { fontSize: '36px', fontFamily: 'Arial' }).setOrigin(0.5);
     fsBtn.add([fsBg, fsIcon]);
@@ -1638,7 +1660,7 @@ export class DungeonGameScene extends Phaser.Scene {
     });
 
     // --- Mute Button Container ---
-    const muteBtn = this.add.container(iconX, audioY).setScrollFactor(0).setDepth(1001);
+    const muteBtn = this.add.container(iconX, audioY).setScrollFactor(0).setDepth(UI_DEPTH + 1);
     const muteBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
     const muteIcon = this.add.text(0, 0, this.sound.mute || this.sound.volume === 0 ? '🔇' : '🔊', { fontSize: '30px' }).setOrigin(0.5);
     muteBtn.add([muteBg, muteIcon]);
@@ -1649,10 +1671,10 @@ export class DungeonGameScene extends Phaser.Scene {
     muteBtn.on('pointerout', () => muteBg.setFillStyle(0x4a2511));
 
     // --- Volume Slider ---
-    const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 45, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(1001);
-    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 9, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setScrollFactor(0).setDepth(1001).setRounded(4);
-    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 9, 0xd4af37).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1002).setRounded(4);
-    const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 15, 0xffffff).setInteractive({ draggable: true, useHandCursor: true }).setScrollFactor(0).setDepth(1003);
+    const trackHitArea = this.add.rectangle(sliderX, audioY, sliderWidth, 45, 0x000000, 0).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(UI_DEPTH + 1);
+    const track = this.add.rectangle(sliderX, audioY, sliderWidth, 9, 0x444444).setOrigin(0, 0.5).setStrokeStyle(1, 0x888888).setScrollFactor(0).setDepth(UI_DEPTH + 1).setRounded(4);
+    const fill = this.add.rectangle(sliderX, audioY, this.sound.volume * sliderWidth, 9, 0xd4af37).setOrigin(0, 0.5).setScrollFactor(0).setDepth(UI_DEPTH + 2).setRounded(4);
+    const handle = this.add.circle(sliderX + this.sound.volume * sliderWidth, audioY, 15, 0xffffff).setInteractive({ draggable: true, useHandCursor: true }).setScrollFactor(0).setDepth(UI_DEPTH + 3);
 
     const syncAudioUI = () => {
       fill.width = this.sound.volume * sliderWidth;
@@ -1697,7 +1719,7 @@ export class DungeonGameScene extends Phaser.Scene {
     handle.on('drag', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
 
     // --- Help Modal ---
-    helpModal = this.add.container(0, 0).setScrollFactor(0).setDepth(3000).setVisible(false);
+    helpModal = this.add.container(0, 0).setScrollFactor(0).setDepth(UI_DEPTH + 3000).setVisible(false);
     
     const overlay = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.8)
       .setInteractive(); // Blocks underlying clicks
@@ -1826,7 +1848,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     if (this.playerShadow && !this.player.isDead) {
-      this.playerShadow.setPosition(this.player.x, this.player.y + 26);
+      this.playerShadow.setPosition(this.player.x, this.player.y + 39);
     }
 
     // Group and perfectly center all active effect countdowns
@@ -1850,7 +1872,7 @@ export class DungeonGameScene extends Phaser.Scene {
         let currentX = this.player.x - (totalWidth / 2);
         this.activeEffects.forEach(effect => {
           const w = effect.textObj.width;
-          effect.textObj.setPosition(currentX + (w / 2), this.player.y - 45);
+          effect.textObj.setPosition(currentX + (w / 2), this.player.y - 45).setDepth(this.player.depth + 1);
           currentX += w + spacing;
         });
       }
@@ -1984,7 +2006,7 @@ export class DungeonGameScene extends Phaser.Scene {
     if (chest.getData('nextInteractionTime') && this.time.now < chest.getData('nextInteractionTime')) return;
     
     const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, chest.x, chest.y);
-    if (distance > 100) { // Increased from 80 to 100 to make clicking more forgiving
+    if (distance > 110) {
       this.showMessage('You are too far away to open this chest!');
       return;
     }
@@ -2095,7 +2117,7 @@ export class DungeonGameScene extends Phaser.Scene {
         fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif',
         fontStyle: 'bold'
       }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(13001);
 
     this.time.delayedCall(2500, () => {
       if (!this.sys || !this.sys.isActive() || !modalBg.active) return;
@@ -2130,7 +2152,7 @@ export class DungeonGameScene extends Phaser.Scene {
       420,
       0x1c1917,
       0.95
-    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(3000).setRounded(16);
+    ).setStrokeStyle(2, 0xb45309).setScrollFactor(0).setDepth(15000).setRounded(16);
 
     const title = this.add.text(
       this.scale.width / 2,
@@ -2142,7 +2164,7 @@ export class DungeonGameScene extends Phaser.Scene {
         align: 'center',
         fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif'
       }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(15001);
 
     const questionText = this.add.text(
       this.scale.width / 2,
@@ -2155,7 +2177,7 @@ export class DungeonGameScene extends Phaser.Scene {
         fontFamily: '"Georgia", "Times New Roman", serif',
         wordWrap: { width: Math.min(560, this.scale.width * 0.8) }
       }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(15001);
 
     const closeHint = this.add.text(
       this.scale.width / 2,
@@ -2170,7 +2192,7 @@ export class DungeonGameScene extends Phaser.Scene {
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         padding: { x: 8, y: 4 }
       }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(3001);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(15001);
 
     const modalElements: Phaser.GameObjects.GameObject[] = [modalBg, title, questionText, closeHint];
 
@@ -2188,7 +2210,7 @@ export class DungeonGameScene extends Phaser.Scene {
           wordWrap: { width: 380, useAdvancedWrap: true },
           align: 'center'
         }
-      ).setOrigin(0.5).setScrollFactor(0).setDepth(3002);
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(15002);
 
       const textHeight = btnText.getBounds().height;
       const bgHeight = textHeight + 20;
@@ -2197,7 +2219,7 @@ export class DungeonGameScene extends Phaser.Scene {
         this.scale.width / 2,
         currentY,
         400, bgHeight, 0x78350f
-      ).setOrigin(0.5).setScrollFactor(0).setDepth(3001).setInteractive({ useHandCursor: true }).setRounded(8);
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(15001).setInteractive({ useHandCursor: true }).setRounded(8);
 
       btnBg.on('pointerover', () => { btnBg.setFillStyle(0x92400e); btnText.setFill('#fbbf24'); });
       btnBg.on('pointerout', () => { btnBg.setFillStyle(0x78350f); btnText.setFill('#fef3c7'); });
@@ -2333,7 +2355,7 @@ export class DungeonGameScene extends Phaser.Scene {
     // Only push player back if the physical enemy collision box exists
     if (enemy) {
       const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
-      player.setVelocity(Math.cos(angle) * 100, Math.sin(angle) * 100); // Reduced pushback
+      player.setVelocity(Math.cos(angle) * 150, Math.sin(angle) * 150); // Reduced pushback
     }
     
     if (wasKilled) {
@@ -2407,7 +2429,7 @@ export class DungeonGameScene extends Phaser.Scene {
       fontFamily: '"Georgia", "Times New Roman", serif',
       align: 'center',
       wordWrap: { width: Math.min(560, this.scale.width * 0.8) }
-    }).setOrigin(0.5).setDepth(2001).setScrollFactor(0);
+    }).setOrigin(0.5).setDepth(12001).setScrollFactor(0);
     
     const bg = this.add.rectangle(
       this.scale.width / 2, 
@@ -2416,7 +2438,7 @@ export class DungeonGameScene extends Phaser.Scene {
       messageText.height + 30, 
       0x1c1917,
       0.95
-    ).setStrokeStyle(2, 0xb45309).setRounded(12).setDepth(2000).setScrollFactor(0);
+    ).setStrokeStyle(2, 0xb45309).setRounded(12).setDepth(12000).setScrollFactor(0);
     
     this.time.delayedCall(2000, () => {
       bg.destroy();
@@ -2483,7 +2505,7 @@ export class DungeonGameScene extends Phaser.Scene {
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3
-    }).setOrigin(0.5).setDepth(2000);
+    }).setOrigin(0.5).setDepth(10010);
     
     this.tweens.add({
       targets: levelText,
@@ -2504,7 +2526,7 @@ export class DungeonGameScene extends Phaser.Scene {
     } else {
       const textObj = this.add.text(0, 0, '', {
         fontSize: '24px', fill: color, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-      }).setOrigin(0.5).setDepth(100);
+      }).setOrigin(0.5).setDepth(9000);
       this.activeEffects.push({ type, endTime, textObj, color });
     }
   }

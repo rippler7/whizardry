@@ -13,12 +13,12 @@ export interface EnemyConfig {
 }
 
 export const ENEMY_CONFIGS: Record<string, EnemyConfig> = {
-  skeleton: { type: 'skeleton', health: 50, speed: 40, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
-  zombie: { type: 'zombie', health: 150, speed: 40, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 10, scoreReward: 50 },
-  zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 40, detectionRange: 200, experienceReward: 15, scoreReward: 75 },
-  bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 150, detectionRange: 250, experienceReward: 10, scoreReward: 50 },
-  spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 150, detectionRange: 350, experienceReward: 10, scoreReward: 50 },
-  boss: { type: 'boss', health: 10500, speed: 40, damage: 30, attackRange: 80, detectionRange: 300, experienceReward: 100, scoreReward: 500 }
+  skeleton: { type: 'skeleton', health: 50, speed: 40, damage: 20, attackRange: 60, detectionRange: 300, experienceReward: 10, scoreReward: 50 },
+  zombie: { type: 'zombie', health: 150, speed: 40, damage: 20, attackRange: 60, detectionRange: 300, experienceReward: 10, scoreReward: 50 },
+  zombie2: { type: 'zombie2', health: 100, speed: 60, damage: 20, attackRange: 60, detectionRange: 300, experienceReward: 15, scoreReward: 75 },
+  bat: { type: 'bat', health: 50, speed: 60, damage: 15, attackRange: 225, detectionRange: 375, experienceReward: 10, scoreReward: 50 },
+  spider: { type: 'spider', health: 50, speed: 50, damage: 15, attackRange: 225, detectionRange: 525, experienceReward: 10, scoreReward: 50 },
+  boss: { type: 'boss', health: 10500, speed: 40, damage: 30, attackRange: 120, detectionRange: 450, experienceReward: 100, scoreReward: 500 }
 };
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -275,8 +275,9 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     const easystar = isFlying ? scene.easystarFlying : scene.easystar;
     if (!easystar) return;
 
-    const cols = Math.ceil(this.scene.scale.width / 32);
-    const rows = Math.ceil(this.scene.scale.height / 32);
+    const worldBounds = this.scene.physics.world.bounds;
+    const cols = Math.ceil(worldBounds.width / 32);
+    const rows = Math.ceil(worldBounds.height / 32);
 
     const startX = Phaser.Math.Clamp(Math.floor(this.x / 32), 0, cols - 1);
     const startY = Phaser.Math.Clamp(Math.floor(this.y / 32), 0, rows - 1);
@@ -470,9 +471,10 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     );
     
     // Check world bounds
-    if (bounds.x < 0 || bounds.y < 0 || 
-        bounds.x + bounds.width > this.scene.scale.width ||
-        bounds.y + bounds.height > this.scene.scale.height) {
+    const worldBounds = this.scene.physics.world.bounds;
+    if (bounds.x < worldBounds.x || bounds.y < worldBounds.y ||
+        bounds.right > worldBounds.right ||
+        bounds.bottom > worldBounds.bottom) {
       return true;
     }
     
@@ -521,7 +523,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
   
   protected setNewPatrolTarget(): void {
-    const range = 150;
+    const range = 225;
     this.patrolTarget = {
       x: this.x + Phaser.Math.Between(-range, range),
       y: this.y + Phaser.Math.Between(-range, range)
@@ -612,9 +614,10 @@ export class Skeleton extends Enemy {
 
   constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'skeleton', 'skeleton', player, hp, speed);
+    this.setScale(1.5);
     this.setSize(32, 48);
     this.setOffset(16, 16);
-    this.createShadow(40, 16, 30);
+    this.createShadow(60, 24, 45); // 1.5x of original 40, 16, 30
   }
   
   protected createAnimations(): void {
@@ -740,9 +743,10 @@ export class Skeleton extends Enemy {
 export class Zombie extends Enemy {
   constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'zombie', 'zombie', player, hp, speed);
+    this.setScale(1.5);
     this.setSize(24, 24);
     this.setOffset(4, 8);
-    this.createShadow(24, 10, 16);
+    this.createShadow(36, 15, 24); // 1.5x of original 24, 10, 16
   }
   
   protected createAnimations(): void {
@@ -810,9 +814,10 @@ export class Zombie extends Enemy {
 export class Zombie2 extends Enemy {
   constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'zombie', 'zombie2', player, hp, speed);
+    this.setScale(1.5);
     this.setSize(24, 24);
     this.setOffset(4, 8);
-    this.createShadow(24, 10, 16);
+    this.createShadow(36, 15, 24); // 1.5x of original 24, 10, 16
   }
   
   protected createAnimations(): void {
@@ -857,10 +862,11 @@ export class Zombie2 extends Enemy {
 export class Bat extends Enemy {
   constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'bat', 'bat', player, hp, speed);
+    this.setScale(1.5);
     this.setSize(48, 48);
     this.setOffset(8, 8);
     this.attackRate = 2000; // Slower attack rate for ranged enemy
-    this.createShadow(30, 12, 30);
+    this.createShadow(45, 18, 45); // 1.5x of original 30, 12, 30
   }
   
   protected createAnimations(): void {
@@ -916,7 +922,7 @@ export class Bat extends Enemy {
     const currentScene = this.scene;
     
     const bullet = currentScene.physics.add.sprite(this.x, this.y, 'bullet');
-    bullet.setScale(0.4);
+    bullet.setScale(0.6); // 1.5x of original 0.4
     bullet.setTint(0x39ff14); // Slime green
     bullet.setAlpha(0.9);
     bullet.setDepth(50);
@@ -926,7 +932,7 @@ export class Bat extends Enemy {
     
     // Sticky fluid particle trail
     const emitter = currentScene.add.particles(0, 0, 'bullet', {
-      scale: { start: 0.35, end: 0 },
+      scale: { start: 0.525, end: 0 }, // 1.5x of original 0.35
       alpha: { start: 0.9, end: 0 },
       tint: 0x39ff14, // Slime green
       speed: { min: -15, max: 15 },
@@ -960,7 +966,7 @@ export class Bat extends Enemy {
     const dx = this.player.x - this.x;
     const dy = this.player.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const baseSpeed = 0.25;
+    const baseSpeed = 0.375;
     
     if (distance > 0) {
       bullet.setData('speedX', (dx / distance) * baseSpeed);
@@ -996,12 +1002,12 @@ export class Spider extends Enemy {
     this.isSmall = isSmall;
 
     if (this.isSmall) {
-      this.setScale(0.75);
-      this.createShadow(30, 12, 21);
+      this.setScale(1.125); // 1.5x of original 0.75
+      this.createShadow(45, 18, 31.5); // 1.5x of original 30, 12, 21
       this.config.attackRange = this.config.attackRange * 0.5;
     } else {
-      this.setScale(1.0);
-      this.createShadow(40, 16, 28);
+      this.setScale(1.5); // 1.5x of original 1.0
+      this.createShadow(60, 24, 42); // 1.5x of original 40, 16, 28
     }
   }
   
@@ -1033,7 +1039,7 @@ export class Spider extends Enemy {
   }
 
   protected setNewPatrolTarget(): void {
-    const range = this.isSmall ? 75 : 150;
+    const range = this.isSmall ? 112 : 225;
     this.patrolTarget = {
       x: this.x + Phaser.Math.Between(-range, range),
       y: this.y + Phaser.Math.Between(-range, range)
@@ -1114,7 +1120,7 @@ export class Spider extends Enemy {
   protected performAttack(): void {
     this.anims.play('attackSpider', true);
     
-    const baseSpeed = 0.25;
+    const baseSpeed = 0.375;
     const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
     const spreadAngles = this.isSmall ? [baseAngle] : [baseAngle - 0.25, baseAngle, baseAngle + 0.25]; // Shoot 1 if small, 3 if big
     
@@ -1122,7 +1128,7 @@ export class Spider extends Enemy {
     
     spreadAngles.forEach(angle => {
       const bullet = currentScene.physics.add.sprite(this.x, this.y, 'bullet');
-      bullet.setScale(this.isSmall ? 0.15 : 0.2); // 75% of original 0.2
+      bullet.setScale(this.isSmall ? 0.225 : 0.3); // 1.5x of original 0.15 and 0.2
       bullet.setTintFill(0xffffff); // Pure white web projectile
       bullet.setAlpha(0.9); // 90% opacity
       bullet.setDepth(50);
@@ -1131,7 +1137,7 @@ export class Spider extends Enemy {
       
       // Sticky fluid particle trail
       const emitter = currentScene.add.particles(0, 0, 'bullet', {
-        scale: { start: this.isSmall ? 0.13125 : 0.175, end: 0 }, // Scaled down to match the new bullet size
+        scale: { start: this.isSmall ? 0.196875 : 0.2625, end: 0 }, // 1.5x of original
         alpha: { start: 0.9, end: 0 },
         tint: 0xffffff,
         tintFill: true,
@@ -1183,7 +1189,7 @@ export class Spider extends Enemy {
     this.moveTowardsTarget(targetX, targetY, this.config.speed * 4 * speedMult);
 
     const originalOrigin = this.displayOriginY;
-    const jumpHeight = 15;
+    const jumpHeight = 22.5; // 1.5x of original 15
 
     this.scene.tweens.add({
       targets: this,
@@ -1319,10 +1325,11 @@ export class Boss extends Enemy {
   
   constructor(scene: Phaser.Scene, x: number, y: number, player: Hero, hp: number, speed: number) {
     super(scene, x, y, 'Boss', 'boss', player, hp, speed);
+    this.setScale(1.5);
     this.setSize(40, 56);
     this.setOffset(12, 8);
     this.attackRate = 1500;
-    this.createShadow(60, 24, 44);
+    this.createShadow(90, 36, 66); // 1.5x of original 60, 24, 44
     this.setPushable(false);
     
     // Calculate phase change thresholds
@@ -1412,13 +1419,13 @@ export class Boss extends Enemy {
       } else {
         const distToChest = Phaser.Math.Distance.Between(this.x, this.y, this.targetChest.x, this.targetChest.y);
         
-        if (this.state === 'chase' && distToChest > 300) {
+        if (this.state === 'chase' && distToChest > 450) {
           this.isReturningToChest = true;
           this.state = 'patrol';
           this.patrolTarget = { x: this.targetChest.x, y: this.targetChest.y };
         }
         
-        if (this.isReturningToChest && distToChest <= 150) {
+        if (this.isReturningToChest && distToChest <= 225) {
           this.isReturningToChest = false;
           this.state = 'patrol';
           this.setNewPatrolTarget();
@@ -1492,7 +1499,7 @@ export class Boss extends Enemy {
       
       if (nearestChest) {
         this.targetChest = nearestChest;
-        const range = 80;
+        const range = 120;
         this.patrolTarget = {
           x: nearestChest.x + Phaser.Math.Between(-range, range),
           y: nearestChest.y + Phaser.Math.Between(-range, range)
@@ -1553,7 +1560,7 @@ export class Boss extends Enemy {
     let currentSpeed = this.config.speed * 0.5; // Normal wandering is 0.5x speed
     
     if (this.isPatrollingToChest || this.isReturningToChest) {
-      currentSpeed = 96; // 80% of player walking speed when going straight to a chest
+      currentSpeed = 144; // 96 * 1.5, to match increased player speed
     }
     
     if (this.scene.time.now > this.pathUpdateTimer) {
@@ -1679,7 +1686,7 @@ export class Boss extends Enemy {
   private shootProjectile(): void {
     
     const bullet = this.scene.physics.add.sprite(this.x, this.y, 'bullet');
-    bullet.setScale(0.8);
+    bullet.setScale(1.2); // 1.5x of original 0.8
     bullet.setTint(0x8800ff);
     bullet.setDepth(50);
     bullet.setData('damage', this.config.damage * 0.7);
@@ -1701,7 +1708,7 @@ export class Boss extends Enemy {
     const dx = this.player.x - this.x;
     const dy = this.player.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const baseSpeed = 0.25;
+    const baseSpeed = 0.375;
     
     if (distance > 0) {
       bullet.setData('speedX', (dx / distance) * baseSpeed);

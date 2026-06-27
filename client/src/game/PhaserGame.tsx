@@ -8,6 +8,8 @@ interface PhaserGameProps {
   playerName?: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://jermsancog.com/dungeongame';
+
 // Preloader Scene
 class PreloaderScene extends Phaser.Scene {
   constructor() {
@@ -49,7 +51,7 @@ class PreloaderScene extends Phaser.Scene {
 
     // Load all assets here so there is zero delay when starting the game
     this.load.image('logo', 'assets/sprites/logo.png');
-    this.load.spritesheet('player', 'assets/sprites/mageHero.png', { frameWidth: 32, frameHeight: 48, endFrame: 15 });
+    this.load.spritesheet('player', 'assets/sprites/mageHero2.png', { frameWidth: 32, frameHeight: 48, endFrame: 31 });
     this.load.spritesheet('skeleton', 'assets/sprites/skeleton.png', { frameWidth: 64, frameHeight: 64, endFrame: 272 });
     this.load.spritesheet('zombie', 'assets/sprites/zombies.png', { frameWidth: 32, frameHeight: 32, endFrame: 95 });
     this.load.spritesheet('bat', 'assets/sprites/chiroptera.png', { frameWidth: 64, frameHeight: 64, endFrame: 54 });
@@ -339,8 +341,7 @@ class MainMenuScene extends Phaser.Scene {
       const loadingText = this.add.text(width / 2, height / 2, 'Summoning scores...', { fontSize: '24px', fill: '#94a3b8', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'italic' }).setOrigin(0.5);
       lbContent.add(loadingText);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://jermsancog.com/dungeongame';
-      fetch(`${apiUrl}/leaderboard.php`)
+      fetch(`${API_URL}/leaderboard.php`)
         .then(res => res.json())
         .then(data => {
           loadingText.destroy();
@@ -472,9 +473,8 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
       
       const stats = data?.playerStats || data || {};
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://jermsancog.com/dungeongame';
       // Securely post the score to our new Leaderboard API
-      fetch(`${apiUrl}/leaderboard.php`, {
+      fetch(`${API_URL}/leaderboard.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
