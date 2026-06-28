@@ -1,5 +1,15 @@
 import * as Phaser from 'phaser';
 import { GAME_CONFIG } from '../data/GameData';
+import type { DungeonGameScene } from '../scenes/DungeonGameScene';
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  description: string;
+  iconTexture: string;
+  onUse: (player: Player, scene: DungeonGameScene) => void;
+}
 
 export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   public health: number = 100;
@@ -16,6 +26,7 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   public hasFireball: boolean = false;
   public joystickVector: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 0);
   public baseDamage: number = 25;
+  public inventory: Map<string, InventoryItem> = new Map();
   
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
@@ -131,6 +142,41 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
   
   public forceLevelUp(): void {
     this.levelUp();
+  }
+
+  public addItem(item: Omit<InventoryItem, 'quantity'>): void {
+    const existingItem = this.inventory.get(item.id);
+
+    if (existingItem) {
+      existingItem.quantity++;
+    } else {
+      this.inventory.set(item.id, { ...item, quantity: 1 });
+    }
+
+    this.scene.events.emit('inventoryChanged');
+  }
+
+  public useItem(itemId: string): void {
+    const item = this.inventory.get(itemId);
+
+    if (item && item.quantity > 0) {
+      item.onUse(this as Player, this.scene as DungeonGameScene);
+
+      item.quantity--;
+      if (item.quantity <= 0) {
+        this.inventory.delete(itemId);
+      }
+
+      this.scene.events.emit('inventoryChanged');
+    }
+  }
+
+  public removeItem(itemId: string): void {
+    const item = this.inventory.get(itemId);
+    if (item) {
+      this.inventory.delete(itemId);
+      this.scene.events.emit('inventoryChanged');
+    }
   }
 }
 

@@ -538,6 +538,9 @@ export class DungeonGameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
 
+    // Launch the UI Scene in parallel
+    this.scene.launch('InventoryUIScene', { gameScene: this });
+
     // Start background music
     this.sound.stopAll();
     if (this.currentDungeon === this.maxDungeons) {
@@ -1612,6 +1615,7 @@ export class DungeonGameScene extends Phaser.Scene {
     const iconX = sliderX - 52;
     const fsX = iconX - 75;
     const helpX = fsX - 75;
+    const inventoryBtnX = helpX - 75;
 
     let helpModal: Phaser.GameObjects.Container;
 
@@ -2676,95 +2680,115 @@ export class DungeonGameScene extends Phaser.Scene {
     const isYellowCrystal = item.texture.key === 'yellowcrystal';
     const isOrangeCrystal = item.texture.key === 'orangecrystal';
     item.destroy();
-    
+
+    this.sound.play('star', { volume: 0.5 });
+
     if (isOrangeCrystal) {
-      this.isOrangeCrystalActive = true;
-      this.player.hasFireball = true;
-      this.orangeEffectEndTime = this.time.now + 8000;
-      
-      this.sound.play('star', { volume: 0.5 });
-      this.addOrResetEffect('orange', 8000, '#f97316');
-      
-      const specialText = this.add.text(this.player.x, this.player.y - 30, 'FIREBALL!', {
-        fontSize: '16px', fill: '#ffb47e', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-      }).setOrigin(0.5).setDepth(100);
-      
-      this.tweens.add({
-        targets: specialText, y: specialText.y - 30, alpha: 0, duration: 1000, onComplete: () => specialText.destroy()
+      this.player.addItem({
+        id: 'fireball_crystal',
+        name: 'Fireball Crystal',
+        description: 'Unleashes a powerful, piercing fireball.',
+        iconTexture: 'orangecrystal',
+        onUse: (player, scene) => {
+          scene.isOrangeCrystalActive = true;
+          player.hasFireball = true;
+          scene.orangeEffectEndTime = scene.time.now + 8000;
+          scene.addOrResetEffect('orange', 8000, '#f97316');
+          const specialText = scene.add.text(player.x, player.y - 30, 'FIREBALL!', {
+            fontSize: '16px', fill: '#ffb47e', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+          }).setOrigin(0.5).setDepth(100);
+          scene.tweens.add({
+            targets: specialText, y: specialText.y - 30, alpha: 0, duration: 1000, onComplete: () => specialText.destroy()
+          });
+        }
       });
       return;
     }
 
     if (isYellowCrystal) {
-      this.player.isInvincible = true;
-      this.player.setTint(0xffff33); // 80% yellow tint
-      this.yellowEffectEndTime = this.time.now + 5000;
-      
-      this.sound.play('star', { volume: 0.5 });
-      this.addOrResetEffect('yellow', 5000, '#fbbf24');
-      
-      const invulnText = this.add.text(this.player.x, this.player.y - 30, 'INVINCIBLE!', {
-        fontSize: '16px', fill: '#fbbf24', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-      }).setOrigin(0.5).setDepth(100);
-      
-      this.tweens.add({
-        targets: invulnText, y: invulnText.y - 30, alpha: 0, duration: 1000, onComplete: () => invulnText.destroy()
+      this.player.addItem({
+        id: 'invincibility_crystal',
+        name: 'Invincibility Crystal',
+        description: 'Become invincible for a short time.',
+        iconTexture: 'yellowcrystal',
+        onUse: (player, scene) => {
+          player.isInvincible = true;
+          player.setTint(0xffff33);
+          scene.yellowEffectEndTime = scene.time.now + 5000;
+          scene.addOrResetEffect('yellow', 5000, '#fbbf24');
+          const invulnText = scene.add.text(player.x, player.y - 30, 'INVINCIBLE!', {
+            fontSize: '16px', fill: '#fbbf24', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+          }).setOrigin(0.5).setDepth(100);
+          scene.tweens.add({
+            targets: invulnText, y: invulnText.y - 30, alpha: 0, duration: 1000, onComplete: () => invulnText.destroy()
+          });
+        }
       });
       return;
     }
 
     if (isBlueCrystal) {
-      this.enemiesFrozenUntil = this.time.now + 8000;
-      
-      this.enemies.getChildren().forEach((enemy: any) => {
-        if (enemy.setVelocity) enemy.setVelocity(0, 0);
-        if (enemy.anims) enemy.anims.stop();
-      });
-      if (this.boss) {
-        this.boss.setVelocity(0, 0);
-        this.boss.anims.stop();
-      }
-      
-      this.sound.play('star', { volume: 0.5 });
-      this.addOrResetEffect('blue', 8000, '#60a5fa'); // blue-400
-      
-      const freezeText = this.add.text(this.player.x, this.player.y - 30, 'TIME FREEZE!', {
-        fontSize: '16px', fill: '#60a5fa', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-      }).setOrigin(0.5).setDepth(100);
-      
-      this.tweens.add({
-        targets: freezeText, y: freezeText.y - 30, alpha: 0, duration: 1000, onComplete: () => freezeText.destroy()
+      this.player.addItem({
+        id: 'freeze_crystal',
+        name: 'Freeze Crystal',
+        description: 'Freezes all enemies on screen.',
+        iconTexture: 'bluecrystal',
+        onUse: (player, scene) => {
+          scene.enemiesFrozenUntil = scene.time.now + 8000;
+          scene.enemies.getChildren().forEach((enemy: any) => {
+            if (enemy.setVelocity) enemy.setVelocity(0, 0);
+            if (enemy.anims) enemy.anims.stop();
+          });
+          if (scene.boss) {
+            scene.boss.setVelocity(0, 0);
+            scene.boss.anims.stop();
+          }
+          scene.addOrResetEffect('blue', 8000, '#60a5fa');
+          const freezeText = scene.add.text(player.x, player.y - 30, 'TIME FREEZE!', {
+            fontSize: '16px', fill: '#60a5fa', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+          }).setOrigin(0.5).setDepth(100);
+          scene.tweens.add({
+            targets: freezeText, y: freezeText.y - 30, alpha: 0, duration: 1000, onComplete: () => freezeText.destroy()
+          });
+        }
       });
       return;
     }
 
     if (isRedCrystal) {
-      this.player.heal(this.player.maxHealth);
+      this.player.addItem({
+        id: 'max_health_potion',
+        name: 'Max Health Potion',
+        description: 'Restores health to full.',
+        iconTexture: 'redcrystal',
+        onUse: (player, scene) => {
+          player.heal(player.maxHealth);
+          const textStr = 'MAX HP!';
+          const textColor = '#ff4444';
+          const healText = scene.add.text(player.x, player.y - 30, textStr, {
+            fontSize: '16px', fill: textColor, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+          }).setOrigin(0.5).setDepth(100);
+          scene.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
+        }
+      });
     } else {
-      this.player.heal(10);
+      // Default to green crystal for minor heal
+      this.player.addItem({
+        id: 'health_potion',
+        name: 'Health Potion',
+        description: 'Restores a small amount of health.',
+        iconTexture: 'greencrystal',
+        onUse: (player, scene) => {
+          player.heal(25); // A bit more than 10
+          const textStr = '+25 HP';
+          const textColor = '#00ff00';
+          const healText = scene.add.text(player.x, player.y - 30, textStr, {
+            fontSize: '16px', fill: textColor, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+          }).setOrigin(0.5).setDepth(100);
+          scene.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
+        }
+      });
     }
-    
-    this.sound.play('star', { volume: 0.5 });
-    
-    // Floating text feedback
-    const textStr = isRedCrystal ? 'MAX HP!' : '+10 HP';
-    const textColor = isRedCrystal ? '#ff4444' : '#00ff00';
-    const healText = this.add.text(this.player.x, this.player.y - 30, textStr, {
-      fontSize: '16px',
-      fill: textColor,
-      fontFamily: '"Georgia", "Times New Roman", serif',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3
-    }).setOrigin(0.5).setDepth(100);
-    
-    this.tweens.add({
-      targets: healText,
-      y: healText.y - 30,
-      alpha: 0,
-      duration: 1000,
-      onComplete: () => healText.destroy()
-    });
   }
 
 }
