@@ -94,8 +94,9 @@ export class PauseScene extends Phaser.Scene {
   
   private resumeGame(): void {
     const gameScene = this.scene.manager.getScenes(false).find(s => s.sys.isPaused());
-    this.scene.stop();
-    if (gameScene) {
+    // Only resume if the audio context is running, otherwise it can throw an error.
+    if (this.sound.context.state === 'running' && gameScene) {
+      this.scene.stop();
       this.scene.resume(gameScene.scene.key);
     }
   }

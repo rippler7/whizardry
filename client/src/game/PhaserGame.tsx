@@ -3,6 +3,8 @@ import Phaser from 'phaser';
 import { DungeonGameScene } from './scenes/DungeonGameScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { InventoryUIScene } from './scenes/InventoryUIScene';
+import { PauseScene } from './scenes/PauseScene';
+import { HelpModalScene } from './scenes/HelpModalScene';   
 
 interface PhaserGameProps {
   onGameEvent: (event: string, data: any) => void;
@@ -445,7 +447,7 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
       pixelArt: false,
       roundPixels: true,
       resolution: window.devicePixelRatio || 1,
-      scene: [PreloaderScene, MainMenuScene, DungeonGameScene, GameOverScene, InventoryUIScene],
+      scene: [PreloaderScene, MainMenuScene, DungeonGameScene, HelpModalScene, PauseScene,GameOverScene, InventoryUIScene],
       physics: {
         default: 'arcade',
         arcade: {

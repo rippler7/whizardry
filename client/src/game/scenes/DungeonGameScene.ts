@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { Enemy, Skeleton, Zombie, Zombie2, Bat, Spider, Boss } from '../entities/Enemy';
 import { Player } from '../entities/Player';
+import { ITEM_DATA } from '../data/ItemData.ts';
 import questionsData from '../entities/questions.json';
 import { FlowField } from '../entities/FlowField';
 import * as easystarjs from 'easystarjs';
@@ -539,7 +540,7 @@ export class DungeonGameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
 
     // Launch the UI Scene in parallel
-    this.scene.launch('InventoryUIScene', { gameScene: this });
+    this.scene.launch('InventoryUIScene', { gameScene: this, player: this.player });
 
     // Start background music
     this.sound.stopAll();
@@ -552,7 +553,20 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     this.showLevelIntro();
+
+    // --- Global Event Listeners for UI Scene Communication ---
+    this.game.events.on('pauseGame', this.pauseGame, this);
+    this.game.events.on('resumeGame', this.resumeGame, this);
+
+    // Ensure listeners are cleaned up when the scene is destroyed
+    this.events.on('shutdown', () => {
+      this.game.events.off('pauseGame', this.pauseGame, this);
+      this.game.events.off('resumeGame', this.resumeGame, this);
+    });
   }
+
+  private pauseGame = () => { this.togglePause(true); };
+  private resumeGame = () => { this.togglePause(false); };
 
   private createDecorations() {
     let decorationGroups: string[][] = [];
@@ -1617,8 +1631,6 @@ export class DungeonGameScene extends Phaser.Scene {
     const helpX = fsX - 75;
     const inventoryBtnX = helpX - 75;
 
-    let helpModal: Phaser.GameObjects.Container;
-
     // --- Help Button ---
     const helpBtn = this.add.container(helpX, audioY).setScrollFactor(0).setDepth(UI_DEPTH + 1);
     const helpBg = this.add.rectangle(0, 0, 60, 60, 0x4a2511).setStrokeStyle(2, 0xd4af37).setRounded(12);
@@ -1630,10 +1642,7 @@ export class DungeonGameScene extends Phaser.Scene {
     helpBtn.on('pointerover', () => helpBg.setFillStyle(0x6b3619));
     helpBtn.on('pointerout', () => helpBg.setFillStyle(0x4a2511));
     helpBtn.on('pointerup', () => {
-      if (helpModal && !this.isModalOpen) {
-        this.physics.pause();
-        helpModal.setVisible(true);
-      }
+      this.scene.launch('HelpModalScene');
     });
 
     // --- Fullscreen Button ---
@@ -1718,44 +1727,6 @@ export class DungeonGameScene extends Phaser.Scene {
     };
 
     trackHitArea.on('pointerdown', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
-    
-    this.input.setDraggable(handle);
-    handle.on('drag', (pointer: Phaser.Input.Pointer) => updateVolumeFromPointer(pointer.x));
-
-    // --- Help Modal ---
-    helpModal = this.add.container(0, 0).setScrollFactor(0).setDepth(UI_DEPTH + 3000).setVisible(false);
-    
-    const overlay = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.8)
-      .setInteractive(); // Blocks underlying clicks
-
-    const modalBox = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, Math.min(this.scale.width * 0.9, 640), 550, 0x1c1917, 0.95)
-      .setStrokeStyle(2, 0xb45309).setRounded(16);
-
-    const helpTitle = this.add.text(this.scale.width / 2, this.scale.height / 2 - 210, 'How to Play', {
-      fontSize: '32px', fill: '#fbbf24', fontFamily: '"Cinzel", "Georgia", "Times New Roman", serif', fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    const isDesktop = this.sys.game.device.os.desktop;
-    const helpTextContent = [
-      isDesktop ? '• Use WASD or Arrow Keys to move' : '• Use the Left Side of screen to move',
-      isDesktop ? '• SPACE or Click to shoot (aim with mouse)' : '• Tap the Right Side of screen to shoot',
-      isDesktop ? '• Click chests when near them to open' : '• Tap chests when near them to open',
-      '• Answer all 4 questions to unlock the door',
-      '• Reach dungeon 5 and defeat the boss!'
-    ].join('\n\n');
-
-    const helpTextDesc = this.add.text(this.scale.width / 2, this.scale.height / 2 - 140, helpTextContent, {
-      fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif', lineSpacing: 10, wordWrap: { width: Math.min(this.scale.width * 0.8, 560) }
-    }).setOrigin(0.5, 0);
-
-    const closeBtnBg = this.add.rectangle(this.scale.width / 2, this.scale.height / 2 + 200, 180, 50, 0x78350f).setRounded(12).setInteractive({ useHandCursor: true });
-    const closeBtnText = this.add.text(this.scale.width / 2, this.scale.height / 2 + 200, 'RESUME', { fontSize: '22px', fill: '#fef3c7', fontFamily: '"Georgia", "Times New Roman", serif' }).setOrigin(0.5);
-
-    closeBtnBg.on('pointerover', () => { closeBtnBg.setScale(1.05); closeBtnText.setScale(1.05); closeBtnBg.setFillStyle(0x92400e); });
-    closeBtnBg.on('pointerout', () => { closeBtnBg.setScale(1.0); closeBtnText.setScale(1.0); closeBtnBg.setFillStyle(0x78350f); });
-    closeBtnBg.on('pointerdown', () => { helpModal.setVisible(false); if (!this.isModalOpen) this.physics.resume(); });
-
-    helpModal.add([overlay, modalBox, helpTitle, helpTextDesc, closeBtnBg, closeBtnText]);
   }
 
   private drawStatsBg() {
@@ -2339,7 +2310,8 @@ export class DungeonGameScene extends Phaser.Scene {
         correctAnswers: this.player.correctAnswers,
         enemiesKilled: this.player.enemiesKilled,
         difficulty: this.gameDifficulty,
-        usedQuestionIds: this.usedQuestionIds
+      usedQuestionIds: this.usedQuestionIds,
+      inventory: this.player.inventory
       });
     }
   }
@@ -2441,10 +2413,10 @@ export class DungeonGameScene extends Phaser.Scene {
       messageText.width + 50, 
       messageText.height + 30, 
       0x1c1917,
-      0.95
+      0.95 // stone-900
     ).setStrokeStyle(2, 0xb45309).setRounded(12).setDepth(12000).setScrollFactor(0);
     
-    this.time.delayedCall(2000, () => {
+    this.time.delayedCall(duration, () => {
       bg.destroy();
       messageText.destroy();
     });
@@ -2489,7 +2461,8 @@ export class DungeonGameScene extends Phaser.Scene {
       correctAnswers: this.player.correctAnswers,
       enemiesKilled: this.player.enemiesKilled,
       difficulty: this.gameDifficulty,
-      usedQuestionIds: this.usedQuestionIds
+      usedQuestionIds: this.usedQuestionIds,
+      inventory: this.player.inventory
     });
   }
 
@@ -2497,6 +2470,55 @@ export class DungeonGameScene extends Phaser.Scene {
   public handleMiniBossDefeated(miniBoss: any) {
     // Medium points for defeating a mini-boss (15% of max health)
     this.player.gainExperience(Math.floor(this.player.maxHealth * 0.15));
+  }
+
+  public togglePause(isPaused: boolean, timePaused?: number): void {
+    this.isModalOpen = isPaused;
+    if (isPaused) {
+      this.physics.pause();
+    } else {
+      this.physics.resume();
+    }
+  }
+
+  /**
+   * Shifts all active timers forward by a given amount. This is called when resuming from a paused state
+   * to ensure that effect durations are not consumed while the game is paused.
+   * @param timePaused The duration in milliseconds that the game was paused.
+   */
+  public shiftTimers(timePaused: number): void {
+    this.orangeEffectEndTime += timePaused;
+    this.yellowEffectEndTime += timePaused;
+    this.enemiesFrozenUntil += timePaused;
+    this.activeEffects.forEach(effect => { effect.endTime += timePaused; });
+    this.enemies.getChildren().forEach((enemy: any) => {
+      if (typeof enemy.shiftTimers === 'function') enemy.shiftTimers(timePaused);
+    });
+    if (this.boss && typeof this.boss.shiftTimers === 'function') {
+      this.boss.shiftTimers(timePaused);
+    }
+  }
+
+  public dropItem(playerX: number, playerY: number, itemKey: string) {
+    // Drop the item a short distance away from the player in a random direction
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const distance = 60;
+    const dropX = playerX + Math.cos(angle) * distance;
+    const dropY = playerY + Math.sin(angle) * distance;
+
+    const dropPos = this.getNearestValidDropPosition(dropX, dropY, 25, 25);
+
+    const droppedItem = this.physics.add.sprite(dropPos.x, dropPos.y - 20, itemKey);
+    droppedItem.setScale(1.2);
+    droppedItem.setDepth(dropPos.y + 12);
+    this.droppedItems.add(droppedItem);
+
+    this.tweens.add({
+      targets: droppedItem,
+      y: dropPos.y,
+      duration: 600,
+      ease: 'Bounce.easeOut'
+    });
   }
 
   private onPlayerLevelUp(level: number) {
@@ -2675,119 +2697,18 @@ export class DungeonGameScene extends Phaser.Scene {
   }
 
   private collectItem(player: any, item: any) {
-    const isRedCrystal = item.texture.key === 'redcrystal';
-    const isBlueCrystal = item.texture.key === 'bluecrystal';
-    const isYellowCrystal = item.texture.key === 'yellowcrystal';
-    const isOrangeCrystal = item.texture.key === 'orangecrystal';
+    const itemKey = item.texture.key;
     item.destroy();
 
     this.sound.play('star', { volume: 0.5 });
 
-    if (isOrangeCrystal) {
-      this.player.addItem({
-        id: 'fireball_crystal',
-        name: 'Fireball Crystal',
-        description: 'Unleashes a powerful, piercing fireball.',
-        iconTexture: 'orangecrystal',
-        onUse: (player, scene) => {
-          scene.isOrangeCrystalActive = true;
-          player.hasFireball = true;
-          scene.orangeEffectEndTime = scene.time.now + 8000;
-          scene.addOrResetEffect('orange', 8000, '#f97316');
-          const specialText = scene.add.text(player.x, player.y - 30, 'FIREBALL!', {
-            fontSize: '16px', fill: '#ffb47e', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-          }).setOrigin(0.5).setDepth(100);
-          scene.tweens.add({
-            targets: specialText, y: specialText.y - 30, alpha: 0, duration: 1000, onComplete: () => specialText.destroy()
-          });
-        }
-      });
-      return;
-    }
+    const itemDefinition = ITEM_DATA[itemKey];
 
-    if (isYellowCrystal) {
-      this.player.addItem({
-        id: 'invincibility_crystal',
-        name: 'Invincibility Crystal',
-        description: 'Become invincible for a short time.',
-        iconTexture: 'yellowcrystal',
-        onUse: (player, scene) => {
-          player.isInvincible = true;
-          player.setTint(0xffff33);
-          scene.yellowEffectEndTime = scene.time.now + 5000;
-          scene.addOrResetEffect('yellow', 5000, '#fbbf24');
-          const invulnText = scene.add.text(player.x, player.y - 30, 'INVINCIBLE!', {
-            fontSize: '16px', fill: '#fbbf24', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-          }).setOrigin(0.5).setDepth(100);
-          scene.tweens.add({
-            targets: invulnText, y: invulnText.y - 30, alpha: 0, duration: 1000, onComplete: () => invulnText.destroy()
-          });
-        }
-      });
-      return;
-    }
-
-    if (isBlueCrystal) {
-      this.player.addItem({
-        id: 'freeze_crystal',
-        name: 'Freeze Crystal',
-        description: 'Freezes all enemies on screen.',
-        iconTexture: 'bluecrystal',
-        onUse: (player, scene) => {
-          scene.enemiesFrozenUntil = scene.time.now + 8000;
-          scene.enemies.getChildren().forEach((enemy: any) => {
-            if (enemy.setVelocity) enemy.setVelocity(0, 0);
-            if (enemy.anims) enemy.anims.stop();
-          });
-          if (scene.boss) {
-            scene.boss.setVelocity(0, 0);
-            scene.boss.anims.stop();
-          }
-          scene.addOrResetEffect('blue', 8000, '#60a5fa');
-          const freezeText = scene.add.text(player.x, player.y - 30, 'TIME FREEZE!', {
-            fontSize: '16px', fill: '#60a5fa', fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-          }).setOrigin(0.5).setDepth(100);
-          scene.tweens.add({
-            targets: freezeText, y: freezeText.y - 30, alpha: 0, duration: 1000, onComplete: () => freezeText.destroy()
-          });
-        }
-      });
-      return;
-    }
-
-    if (isRedCrystal) {
-      this.player.addItem({
-        id: 'max_health_potion',
-        name: 'Max Health Potion',
-        description: 'Restores health to full.',
-        iconTexture: 'redcrystal',
-        onUse: (player, scene) => {
-          player.heal(player.maxHealth);
-          const textStr = 'MAX HP!';
-          const textColor = '#ff4444';
-          const healText = scene.add.text(player.x, player.y - 30, textStr, {
-            fontSize: '16px', fill: textColor, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-          }).setOrigin(0.5).setDepth(100);
-          scene.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
-        }
-      });
+    if (itemDefinition) {
+      this.player.addItem(itemDefinition);
     } else {
-      // Default to green crystal for minor heal
-      this.player.addItem({
-        id: 'health_potion',
-        name: 'Health Potion',
-        description: 'Restores a small amount of health.',
-        iconTexture: 'greencrystal',
-        onUse: (player, scene) => {
-          player.heal(25); // A bit more than 10
-          const textStr = '+25 HP';
-          const textColor = '#00ff00';
-          const healText = scene.add.text(player.x, player.y - 30, textStr, {
-            fontSize: '16px', fill: textColor, fontFamily: '"Georgia", "Times New Roman", serif', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
-          }).setOrigin(0.5).setDepth(100);
-          scene.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
-        }
-      });
+      // Fallback for any other items, defaults to a standard health potion
+      this.player.addItem(ITEM_DATA['greencrystal']);
     }
   }
 

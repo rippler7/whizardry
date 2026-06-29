@@ -160,23 +160,27 @@ export abstract class Hero extends Phaser.Physics.Arcade.Sprite {
     const item = this.inventory.get(itemId);
 
     if (item && item.quantity > 0) {
+      this.consumeItem(itemId);
       item.onUse(this as Player, this.scene as DungeonGameScene);
-
-      item.quantity--;
-      if (item.quantity <= 0) {
-        this.inventory.delete(itemId);
-      }
-
-      this.scene.events.emit('inventoryChanged');
     }
   }
 
   public removeItem(itemId: string): void {
     const item = this.inventory.get(itemId);
     if (item) {
-      this.inventory.delete(itemId);
-      this.scene.events.emit('inventoryChanged');
+      // The active scene is the UI scene, so we need to get the game scene from the scene manager
+      const gameScene = this.scene.scene.get('DungeonGameScene') as DungeonGameScene;
+      gameScene.dropItem(this.x, this.y, item.iconTexture);
+      this.consumeItem(itemId);
     }
+  }
+
+  private consumeItem(itemId: string): void {
+    const item = this.inventory.get(itemId);
+    if (item && --item.quantity <= 0) {
+      this.inventory.delete(itemId);
+    }
+    this.scene.events.emit('inventoryChanged');
   }
 }
 

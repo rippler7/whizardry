@@ -1,19 +1,20 @@
 import * as Phaser from 'phaser';
 import { Player, InventoryItem } from '../entities/Player';
-import { DungeonGameScene } from './DungeonGameScene';
 
 export class InventoryUIScene extends Phaser.Scene {
-  private gameScene!: DungeonGameScene;
   private player!: Player;
+  private gameScene!: Phaser.Scene;
   private inventoryModalContainer: Phaser.GameObjects.Container | null = null;
   private isModalOpen: boolean = false;
+  private modalOpenTimestamp: number = 0;
 
   constructor() {
     super({ key: 'InventoryUIScene' });
   }
 
-  init(data: { gameScene: DungeonGameScene }) {
+  init(data: { gameScene: Phaser.Scene, player: Player }) {
     this.gameScene = data.gameScene;
+    this.player = data.player;
   }
 
   create(): void {
@@ -22,8 +23,6 @@ export class InventoryUIScene extends Phaser.Scene {
         this.scene.stop();
         return;
     }
-
-    this.player = this.gameScene.player;
 
     this.createInventoryButton();
 
@@ -40,9 +39,11 @@ export class InventoryUIScene extends Phaser.Scene {
   }
 
   private createInventoryButton() {
-    // Re-calculate button positions to place inventory button correctly
-    const exitBtnX = this.scale.width - 120 - 20;
-    const sliderX = exitBtnX - 120 - 150 - 30;
+    // Re-calculate button positions to place inventory button correctly, matching DungeonGameScene's layout logic.
+    const exitBtnWidth = 240;
+    const exitBtnX = this.scale.width - exitBtnWidth / 2 - 20;
+    const sliderWidth = 150;
+    const sliderX = exitBtnX - exitBtnWidth / 2 - sliderWidth - 30;
     const iconX = sliderX - 52;
     const fsX = iconX - 75;
     const helpX = fsX - 75;
@@ -59,7 +60,7 @@ export class InventoryUIScene extends Phaser.Scene {
     inventoryBtn.on('pointerdown', () => this.toggleInventory());
   }
 
-  private toggleInventory() {
+  public toggleInventory() {
     if (this.isModalOpen) {
       this.hideInventory();
     } else {
@@ -76,7 +77,8 @@ export class InventoryUIScene extends Phaser.Scene {
   private showInventory() {
     if (this.isModalOpen) return;
     this.isModalOpen = true;
-    this.gameScene.scene.pause();
+    this.game.events.emit('pauseGame');
+    this.modalOpenTimestamp = this.time.now;
 
     const { width, height } = this.scale;
     const MODAL_DEPTH = 20000;
@@ -145,7 +147,9 @@ export class InventoryUIScene extends Phaser.Scene {
         }).setOrigin(1, 1);
 
         slotBg.setInteractive({ useHandCursor: true });
-        slotBg.on('pointerdown', () => {
+        slotBg.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+            // We need to stop propagation here to prevent the modalBox from closing the context menu instantly.
+            event.stopPropagation();
             this.showItemContextMenu(item, x, y);
         });
 
@@ -199,6 +203,9 @@ export class InventoryUIScene extends Phaser.Scene {
     this.isModalOpen = false;
     this.inventoryModalContainer?.destroy();
     this.inventoryModalContainer = null;
-    this.gameScene.scene.resume();
+
+    const timePaused = this.time.now - this.modalOpenTimestamp;
+    this.game.events.emit('shiftTimers', timePaused);
+    this.game.events.emit('resumeGame');
   }
 }
