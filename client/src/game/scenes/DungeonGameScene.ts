@@ -559,7 +559,23 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     this.showLevelIntro();
+
+    // --- Global Event Listeners for UI Scene Communication ---
+    this.game.events.on('pauseGame', this.pauseGame, this);
+    this.game.events.on('resumeGame', this.resumeGame, this);
+    this.game.events.on('shiftTimers', this.shiftTimers, this);
+
+    // Ensure listeners are cleaned up when the scene is destroyed
+    this.events.on('shutdown', () => {
+      this.game.events.off('pauseGame', this.pauseGame, this);
+      this.game.events.off('resumeGame', this.resumeGame, this);
+      this.game.events.off('shiftTimers', this.shiftTimers, this);
+      this.scene.stop('InventoryUIScene');
+    });
   }
+
+  private pauseGame = () => { this.togglePause(true); };
+  private resumeGame = () => { this.togglePause(false); };
 
   private createDecorations() {
     let decorationGroups: string[][] = [];
@@ -2391,10 +2407,10 @@ export class DungeonGameScene extends Phaser.Scene {
     }
   }
 
-  private showMessage(message: string) {
+  public showMessage(message: string, duration: number = 2000) {
     const messageText = this.add.text(this.scale.width / 2, this.scale.height / 2, message, {
       fontSize: '22px',
-      fill: '#fde68a',
+      fill: '#fde68a', // amber-200
       fontFamily: '"Georgia", "Times New Roman", serif',
       align: 'center',
       wordWrap: { width: Math.min(560, this.scale.width * 0.8) }
@@ -2406,12 +2422,12 @@ export class DungeonGameScene extends Phaser.Scene {
       messageText.width + 50, 
       messageText.height + 30, 
       0x1c1917,
-      0.95 // stone-900
+      0.95
     ).setStrokeStyle(2, 0xb45309).setRounded(12).setDepth(12000).setScrollFactor(0);
     
     this.time.delayedCall(duration, () => {
-      bg.destroy();
-      messageText.destroy();
+      if (bg.active) bg.destroy();
+      if (messageText.active) messageText.destroy();
     });
   }
 
@@ -2478,7 +2494,7 @@ export class DungeonGameScene extends Phaser.Scene {
    * Shifts all active timers forward by a given amount. This is called when resuming from a paused state
    * to ensure that effect durations are not consumed while the game is paused.
    * @param timePaused The duration in milliseconds that the game was paused.
-   */
+   */  
   public shiftTimers(timePaused: number): void {
     this.orangeEffectEndTime += timePaused;
     this.yellowEffectEndTime += timePaused;

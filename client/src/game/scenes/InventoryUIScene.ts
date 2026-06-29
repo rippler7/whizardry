@@ -19,12 +19,17 @@ export class InventoryUIScene extends Phaser.Scene {
 
   create(): void {
     // This check is crucial for when the game scene restarts
-    if (!this.gameScene || !this.gameScene.sys.isActive()) {
+    if (!this.gameScene || !this.gameScene.scene.isActive()) {
         this.scene.stop();
         return;
     }
 
     this.createInventoryButton();
+
+    // When the game scene shuts down, this UI scene should also shut down.
+    this.gameScene.events.on('shutdown', () => {
+      this.scene.stop();
+    });
 
     // Listen for events from the game scene
     this.gameScene.events.on('inventoryChanged', this.handleInventoryChange, this);
