@@ -2707,18 +2707,24 @@ export class DungeonGameScene extends Phaser.Scene {
 
   private collectItem(player: any, item: any) {
     const itemKey = item.texture.key;
-    item.destroy();
 
     this.sound.play('star', { volume: 0.5 });
 
     const itemDefinition = ITEM_DATA[itemKey];
 
     if (itemDefinition) {
-      this.player.addItem(itemDefinition);
+      // Add animation key for crystals
+      const itemToAdd = { ...itemDefinition };
+      if (itemKey.includes('crystal')) {
+        itemToAdd.iconAnimKey = `spin-${itemKey}`;
+      }
+      this.player.addItem(itemToAdd);
     } else {
       // Fallback for any other items, defaults to a standard health potion
       this.player.addItem(ITEM_DATA['greencrystal']);
     }
+
+    item.destroy();
   }
 
 }

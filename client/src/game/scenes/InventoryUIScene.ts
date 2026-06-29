@@ -131,22 +131,40 @@ export class InventoryUIScene extends Phaser.Scene {
       modalContentContainer.list.filter(c => c.getData && c.getData('isInventoryItem')).forEach(c => c.destroy());
     }
 
+    // --- Item Grid Container ---
+    const gridContainer = this.add.container(0, -10);
+    modalContentContainer.add(gridContainer);
+
     const slotSize = 64;
     const slotMargin = 10;
-    const cols = 8;
-    const startX = -((cols / 2) * (slotSize + slotMargin)) + (slotSize / 2) + (slotMargin / 2);
-    const startY = -120;
+    const maxCols = 8;
+    const numItems = this.player.inventory.size;
+    const cols = Math.min(numItems, maxCols);
+    const rows = Math.ceil(numItems / maxCols);
+
+    const gridWidth = cols * (slotSize + slotMargin) - slotMargin;
+    const gridHeight = rows * (slotSize + slotMargin) - slotMargin;
+
+    const startX = -gridWidth / 2 + slotSize / 2;
+    const startY = -gridHeight / 2 + slotSize / 2;
 
     let i = 0;
     this.player.inventory.forEach((item) => {
         const row = Math.floor(i / cols);
-        const col = i % cols;
-
-        const x = startX + col * (slotSize + slotMargin);
-        const y = startY + row * (slotSize + slotMargin);
+        const itemsInRow = Math.min(numItems - (row * cols), cols);
+        const rowStartX = -((itemsInRow * (slotSize + slotMargin) - slotMargin) / 2) + slotSize / 2;
+        const col = i % maxCols;
+        const x = rowStartX + col * (slotSize + slotMargin);
+        const y = startY + row * (slotSize + slotMargin)
 
         const slotBg = this.add.rectangle(x, y, slotSize, slotSize, 0x44403c, 0.8).setStrokeStyle(1, 0x78350f).setOrigin(0.5);
+        
         const itemIcon = this.add.sprite(x, y, item.iconTexture, 0).setScale(1.5);
+        // If an animation key is provided, play it.
+        if (item.iconAnimKey && this.anims.exists(item.iconAnimKey)) {
+            itemIcon.play(item.iconAnimKey);
+        }
+
         const quantityText = this.add.text(x + slotSize / 2 - 5, y + slotSize / 2 - 5, `x${item.quantity}`, {
             fontSize: '14px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2
         }).setOrigin(1, 1);
@@ -162,9 +180,9 @@ export class InventoryUIScene extends Phaser.Scene {
         itemIcon.setData('isInventoryItem', true);
         quantityText.setData('isInventoryItem', true);
 
-        modalContentContainer.add(slotBg);
-        modalContentContainer.add(itemIcon);
-        modalContentContainer.add(quantityText);
+        gridContainer.add(slotBg);
+        gridContainer.add(itemIcon);
+        gridContainer.add(quantityText);
         i++;
     });
   }

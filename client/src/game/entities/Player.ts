@@ -8,6 +8,7 @@ export interface InventoryItem {
   quantity: number;
   description: string;
   iconTexture: string;
+  iconAnimKey?: string;
   onUse: (player: Player, scene: DungeonGameScene) => void;
 }
 
