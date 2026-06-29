@@ -447,7 +447,7 @@ const PhaserGame: React.FC<PhaserGameProps> = ({ onGameEvent, playerName }) => {
       pixelArt: false,
       roundPixels: true,
       resolution: window.devicePixelRatio || 1,
-      scene: [PreloaderScene, MainMenuScene, DungeonGameScene, HelpModalScene, PauseScene,GameOverScene, InventoryUIScene],
+      scene: [PreloaderScene, MainMenuScene, DungeonGameScene, InventoryUIScene, HelpModalScene, PauseScene, GameOverScene],
       physics: {
         default: 'arcade',
         arcade: {

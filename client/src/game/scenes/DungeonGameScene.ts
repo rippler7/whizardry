@@ -553,20 +553,7 @@ export class DungeonGameScene extends Phaser.Scene {
     }
 
     this.showLevelIntro();
-
-    // --- Global Event Listeners for UI Scene Communication ---
-    this.game.events.on('pauseGame', this.pauseGame, this);
-    this.game.events.on('resumeGame', this.resumeGame, this);
-
-    // Ensure listeners are cleaned up when the scene is destroyed
-    this.events.on('shutdown', () => {
-      this.game.events.off('pauseGame', this.pauseGame, this);
-      this.game.events.off('resumeGame', this.resumeGame, this);
-    });
   }
-
-  private pauseGame = () => { this.togglePause(true); };
-  private resumeGame = () => { this.togglePause(false); };
 
   private createDecorations() {
     let decorationGroups: string[][] = [];
@@ -2472,12 +2459,12 @@ export class DungeonGameScene extends Phaser.Scene {
     this.player.gainExperience(Math.floor(this.player.maxHealth * 0.15));
   }
 
-  public togglePause(isPaused: boolean, timePaused?: number): void {
+  public togglePause(isPaused: boolean): void {
     this.isModalOpen = isPaused;
     if (isPaused) {
-      this.physics.pause();
+      this.scene.pause();
     } else {
-      this.physics.resume();
+      this.scene.resume();
     }
   }
 
