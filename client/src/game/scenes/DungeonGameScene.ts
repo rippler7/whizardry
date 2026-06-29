@@ -185,7 +185,8 @@ export class DungeonGameScene extends Phaser.Scene {
       score: data.score || 0,
       questionsAnswered: data.questionsAnswered || 0,
       correctAnswers: data.correctAnswers || 0,
-      enemiesKilled: data.enemiesKilled || 0
+      enemiesKilled: data.enemiesKilled || 0,
+      inventory: data.inventory || []
     };
 
     // Reset per-level state for when the scene restarts
@@ -426,6 +427,11 @@ export class DungeonGameScene extends Phaser.Scene {
     this.player.questionsAnswered = this.initialPlayerStats.questionsAnswered;
     this.player.correctAnswers = this.initialPlayerStats.correctAnswers;
     this.player.enemiesKilled = this.initialPlayerStats.enemiesKilled;
+
+    // Restore inventory by converting the array from the previous scene back into a Map
+    if (Array.isArray(this.initialPlayerStats.inventory) && this.initialPlayerStats.inventory.length > 0) {
+      this.player.inventory = new Map(this.initialPlayerStats.inventory.map(item => [item.id, item]));
+    }
 
     // Ensure joystickVector exists on player, even if Player class doesn't initialize it
     if (!this.player.joystickVector) {
@@ -2298,7 +2304,7 @@ export class DungeonGameScene extends Phaser.Scene {
         enemiesKilled: this.player.enemiesKilled,
         difficulty: this.gameDifficulty,
       usedQuestionIds: this.usedQuestionIds,
-      inventory: this.player.inventory
+      inventory: Array.from(this.player.inventory.values())
       });
     }
   }
