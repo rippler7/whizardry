@@ -118,72 +118,93 @@ export class InventoryUIScene extends Phaser.Scene {
     modalContentContainer.add(title);
     modalContentContainer.add(closeBtn);
 
+    // --- Item Grid Container ---
+    const gridContainer = this.add.container(0, -10);
+    gridContainer.setName('gridContainer');
+    modalContentContainer.add(gridContainer);
+
     this.renderInventoryItems();
   }
 
   private renderInventoryItems() {
     if (!this.inventoryModalContainer) return;
 
-    const modalContentContainer = this.inventoryModalContainer.getAt(1) as Phaser.GameObjects.Container;
-    if (!modalContentContainer) return;
-
-    if (modalContentContainer.list) {
-      modalContentContainer.list.filter(c => c.getData && c.getData('isInventoryItem')).forEach(c => c.destroy());
-    }
-
-    // --- Item Grid Container ---
-    const gridContainer = this.add.container(0, -10);
-    modalContentContainer.add(gridContainer);
+    const modalContentContainer = this.inventoryModalContainer.getAt(1) as Phaser.GameObjects.Container | undefined;
+    const gridContainer = modalContentContainer?.getByName('gridContainer') as Phaser.GameObjects.Container | undefined;
+    if (!modalContentContainer || !gridContainer) return;
 
     const slotSize = 64;
     const slotMargin = 10;
     const maxCols = 8;
     const numItems = this.player.inventory.size;
-    const cols = Math.min(numItems, maxCols);
     const rows = Math.ceil(numItems / maxCols);
-
-    const gridWidth = cols * (slotSize + slotMargin) - slotMargin;
     const gridHeight = rows * (slotSize + slotMargin) - slotMargin;
-
-    const startX = -gridWidth / 2 + slotSize / 2;
     const startY = -gridHeight / 2 + slotSize / 2;
 
+    const newPositions = new Map<string, { x: number, y: number }>();
     let i = 0;
+
+    // 1. Calculate the final position for each item
     this.player.inventory.forEach((item) => {
-        const row = Math.floor(i / cols);
-        const itemsInRow = Math.min(numItems - (row * cols), cols);
-        const rowStartX = -((itemsInRow * (slotSize + slotMargin) - slotMargin) / 2) + slotSize / 2;
+        const row = Math.floor(i / maxCols);
         const col = i % maxCols;
+
+        const itemsInThisRow = Math.min(numItems - (row * maxCols), maxCols);
+        const rowWidth = itemsInThisRow * (slotSize + slotMargin) - slotMargin;
+        const rowStartX = -rowWidth / 2 + slotSize / 2;
+
         const x = rowStartX + col * (slotSize + slotMargin);
-        const y = startY + row * (slotSize + slotMargin)
+        const y = startY + row * (slotSize + slotMargin);
 
-        const slotBg = this.add.rectangle(x, y, slotSize, slotSize, 0x44403c, 0.8).setStrokeStyle(1, 0x78350f).setOrigin(0.5);
-        
-        const itemIcon = this.add.sprite(x, y, item.iconTexture, 0).setScale(1.5);
-        // If an animation key is provided, play it.
-        if (item.iconAnimKey && this.anims.exists(item.iconAnimKey)) {
-            itemIcon.play(item.iconAnimKey);
-        }
-
-        const quantityText = this.add.text(x + slotSize / 2 - 5, y + slotSize / 2 - 5, `x${item.quantity}`, {
-            fontSize: '14px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2
-        }).setOrigin(1, 1);
-
-        slotBg.setInteractive({ useHandCursor: true });
-        slotBg.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
-            // We need to stop propagation here to prevent the modalBox from closing the context menu instantly.
-            event.stopPropagation();
-            this.showItemContextMenu(item, x, y);
-        });
-
-        slotBg.setData('isInventoryItem', true);
-        itemIcon.setData('isInventoryItem', true);
-        quantityText.setData('isInventoryItem', true);
-
-        gridContainer.add(slotBg);
-        gridContainer.add(itemIcon);
-        gridContainer.add(quantityText);
+        newPositions.set(item.id, { x, y });
         i++;
+    });
+
+    // 2. Animate existing items and create new ones
+    this.player.inventory.forEach((item) => {
+        const pos = newPositions.get(item.id)!;
+        const existingContainer = gridContainer.getByName(item.id) as Phaser.GameObjects.Container | null;
+
+        if (existingContainer) {
+            // Item exists, tween it to the new position
+            this.tweens.add({
+                targets: existingContainer,
+                x: pos.x,
+                y: pos.y,
+                duration: 300,
+                ease: 'Power2'
+            });
+            // Update quantity text
+            const quantityText = existingContainer.getByName('quantity') as Phaser.GameObjects.Text;
+            if (quantityText) {
+                quantityText.setText(`x${item.quantity}`);
+            }
+        } else {
+            // New item, create and fade it in
+            const itemContainer = this.createItemContainer(item, pos.x, pos.y);
+            itemContainer.setAlpha(0);
+            gridContainer.add(itemContainer);
+            this.tweens.add({
+                targets: itemContainer,
+                alpha: 1,
+                duration: 300,
+                ease: 'Power2'
+            });
+        }
+    });
+
+    // 3. Remove items that are no longer in the inventory
+    gridContainer.list.forEach((child) => {
+        const container = child as Phaser.GameObjects.Container;
+        if (container.name && !this.player.inventory.has(container.name)) {
+            this.tweens.add({
+                targets: container,
+                alpha: 0,
+                duration: 300,
+                ease: 'Power2',
+                onComplete: () => container.destroy()
+            });
+        }
     });
   }
 
@@ -212,6 +233,36 @@ export class InventoryUIScene extends Phaser.Scene {
     contextMenu.add([menuBg, useBtn, discardBtn]);
     contextMenu.setData('isContextMenu', true);
     modalContentContainer.add(contextMenu);
+  }
+
+  private createItemContainer(item: InventoryItem, x: number, y: number): Phaser.GameObjects.Container {
+    const slotSize = 64;
+    const itemContainer = this.add.container(x, y);
+    itemContainer.setName(item.id);
+    itemContainer.setSize(slotSize, slotSize);
+
+    const slotBg = this.add.rectangle(0, 0, slotSize, slotSize, 0x44403c, 0.8)
+        .setStrokeStyle(1, 0x78350f)
+        .setOrigin(0.5);
+
+    const itemIcon = this.add.sprite(0, 0, item.iconTexture, 0).setScale(1.5);
+    if (item.iconAnimKey && this.anims.exists(item.iconAnimKey)) {
+        itemIcon.play(item.iconAnimKey);
+    }
+
+    const quantityText = this.add.text(slotSize / 2 - 5, slotSize / 2 - 5, `x${item.quantity}`, {
+        fontSize: '14px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2
+    }).setOrigin(1, 1);
+    quantityText.setName('quantity');
+
+    slotBg.setInteractive({ useHandCursor: true });
+    slotBg.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        this.showItemContextMenu(item, itemContainer.x, itemContainer.y);
+    });
+
+    itemContainer.add([slotBg, itemIcon, quantityText]);
+    return itemContainer;
   }
 
   private hideItemContextMenu() {
